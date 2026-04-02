@@ -20,6 +20,15 @@ indent_size = 2
 indent_style = space
 indent_size = 2
 
+[*.ts]
+indent_style = space
+indent_size = 2
+
+
+[*.tsx]
+indent_style = space
+indent_size = 2
+
 # Line endings
 [*]
 end_of_line = lf
