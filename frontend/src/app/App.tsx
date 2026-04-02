@@ -1,9 +1,9 @@
-import { BrowserRouter } from "react-router-dom";
-import { Navbar } from "./components/layout/Navbar";
-import { AuthProvider } from "./contexts/AuthContext";
-import { CartProvider } from "./contexts/CartContext";
-import { LandingPage } from "./pages/LandingPage";
-import "../styles/index.css";
+import {BrowserRouter} from 'react-router-dom';
+import {Navbar} from './components/layout/Navbar';
+import {AuthProvider} from './contexts/AuthContext';
+import {CartProvider} from './contexts/CartContext';
+import {LandingPage} from './pages/LandingPage';
+import '../styles/index.css';
 
 export default function App() {
   return (
@@ -19,4 +19,3 @@ export default function App() {
     </BrowserRouter>
   );
 }
-
