@@ -8,7 +8,7 @@ Tämä dokumentti sisältää keskusvarastoprojektin teknisen kuvauksen, tietoka
 
 Tietokanta koostuu viidestä taulusta, jotka mahdollistavat käyttäjien, asiakaskauppojen, tuotteiden ja tilausten hallinnan.
 
-![Tietokantakaavio](./image_970125.png)
+![Tietokantakaavio](./assets/db_schema_v1.png)
 
 ### Taulujen kuvaukset:
 
