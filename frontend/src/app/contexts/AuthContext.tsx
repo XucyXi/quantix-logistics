@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {createContext, useContext, useState, useEffect} from 'react';
 
-export type UserRole = "customer" | "admin" | "driver" | "store";
+export type UserRole = 'customer' | 'admin' | 'driver';
 
 export interface User {
   id: string;
@@ -20,18 +20,35 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Demokäyttäjät kirjautumisen testaamiseen ilman backendiä.
-const MOCK_USERS: (User & { password: string })[] = [
-  { id: "1", name: "Matti Virtanen", email: "asiakas@demo.fi", password: "demo123", role: "customer" },
-  { id: "2", name: "Päivi Mäkinen", email: "admin@quantix.fi", password: "admin123", role: "admin" },
-  { id: "3", name: "Jukka Leinonen", email: "kuljettaja@quantix.fi", password: "driver123", role: "driver" },
-  { id: "4", name: "K-Market Tampere", email: "kauppa@demo.fi", password: "store123", role: "store", company: "K-Market Tampere" },
+const MOCK_USERS: (User & {password: string})[] = [
+  {
+    id: '1',
+    name: 'Matti Virtanen',
+    email: 'asiakas@demo.fi',
+    password: 'demo123',
+    role: 'customer',
+  },
+  {
+    id: '2',
+    name: 'Päivi Mäkinen',
+    email: 'admin@quantix.fi',
+    password: 'admin123',
+    role: 'admin',
+  },
+  {
+    id: '3',
+    name: 'Jukka Leinonen',
+    email: 'kuljettaja@quantix.fi',
+    password: 'driver123',
+    role: 'driver',
+  },
 ];
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({children}: {children: React.ReactNode}) {
   // Säilytetään käyttäjä localStoragessa, jotta sessio säilyy refreshin yli.
   const [user, setUser] = useState<User | null>(() => {
     try {
-      const saved = localStorage.getItem("quantix_user");
+      const saved = localStorage.getItem('quantix_user');
       return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
@@ -40,12 +57,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = (email: string, password: string, role?: UserRole): boolean => {
     const found = MOCK_USERS.find(
-      (u) => u.email === email && u.password === password && (!role || u.role === role)
+      (u) =>
+        u.email === email &&
+        u.password === password &&
+        (!role || u.role === role)
     );
     if (found) {
-      const { password: _, ...userWithoutPassword } = found;
+      const {password: _, ...userWithoutPassword} = found;
       setUser(userWithoutPassword);
-      localStorage.setItem("quantix_user", JSON.stringify(userWithoutPassword));
+      localStorage.setItem('quantix_user', JSON.stringify(userWithoutPassword));
       return true;
     }
     return false;
@@ -53,11 +73,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("quantix_user");
+    localStorage.removeItem('quantix_user');
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider
+      value={{user, login, logout, isAuthenticated: !!user}}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -66,6 +88,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   // Hookia saa käyttää vain providerin sisällä.
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 }
