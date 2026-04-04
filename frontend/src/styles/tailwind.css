@@ -1,0 +1,4 @@
+/* Tailwindin peruskerrokset: base, components ja utilities. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
