@@ -29,12 +29,15 @@ export function Navbar() {
     {to: '/pricing', label: 'Hinnoittelu'},
   ];
 
+  // Etusivu vaatii tarkan osuman, muut linkit hyväksyvät myös alireitit.
+  // Esim. /products/123 merkitään edelleen Tuotteet-kohdan alle aktiiviseksi.
   const isActive = (path: string) =>
     path === '/'
       ? location.pathname === '/'
       : location.pathname.startsWith(path);
 
   const handleLogout = () => {
+    // Suljetaan valikko ennen navigointia, jotta UI ei jää auki seuraavalle sivulle.
     logout();
     setUserMenuOpen(false);
     navigate('/');
@@ -129,6 +132,7 @@ export function Navbar() {
               <Link
                 key={link.to}
                 to={link.to}
+                // Inline-hoverit pidetään tässä, koska komponentti käyttää pääosin inline-tyylejä.
                 style={{
                   padding: '0.4rem 0.9rem',
                   borderRadius: 6,
@@ -233,6 +237,8 @@ export function Navbar() {
                   <ChevronDown size={14} />
                 </button>
                 {userMenuOpen && (
+                  // Pudotusvalikko ankkuroidaan oikeaan reunaan, jotta se pysyy napin alla
+                  // myös silloin kun käyttäjän nimi on eri pituinen.
                   <div
                     style={{
                       position: 'absolute',
@@ -269,6 +275,7 @@ export function Navbar() {
                     {user.role !== 'customer' && (
                       <button
                         onClick={() => {
+                          // Rooli määrää hallintapaneelin kohdenäkymän.
                           navigate(roleDashboard[user.role]);
                           setUserMenuOpen(false);
                         }}
@@ -372,6 +379,7 @@ export function Navbar() {
 
         {/* Mobile menu */}
         {mobileOpen && (
+          // Mobiilissa näytetään sama linkkilista pystynäkymänä.
           <div
             style={{
               borderTop: '1px solid rgba(255,255,255,0.08)',

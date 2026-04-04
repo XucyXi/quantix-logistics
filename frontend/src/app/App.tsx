@@ -7,11 +7,12 @@ import '../styles/index.css';
 
 export default function App() {
   return (
-    // Router + contextit pidetaan Appin juuritasolla,
-    // jotta kaikki alikomponentit saavat tarvittavan tilan.
+    // Providerit on tarkoituksella juuritasolla: näin sama kirjautumis- ja ostoskoritila
+    // pysyy yhtenäisenä reitistä riippumatta eikä nollaannu sivua vaihdettaessa.
     <BrowserRouter>
       <AuthProvider>
         <CartProvider>
+          {/* Navbar on globaali UI-osa, joten se renderöidään ennen sivukohtaista sisältöä. */}
           <Navbar />
           <LandingPage />
         </CartProvider>

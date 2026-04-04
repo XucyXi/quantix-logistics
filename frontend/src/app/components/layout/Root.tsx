@@ -8,6 +8,7 @@ export function Root() {
     <div style={{minHeight: '100vh', display: 'flex', flexDirection: 'column'}}>
       <Navbar />
       <main style={{flex: 1}}>
+        {/* Outlet renderöi kulloinkin aktiivisen lapsireitin sisällön layoutin sisään. */}
         <Outlet />
       </main>
       <Footer />

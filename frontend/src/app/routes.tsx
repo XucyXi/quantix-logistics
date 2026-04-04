@@ -1,14 +1,17 @@
-import { createBrowserRouter, redirect } from "react-router";
-import { LandingPage } from "./pages/LandingPage";
+import {createBrowserRouter, redirect} from 'react-router';
+import {LandingPage} from './pages/LandingPage';
 
-// Varareititys: kaikki tuntemattomat polut ohjataan etusivulle.
+// Keskitetty reititysmäärittely, jota voidaan laajentaa myöhemmin roolikohtaisiin näkymiin.
 export const router = createBrowserRouter([
   {
-    path: "/",
+    // Julkinen etusivu.
+    path: '/',
     Component: LandingPage,
   },
   {
-    path: "*",
-    loader: () => redirect("/"),
+    // Fallback: jos URL ei täsmää mihinkään tunnettuun reittiin, ohjataan etusivulle.
+    // Tämä estää käyttäjää jäämästä tyhjälle sivulle esimerkiksi vanhalla bookmarkilla.
+    path: '*',
+    loader: () => redirect('/'),
   },
 ]);
