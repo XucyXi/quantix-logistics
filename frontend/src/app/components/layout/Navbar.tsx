@@ -25,8 +25,8 @@ export function Navbar() {
   // Ylävalikon päälinkit.
   const navLinks = [
     {to: '/', label: 'Etusivu'},
-    {to: '/products', label: 'Tuotteet'},
-    {to: '/pricing', label: 'Hinnoittelu'},
+    {to: '/tuotteet', label: 'Tuotteet'},
+    {to: '/hinnoittelu', label: 'Hinnoittelu'},
   ];
 
   const isActive = (path: string) =>
@@ -52,8 +52,7 @@ export function Navbar() {
   const roleDashboard: Record<string, string> = {
     admin: '/admin',
     driver: '/driver',
-    store: '/store',
-    customer: '/products',
+    customer: '/tuotteet',
   };
 
   return (
