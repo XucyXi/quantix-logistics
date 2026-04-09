@@ -26,6 +26,7 @@ export function Navbar() {
 
   const navLinks = [
     {to: '/', label: 'Etusivu'},
+    {to: '/meista', label: 'Meistä'},
     {to: '/tuotteet', label: 'Tuotteet'},
     {to: '/hinnoittelu', label: 'Hinnoittelu'},
   ];
