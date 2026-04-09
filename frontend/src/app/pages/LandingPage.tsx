@@ -1,5 +1,7 @@
+import {useEffect, useState} from 'react';
 import {Link} from 'react-router-dom';
 import {motion} from 'motion/react';
+import testimonialVideo from '../../../Ravintolaomistajan_suositus_kuljetuspalvelulle.mp4';
 import {
   Truck,
   Package,
@@ -8,16 +10,20 @@ import {
   CheckCircle,
   BarChart2,
   Shield,
+  Clock,
   Star,
   ChevronRight,
   Zap,
 } from 'lucide-react';
 
-// Hero-taustakuva.
+// Rivikohtainen lisaselitys loytyy tiedostosta: src/app/pages/LandingPage.comments.md
+
 const heroImg =
   'https://images.unsplash.com/photo-1641290451977-a427586acf49?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmb29kJTIwbG9naXN0aWNzJTIwdHJ1Y2slMjBkZWxpdmVyeSUyMHdhcmVob3VzZXxlbnwxfHx8fDE3NzQzNDA3Nzd8MA&ixlib=rb-4.1.0&q=80&w=1080';
+const distImg =
+  'https://images.unsplash.com/photo-1766793110924-98e05b48eadc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBkaXN0cmlidXRpb24lMjBjZW50ZXIlMjBsb2dpc3RpY3N8ZW58MXx8fHwxNzc0MzQwNzc4fDA&ixlib=rb-4.1.0&q=80&w=1080';
 
-// Hero-osion avainluvut.
+// Hero-osan KPI-luvut: desktopissa kortteina, mobiilissa omana rivinään.
 const stats = [
   {value: '340+', label: 'Kauppaa palveltu'},
   {value: '12 000', label: 'Toimitusta / viikko'},
@@ -25,7 +31,7 @@ const stats = [
   {value: '5', label: 'Toimintavuotta'},
 ];
 
-// Tuoteominaisuudet kortteina.
+// Ominaisuuskortit: icon + teksti + korostusväri, renderöidään features-gridiin.
 const features = [
   {
     icon: Zap,
@@ -35,14 +41,14 @@ const features = [
   },
   {
     icon: Package,
-    title: 'Alykäs pakkaus',
+    title: 'Älykäs pakkaus',
     desc: 'Jakelukeskus pakkaa rullakot optimaalisesti boksikohtaisten tilausten mukaan.',
     color: '#3b82f6',
   },
   {
     icon: Truck,
     title: 'Reittioptimointi',
-    desc: 'Automaattinen reittioptimointi vahentaa kuljetuskustannuksia ja parantaa tehokkuutta.',
+    desc: 'Automaattinen reittioptimointi vähentää kuljetuskustannuksia ja parantaa tehokkuutta.',
     color: '#8b5cf6',
   },
   {
@@ -54,33 +60,33 @@ const features = [
   {
     icon: BarChart2,
     title: 'Kattavat raportit',
-    desc: 'Analytiikka kaikesta toimitusketjusta - myynneista reklamaatioihin.',
+    desc: 'Analytiikka kaikesta toimitusketjusta – myynneistä reklamaatioihin.',
     color: '#ec4899',
   },
   {
     icon: Shield,
     title: 'Elintarviketurvallisuus',
-    desc: 'Taysi jaljitettavyys ja kylmaketjun valvonta HACCP-standardien mukaisesti.',
+    desc: 'Täysi jäljitettävyys ja kylmäketjun valvonta HACCP-standardien mukaisesti.',
     color: '#f59e0b',
   },
 ];
 
-// Roolikohtaiset portaalit.
+// Roolikortit ja niiden CTA-linkit roolikohtaisiin näkymiin.
 const roles = [
   {
     icon: BarChart2,
     role: 'Ajokeskus',
-    desc: 'Hallinnoi reitteja, pakkausta ja kuljettajia yhdesta paikasta.',
+    desc: 'Hallinnoi reittejä, pakkausta ja kuljettajia yhdestä paikasta.',
     to: '/admin/login',
     color: '#0f2444',
-    cta: 'Kirjaudu yllapitoon',
+    cta: 'Kirjaudu ylläpitoon',
   },
   {
     icon: Truck,
     role: 'Kuljettaja',
-    desc: 'Nae paivan reitit, toimitukset ja paivita tilanne liikkeella ollessa.',
+    desc: 'Näe päivän reitit, toimitukset ja päivitä tilanne liikkeellä ollessa.',
     to: '/driver',
-    color: '#1e3a5f',
+    color: '#17324f',
     cta: 'Kuljettajan portaali',
   },
   {
@@ -93,31 +99,57 @@ const roles = [
   },
 ];
 
-// Asiakaspalautteet landing-sivun referensseihin.
+// Asiakastiedot säilytetään edelleen datassa mahdollista laajennusta varten.
 const testimonials = [
   {
     name: 'Mirka Korhonen',
-    company: 'K-Market Jarvenpaa',
-    text: 'Quantix on muuttanut tavan, jolla seuraamme saapuvia toimituksia. Ei enaa yllatysten odottelua - tiedamme tarkalleen milloin rekka saapuu.',
+    company: 'K-Market Järvenpää',
+    text: 'Quantix on muuttanut tavan, jolla seuraamme saapuvia toimituksia. Ei enää yllätysten odottelua – tiedämme tarkalleen milloin rekka saapuu.',
     rating: 5,
   },
   {
     name: 'Petri Salminen',
     company: 'S-Market Espoo',
-    text: 'Tuotetietojen hallinta on nyt niin paljon helpompaa. Kaupan henkilokunta tietaa tarkalleen mita on tulossa ja milloin.',
+    text: 'Tuotetietojen hallinta on nyt niin paljon helpompaa. Kaupan henkilökunta tietää tarkalleen mitä on tulossa ja milloin.',
     rating: 5,
   },
   {
     name: 'Anne Virtanen',
     company: 'Lidl Tampere',
-    text: 'Toimitusaikataulu pitaa yllattavan hyvin. Quantixiin siirtymisen jalkeen hukkaprosenttimme putosi merkittavasti.',
+    text: 'Toimitusaikataulu pitää yllättävän hyvin. Quantixiin siirtymisen jälkeen hukkaprosenttimme putosi merkittävästi.',
     rating: 5,
   },
 ];
 
 export function LandingPage() {
+  // now-tila päivittyy sekunnin välein, jotta hero-badgen kello käy reaaliajassa.
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  // Muotoillaan päivä, viikonpäivä ja aika erikseen, jotta niitä voi yhdistellä UI:ssa vapaasti.
+  const liveDate = now.toLocaleDateString('fi-FI', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+
+  const liveWeekday = now.toLocaleDateString('fi-FI', {
+    weekday: 'long',
+  });
+
+  const liveTime = now.toLocaleTimeString('fi-FI', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+
   return (
     <div style={{fontFamily: "'Space Grotesk', sans-serif"}}>
+      {/* Hero */}
       <section
         style={{
           position: 'relative',
@@ -128,6 +160,7 @@ export function LandingPage() {
           backgroundColor: '#0a1929',
         }}
       >
+        {/* Background image */}
         <div
           style={{
             position: 'absolute',
@@ -138,6 +171,7 @@ export function LandingPage() {
             opacity: 0.18,
           }}
         />
+        {/* Gradient overlay */}
         <div
           style={{
             position: 'absolute',
@@ -157,12 +191,14 @@ export function LandingPage() {
             width: '100%',
           }}
         >
+          {/* Hero jaetaan kahteen kolumniin: vasen teksti + oikea statsi-visualisointi. */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <motion.div
               initial={{opacity: 0, y: 30}}
               animate={{opacity: 1, y: 0}}
               transition={{duration: 0.7}}
             >
+              {/* Live-badge näyttää järjestelmän tilan sekä kellon reaaliajassa. */}
               <div
                 style={{
                   display: 'inline-flex',
@@ -173,6 +209,7 @@ export function LandingPage() {
                   backgroundColor: 'rgba(249,115,22,0.15)',
                   border: '1px solid rgba(249,115,22,0.3)',
                   marginBottom: '1.5rem',
+                  flexWrap: 'wrap',
                 }}
               >
                 <div
@@ -190,7 +227,23 @@ export function LandingPage() {
                     fontWeight: 600,
                   }}
                 >
-                  Live-seuranta kaytossä
+                  Live-seuranta käytössä
+                </span>
+                <span
+                  style={{
+                    width: 1,
+                    height: 14,
+                    backgroundColor: 'rgba(249,115,22,0.35)',
+                  }}
+                />
+                <span
+                  style={{
+                    color: 'rgba(255,255,255,0.82)',
+                    fontSize: '0.8rem',
+                    fontWeight: 500,
+                  }}
+                >
+                  {liveWeekday} {liveDate} {liveTime}
                 </span>
               </div>
 
@@ -225,9 +278,9 @@ export function LandingPage() {
                   maxWidth: 520,
                 }}
               >
-                Quantix Logistics yhdistaa jakelukeskuksen, kuljettajat ja
-                kaupat saumattomaksi digitaaliseksi ketjuksi - reaaliaikaisesti,
-                lapinakyvasti ja tehokkaasti.
+                Quantix Logistics yhdistää jakelukeskuksen, kuljettajat ja
+                kaupat saumattomaksi digitaaliseksi ketjuksi – reaaliaikaisesti,
+                läpinäkyvästi ja tehokkaasti.
               </p>
 
               <div style={{display: 'flex', gap: '1rem', flexWrap: 'wrap'}}>
@@ -280,6 +333,7 @@ export function LandingPage() {
                   marginTop: '2.5rem',
                 }}
               >
+                {/* Sertifikaatit mapataan yhdestä taulukosta, jolloin sisältö on helppo muuttaa. */}
                 {['HACCP-sertifioitu', 'ISO 22000', 'GDPR-yhteensopiva'].map(
                   (tag) => (
                     <div
@@ -300,6 +354,7 @@ export function LandingPage() {
               </div>
             </motion.div>
 
+            {/* Stats cards */}
             <motion.div
               initial={{opacity: 0, x: 40}}
               animate={{opacity: 1, x: 0}}
@@ -342,6 +397,7 @@ export function LandingPage() {
           </div>
         </div>
 
+        {/* Bottom wave */}
         <div
           style={{
             position: 'absolute',
@@ -354,6 +410,7 @@ export function LandingPage() {
         />
       </section>
 
+      {/* Stats row (mobile): desktopin oikea sarake korvataan tällä pienemmillä ruuduilla. */}
       <section
         style={{backgroundColor: '#f8fafc', padding: '2rem 1.5rem'}}
         className="lg:hidden"
@@ -389,6 +446,7 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* Features: palvelun tärkeimmät hyödyt kortteina. */}
       <section style={{backgroundColor: '#f8fafc', padding: '5rem 1.5rem'}}>
         <div style={{maxWidth: 1280, margin: '0 auto'}}>
           <div style={{textAlign: 'center', marginBottom: '3.5rem'}}>
@@ -414,7 +472,7 @@ export function LandingPage() {
                 marginBottom: '1rem',
               }}
             >
-              Kaikki mita tarvitset tehokkaaseen ruokalogistiikkaan
+              Kaikki mitä tarvitset tehokkaaseen ruokalogistiikkaan
             </h2>
             <p
               style={{
@@ -424,8 +482,8 @@ export function LandingPage() {
                 margin: '0 auto',
               }}
             >
-              Quantix yhdistaa kaikki toimitusketjun osat yhteen alykkaaseen
-              jarjestelmaan.
+              Quantix yhdistää kaikki toimitusketjun osat yhteen älykkääseen
+              järjestelmään.
             </p>
           </div>
 
@@ -488,6 +546,7 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* How it works: vaiheistus näyttää toimitusketjun alusta loppuun. */}
       <section style={{backgroundColor: '#0f2444', padding: '5rem 1.5rem'}}>
         <div style={{maxWidth: 1280, margin: '0 auto'}}>
           <div style={{textAlign: 'center', marginBottom: '3.5rem'}}>
@@ -513,7 +572,7 @@ export function LandingPage() {
                 marginBottom: '1rem',
               }}
             >
-              Kolme vaihetta taydelliseen toimitukseen
+              Kolme vaihetta täydelliseen toimitukseen
             </h2>
           </div>
 
@@ -523,23 +582,45 @@ export function LandingPage() {
                 step: '01',
                 icon: Package,
                 title: 'Jakelukeskus pakkaa',
-                desc: 'Tilaukset saapuvat jarjestelmaan, jakelukeskus pakkaa rullakot ruokabokseineen ja kirjaa ne jarjestelmaan.',
+                desc: 'Tilaukset saapuvat järjestelmään, jakelukeskus pakkaa rullakot ruokabokseineen ja kirjaa ne järjestelmään.',
               },
               {
                 step: '02',
                 icon: Truck,
                 title: 'Rekka toimittaa',
-                desc: 'Kuljettaja saa optimoidun reitin, merkitsee toimitukset tehdyksi ja jarjestelma paivittyy reaaliajassa.',
+                desc: 'Kuljettaja saa optimoidun reitin, merkitsee toimitukset tehdyksi ja järjestelmä päivittyy reaaliajassa.',
               },
               {
                 step: '03',
                 icon: Store,
                 title: 'Kauppa vastaanottaa',
-                desc: 'Kauppa seuraa tilauksen saapumista, vastaanottaa rullakot ja kuittaa toimituksen jarjestelmassa.',
+                desc: 'Kauppa seuraa tilauksen saapumista, vastaanottaa rullakot ja kuittaa toimituksen järjestelmässä.',
               },
-            ].map((item) => (
-              <div key={item.step} style={{textAlign: 'center'}}>
-                <div
+            ].map((item, i) => (
+              <motion.div
+                key={item.step}
+                initial={{opacity: 0, y: 40}}
+                whileInView={{opacity: 1, y: 0}}
+                transition={{
+                  duration: 0.6,
+                  delay: i * 0.3,
+                  ease: 'easeOut',
+                }}
+                viewport={{once: true}}
+                style={{textAlign: 'center'}}
+              >
+                <motion.div
+                  initial={{scale: 0}}
+                  whileInView={{scale: 1}}
+                  transition={{
+                    duration: 0.5,
+                    delay: i * 0.3 + 0.2,
+                    type: 'spring',
+                    stiffness: 200,
+                    damping: 15,
+                  }}
+                  viewport={{once: true}}
+                  whileHover={{scale: 1.1}}
                   style={{
                     width: 72,
                     height: 72,
@@ -551,10 +632,20 @@ export function LandingPage() {
                     justifyContent: 'center',
                     margin: '0 auto 1.25rem',
                     position: 'relative',
+                    cursor: 'pointer',
                   }}
                 >
                   <item.icon size={28} color="#f97316" />
-                  <div
+                  <motion.div
+                    initial={{scale: 0, rotate: -180}}
+                    whileInView={{scale: 1, rotate: 0}}
+                    transition={{
+                      duration: 0.6,
+                      delay: i * 0.3 + 0.4,
+                      type: 'spring',
+                      stiffness: 200,
+                    }}
+                    viewport={{once: true}}
                     style={{
                       position: 'absolute',
                       top: -8,
@@ -571,10 +662,35 @@ export function LandingPage() {
                       justifyContent: 'center',
                     }}
                   >
+                    <motion.div
+                      animate={{
+                        boxShadow: [
+                          '0 0 0 0 rgba(249,115,22,0.4)',
+                          '0 0 0 10px rgba(249,115,22,0)',
+                          '0 0 0 0 rgba(249,115,22,0)',
+                        ],
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        repeatDelay: 1,
+                        delay: i * 0.3 + 0.8,
+                      }}
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        borderRadius: '50%',
+                        pointerEvents: 'none',
+                      }}
+                    />
                     {item.step}
-                  </div>
-                </div>
-                <h3
+                  </motion.div>
+                </motion.div>
+                <motion.h3
+                  initial={{opacity: 0}}
+                  whileInView={{opacity: 1}}
+                  transition={{duration: 0.5, delay: i * 0.3 + 0.5}}
+                  viewport={{once: true}}
                   style={{
                     color: 'white',
                     fontWeight: 700,
@@ -583,8 +699,12 @@ export function LandingPage() {
                   }}
                 >
                   {item.title}
-                </h3>
-                <p
+                </motion.h3>
+                <motion.p
+                  initial={{opacity: 0}}
+                  whileInView={{opacity: 1}}
+                  transition={{duration: 0.5, delay: i * 0.3 + 0.6}}
+                  viewport={{once: true}}
                   style={{
                     color: 'rgba(255,255,255,0.6)',
                     fontSize: '0.9rem',
@@ -592,13 +712,14 @@ export function LandingPage() {
                   }}
                 >
                   {item.desc}
-                </p>
-              </div>
+                </motion.p>
+              </motion.div>
             ))}
           </div>
         </div>
       </section>
 
+      {/* Roles: jokaiselle käyttäjäryhmälle oma kortti ja suora sisäänmeno. */}
       <section style={{backgroundColor: '#f8fafc', padding: '5rem 1.5rem'}}>
         <div style={{maxWidth: 1280, margin: '0 auto'}}>
           <div style={{textAlign: 'center', marginBottom: '3rem'}}>
@@ -612,8 +733,8 @@ export function LandingPage() {
               Portaalit jokaiselle roolille
             </h2>
             <p style={{color: '#64748b', marginTop: '0.75rem'}}>
-              Kolme erillista kayttajaroolia, kukin omalla raataloidylla
-              nakymallaan.
+              Kolme erillistä käyttäjäroolia, kukin omalla räätälöidyllä
+              näkymällään.
             </p>
           </div>
 
@@ -691,6 +812,7 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* Testimonials: yksi isompi videokortti ilman kolmen kortin toistoa. */}
       <section style={{backgroundColor: 'white', padding: '5rem 1.5rem'}}>
         <div style={{maxWidth: 1280, margin: '0 auto'}}>
           <div style={{textAlign: 'center', marginBottom: '3rem'}}>
@@ -705,58 +827,63 @@ export function LandingPage() {
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {testimonials.map((t) => (
+          <div
+            style={{
+              backgroundColor: '#f8fafc',
+              borderRadius: 18,
+              padding: '1.75rem',
+              border: '1px solid #e2e8f0',
+              maxWidth: 920,
+              margin: '0 auto',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                gap: '0.25rem',
+                marginBottom: '1rem',
+              }}
+            >
+              {Array.from({length: testimonials[0].rating}).map((_, i) => (
+                <Star key={i} size={16} color="#f97316" fill="#f97316" />
+              ))}
+            </div>
+
+            {/* Yksi isompi asiakasvideo, ettei sama klippi toistu kolmessa kortissa. */}
+            <video
+              controls
+              playsInline
+              preload="metadata"
+              style={{
+                width: '100%',
+                borderRadius: 14,
+                marginBottom: '1.25rem',
+                backgroundColor: '#000000',
+              }}
+            >
+              <source src={testimonialVideo} type="video/mp4" />
+              Selaimesi ei tue videotoistoa.
+            </video>
+
+            <div>
               <div
-                key={t.name}
                 style={{
-                  backgroundColor: '#f8fafc',
-                  borderRadius: 16,
-                  padding: '1.75rem',
-                  border: '1px solid #e2e8f0',
+                  fontWeight: 700,
+                  color: '#0f2444',
+                  fontSize: '0.95rem',
                 }}
               >
-                <div
-                  style={{
-                    display: 'flex',
-                    gap: '0.25rem',
-                    marginBottom: '1rem',
-                  }}
-                >
-                  {Array.from({length: t.rating}).map((_, i) => (
-                    <Star key={i} size={16} color="#f97316" fill="#f97316" />
-                  ))}
-                </div>
-                <p
-                  style={{
-                    color: '#374151',
-                    fontSize: '0.9rem',
-                    lineHeight: 1.7,
-                    marginBottom: '1.25rem',
-                  }}
-                >
-                  "{t.text}"
-                </p>
-                <div>
-                  <div
-                    style={{
-                      fontWeight: 700,
-                      color: '#0f2444',
-                      fontSize: '0.9rem',
-                    }}
-                  >
-                    {t.name}
-                  </div>
-                  <div style={{color: '#64748b', fontSize: '0.8rem'}}>
-                    {t.company}
-                  </div>
-                </div>
+                {testimonials[0].name}
               </div>
-            ))}
+              <div style={{color: '#64748b', fontSize: '0.85rem'}}>
+                {testimonials[0].company}
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
+      {/* CTA: viimeinen konversioblokki, vie rekisteröintiin tai hinnoitteluun. */}
       <section
         style={{
           background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
