@@ -1,7 +1,6 @@
-import {Link} from 'react-router';
+import {Link} from 'react-router-dom';
 import {Truck, Mail, Phone, MapPin} from 'lucide-react';
 
-// Footer kokoaa navigaation, portaalilinkit ja yhteystiedot yhteen.
 export function Footer() {
   return (
     <footer
@@ -80,7 +79,7 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Links */}
+          {/* Links: julkiset asiakassivut */}
           <div>
             <h4
               style={{
@@ -102,7 +101,6 @@ export function Footer() {
                 gap: '0.5rem',
               }}
             >
-              {/* Linkit renderöidään taulukosta, jotta lisäys/poisto on helppoa ilman JSX-toistoa. */}
               {[
                 {to: '/products', label: 'Tuotteet'},
                 {to: '/pricing', label: 'Hinnoittelu'},
@@ -132,6 +130,7 @@ export function Footer() {
             </ul>
           </div>
 
+          {/* Links: roolikohtaiset portaalit */}
           <div>
             <h4
               style={{
@@ -153,7 +152,6 @@ export function Footer() {
                 gap: '0.5rem',
               }}
             >
-              {/* Portaalilinkit pidetään erillisenä listana, jotta roolikohtainen navilogiikka on selkeä. */}
               {[
                 {to: '/login', label: 'Asiakkaan kirjautuminen'},
                 {to: '/register', label: 'Rekisteröityminen'},
@@ -200,7 +198,6 @@ export function Footer() {
             <div
               style={{display: 'flex', flexDirection: 'column', gap: '0.75rem'}}
             >
-              {/* Ikoni + teksti -parit tehdään mapilla, jotta rakenne pysyy yhtenäisenä. */}
               {[
                 {Icon: Mail, text: 'info@quantixlogistics.fi'},
                 {Icon: Phone, text: '+358 9 1234 5678'},
@@ -227,7 +224,7 @@ export function Footer() {
         </div>
       </div>
 
-      {/* Alapalkki: copyright + juridiset linkit */}
+      {/* Bottom bar: copyright + legal-linkit */}
       <div
         style={{
           borderTop: '1px solid rgba(255,255,255,0.07)',

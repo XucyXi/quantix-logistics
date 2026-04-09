@@ -3,13 +3,14 @@
   "editor.defaultFormatter": "esbenp.prettier-vscode",
 
   "eslint.workingDirectories": [
-    { "pattern": "./backend/" },
-    { "pattern": "./frontend/" }
+    {"pattern": "./backend/"},
+    {"pattern": "./frontend/"}
   ],
   "eslint.validate": [
     "javascript",
     "javascriptreact",
     "typescript",
     "typescriptreact"
-  ]
+  ],
+  "css.lint.unknownAtRules": "ignore"
 }
