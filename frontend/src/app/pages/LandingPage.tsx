@@ -14,6 +14,10 @@ import {
   Star,
   ChevronRight,
   Zap,
+  Mail,
+  Phone,
+  MapPin,
+  Send,
 } from 'lucide-react';
 
 // Rivikohtainen lisaselitys loytyy tiedostosta: src/app/pages/LandingPage.comments.md
@@ -102,8 +106,8 @@ const roles = [
 // Asiakastiedot säilytetään edelleen datassa mahdollista laajennusta varten.
 const testimonials = [
   {
-    name: 'Mirka Korhonen',
-    company: 'K-Market Järvenpää',
+    name: 'Jaakko Koskinen',
+    company: 'Viiden tähden ravintola Helsinki',
     text: 'Quantix on muuttanut tavan, jolla seuraamme saapuvia toimituksia. Ei enää yllätysten odottelua – tiedämme tarkalleen milloin rekka saapuu.',
     rating: 5,
   },
@@ -120,6 +124,20 @@ const testimonials = [
     rating: 5,
   },
 ];
+
+// Yhteinen tyyli lomakkeen kentille
+const inputStyle = {
+  width: '100%',
+  padding: '0.875rem 1rem',
+  borderRadius: 8,
+  border: '1px solid #cbd5e1',
+  backgroundColor: 'white',
+  fontSize: '0.95rem',
+  color: '#334155',
+  fontFamily: "'Space Grotesk', sans-serif",
+  outline: 'none',
+  transition: 'border-color 0.2s',
+};
 
 export function LandingPage() {
   // now-tila päivittyy sekunnin välein, jotta hero-badgen kello käy reaaliajassa.
@@ -160,7 +178,6 @@ export function LandingPage() {
           backgroundColor: '#0a1929',
         }}
       >
-        {/* Background image */}
         <div
           style={{
             position: 'absolute',
@@ -171,7 +188,6 @@ export function LandingPage() {
             opacity: 0.18,
           }}
         />
-        {/* Gradient overlay */}
         <div
           style={{
             position: 'absolute',
@@ -191,14 +207,12 @@ export function LandingPage() {
             width: '100%',
           }}
         >
-          {/* Hero jaetaan kahteen kolumniin: vasen teksti + oikea statsi-visualisointi. */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <motion.div
               initial={{opacity: 0, y: 30}}
               animate={{opacity: 1, y: 0}}
               transition={{duration: 0.7}}
             >
-              {/* Live-badge näyttää järjestelmän tilan sekä kellon reaaliajassa. */}
               <div
                 style={{
                   display: 'inline-flex',
@@ -333,7 +347,6 @@ export function LandingPage() {
                   marginTop: '2.5rem',
                 }}
               >
-                {/* Sertifikaatit mapataan yhdestä taulukosta, jolloin sisältö on helppo muuttaa. */}
                 {['HACCP-sertifioitu', 'ISO 22000', 'GDPR-yhteensopiva'].map(
                   (tag) => (
                     <div
@@ -354,7 +367,6 @@ export function LandingPage() {
               </div>
             </motion.div>
 
-            {/* Stats cards */}
             <motion.div
               initial={{opacity: 0, x: 40}}
               animate={{opacity: 1, x: 0}}
@@ -397,7 +409,6 @@ export function LandingPage() {
           </div>
         </div>
 
-        {/* Bottom wave */}
         <div
           style={{
             position: 'absolute',
@@ -410,7 +421,7 @@ export function LandingPage() {
         />
       </section>
 
-      {/* Stats row (mobile): desktopin oikea sarake korvataan tällä pienemmillä ruuduilla. */}
+      {/* Stats row (mobile) */}
       <section
         style={{backgroundColor: '#f8fafc', padding: '2rem 1.5rem'}}
         className="lg:hidden"
@@ -446,7 +457,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Features: palvelun tärkeimmät hyödyt kortteina. */}
+      {/* Features */}
       <section style={{backgroundColor: '#f8fafc', padding: '5rem 1.5rem'}}>
         <div style={{maxWidth: 1280, margin: '0 auto'}}>
           <div style={{textAlign: 'center', marginBottom: '3.5rem'}}>
@@ -546,7 +557,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* How it works: vaiheistus näyttää toimitusketjun alusta loppuun. */}
+      {/* How it works */}
       <section style={{backgroundColor: '#0f2444', padding: '5rem 1.5rem'}}>
         <div style={{maxWidth: 1280, margin: '0 auto'}}>
           <div style={{textAlign: 'center', marginBottom: '3.5rem'}}>
@@ -719,7 +730,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Roles: jokaiselle käyttäjäryhmälle oma kortti ja suora sisäänmeno. */}
+      {/* Roles */}
       <section style={{backgroundColor: '#f8fafc', padding: '5rem 1.5rem'}}>
         <div style={{maxWidth: 1280, margin: '0 auto'}}>
           <div style={{textAlign: 'center', marginBottom: '3rem'}}>
@@ -812,7 +823,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Testimonials: yksi isompi videokortti ilman kolmen kortin toistoa. */}
+      {/* Testimonials */}
       <section style={{backgroundColor: 'white', padding: '5rem 1.5rem'}}>
         <div style={{maxWidth: 1280, margin: '0 auto'}}>
           <div style={{textAlign: 'center', marginBottom: '3rem'}}>
@@ -849,7 +860,6 @@ export function LandingPage() {
               ))}
             </div>
 
-            {/* Yksi isompi asiakasvideo, ettei sama klippi toistu kolmessa kortissa. */}
             <video
               controls
               playsInline
@@ -883,7 +893,249 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* CTA: viimeinen konversioblokki, vie rekisteröintiin tai hinnoitteluun. */}
+      {/* Ota yhteyttä */}
+      <section
+        style={{
+          backgroundColor: 'white',
+          padding: '5rem 1.5rem',
+          borderTop: '1px solid #f1f5f9',
+        }}
+      >
+        <div style={{maxWidth: 1280, margin: '0 auto'}}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+            {/* Vasen puoli: Yhteystiedot */}
+            <div>
+              <div
+                style={{
+                  display: 'inline-block',
+                  backgroundColor: 'rgba(249,115,22,0.1)',
+                  color: '#f97316',
+                  padding: '0.3rem 1rem',
+                  borderRadius: 20,
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  marginBottom: '1rem',
+                }}
+              >
+                OTA YHTEYTTÄ
+              </div>
+              <h2
+                style={{
+                  color: '#0f2444',
+                  fontSize: 'clamp(1.75rem, 3vw, 2.5rem)',
+                  fontWeight: 800,
+                  marginBottom: '1rem',
+                }}
+              >
+                Kysyttävää? Olemme täällä auttamassa.
+              </h2>
+              <p
+                style={{
+                  color: '#64748b',
+                  fontSize: '1.05rem',
+                  lineHeight: 1.6,
+                  marginBottom: '2.5rem',
+                }}
+              >
+                Haluatko kuulla lisää siitä, miten Quantix voi tehostaa
+                yrityksesi ruokalogistiikkaa? Jätä viesti, niin asiantuntijamme
+                on sinuun yhteydessä.
+              </p>
+
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1.5rem',
+                }}
+              >
+                {[
+                  {icon: Mail, title: 'Sähköposti', value: 'myynti@quantix.fi'},
+                  {icon: Phone, title: 'Puhelin', value: '+358 10 123 4567'},
+                  {
+                    icon: MapPin,
+                    title: 'Toimisto',
+                    value: 'Logistiikkakuja 1, 00980 Helsinki',
+                  },
+                ].map((info) => (
+                  <div
+                    key={info.title}
+                    style={{display: 'flex', alignItems: 'center', gap: '1rem'}}
+                  >
+                    <div
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 12,
+                        backgroundColor: '#f8fafc',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: '1px solid #e2e8f0',
+                      }}
+                    >
+                      <info.icon size={20} color="#f97316" />
+                    </div>
+                    <div>
+                      <div
+                        style={{
+                          color: '#64748b',
+                          fontSize: '0.85rem',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {info.title}
+                      </div>
+                      <div style={{color: '#0f2444', fontWeight: 700}}>
+                        {info.value}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Oikea puoli: Lomake */}
+            <div
+              style={{
+                backgroundColor: '#f8fafc',
+                borderRadius: 20,
+                padding: '2.5rem',
+                border: '1px solid #e2e8f0',
+              }}
+            >
+              <form
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1.25rem',
+                }}
+                onSubmit={(e) => e.preventDefault()}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    <label
+                      style={{
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        color: '#0f2444',
+                      }}
+                    >
+                      Etunimi
+                    </label>
+                    <input type="text" placeholder="Matti" style={inputStyle} />
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    <label
+                      style={{
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        color: '#0f2444',
+                      }}
+                    >
+                      Sukunimi
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Meikäläinen"
+                      style={inputStyle}
+                    />
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.5rem',
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                      color: '#0f2444',
+                    }}
+                  >
+                    Sähköposti
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="matti.meikalainen@yritys.fi"
+                    style={inputStyle}
+                  />
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.5rem',
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                      color: '#0f2444',
+                    }}
+                  >
+                    Viesti
+                  </label>
+                  <textarea
+                    rows={4}
+                    placeholder="Miten voimme auttaa?"
+                    style={{...inputStyle, resize: 'vertical'}}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  style={{
+                    marginTop: '0.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    padding: '1rem',
+                    borderRadius: 10,
+                    backgroundColor: '#f97316',
+                    color: 'white',
+                    fontWeight: 700,
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s',
+                    fontSize: '1rem',
+                  }}
+                  onMouseOver={(e) =>
+                    (e.currentTarget.style.backgroundColor = '#ea580c')
+                  }
+                  onMouseOut={(e) =>
+                    (e.currentTarget.style.backgroundColor = '#f97316')
+                  }
+                >
+                  Lähetä viesti
+                  <Send size={18} />
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
       <section
         style={{
           background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
@@ -949,6 +1201,21 @@ export function LandingPage() {
               }}
             >
               Katso hinnat
+            </Link>
+            <Link
+              to="/meista"
+              style={{
+                padding: '0.9rem 2.25rem',
+                borderRadius: 10,
+                backgroundColor: 'rgba(255,255,255,0.08)',
+                border: '2px solid rgba(255,255,255,0.25)',
+                color: 'white',
+                fontWeight: 600,
+                fontSize: '1rem',
+                textDecoration: 'none',
+              }}
+            >
+              Meistä
             </Link>
           </div>
         </div>

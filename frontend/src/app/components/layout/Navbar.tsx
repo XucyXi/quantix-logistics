@@ -26,8 +26,8 @@ export function Navbar() {
 
   const navLinks = [
     {to: '/', label: 'Etusivu'},
-    {to: '/products', label: 'Tuotteet'},
-    {to: '/pricing', label: 'Hinnoittelu'},
+    {to: '/tuotteet', label: 'Tuotteet'},
+    {to: '/hinnoittelu', label: 'Hinnoittelu'},
   ];
 
   // Juurireitti käsitellään erikoistapauksena, muut polut vertaillaan startsWith-logiikalla.
@@ -53,7 +53,7 @@ export function Navbar() {
     admin: '/admin',
     driver: '/driver',
     store: '/store',
-    customer: '/products',
+    customer: '/tuotteet',
   };
 
   return (
@@ -188,7 +188,7 @@ export function Navbar() {
           >
             {/* Cart */}
             <Link
-              to="/cart"
+              to="/ostoskori"
               style={{
                 position: 'relative',
                 display: 'flex',
