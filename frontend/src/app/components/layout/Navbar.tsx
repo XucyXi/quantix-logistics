@@ -52,6 +52,7 @@ export function Navbar() {
   const roleDashboard: Record<string, string> = {
     admin: '/admin',
     driver: '/driver',
+    store: '/store',
     customer: '/tuotteet',
   };
 
@@ -187,7 +188,7 @@ export function Navbar() {
           >
             {/* Cart */}
             <Link
-              to="/cart"
+              to="/ostoskori"
               style={{
                 position: 'relative',
                 display: 'flex',

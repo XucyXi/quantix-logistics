@@ -1,7 +1,6 @@
 import {useState} from 'react';
-import {motion} from 'motion/react';
+import {motion, AnimatePresence} from 'motion/react';
 import {
-  ShoppingCart,
   Package,
   Search,
   SlidersHorizontal,
@@ -9,24 +8,52 @@ import {
   AlertCircle,
   Tag,
   Box,
+  Plus,
+  Minus,
+  ShoppingCart,
+  Check,
 } from 'lucide-react';
-import {useCart} from '../contexts/CartContext';
 
-/**
- * MOCK-DATA: Tämä simuloi oikean API-rajapinnan palauttamaa JSON-dataa.
- * Tarkoitus on mahdollistaa UI:n ja hakulogiikan rakentaminen valmiiksi
- * ennen kuin varsinainen backend ja tietokanta on kytketty.
- * Rakenne (kategoriat ja tuotteet erillään) mukailee tyypillistä relaatiotietokannan vastausta.
- */
+// Mock wholesale product catalog simulating API response
 const PRODUCTS_DATA = {
   updated: '2026-04-02T08:00:00',
   categories: [
-    {id: 'maito', name: 'Maitotuotteet', icon: '🥛', color: '#3b82f6'},
-    {id: 'liha', name: 'Liha & Kala', icon: '🥩', color: '#ef4444'},
-    {id: 'vihannes', name: 'Vihannes & Hedelmä', icon: '🥦', color: '#22c55e'},
-    {id: 'kuiva', name: 'Kuivatuotteet', icon: '🌾', color: '#f59e0b'},
-    {id: 'pakaste', name: 'Pakasteet', icon: '❄️', color: '#0891b2'},
-    {id: 'juoma', name: 'Juomat', icon: '🧃', color: '#8b5cf6'},
+    {
+      id: 'maito',
+      name: 'Maitotuotteet',
+      icon: '🥛',
+      color: '#3b82f6',
+    },
+    {
+      id: 'liha',
+      name: 'Liha & Kala',
+      icon: '🥩',
+      color: '#ef4444',
+    },
+    {
+      id: 'vihannes',
+      name: 'Vihannes & Hedelmä',
+      icon: '🥦',
+      color: '#22c55e',
+    },
+    {
+      id: 'kuiva',
+      name: 'Kuivatuotteet',
+      icon: '🌾',
+      color: '#f59e0b',
+    },
+    {
+      id: 'pakaste',
+      name: 'Pakasteet',
+      icon: '❄️',
+      color: '#0891b2',
+    },
+    {
+      id: 'juoma',
+      name: 'Juomat',
+      icon: '🧃',
+      color: '#8b5cf6',
+    },
   ],
   products: [
     {
@@ -45,6 +72,7 @@ const PRODUCTS_DATA = {
       kcal: 61,
       inStock: true,
       tags: ['Luomu'],
+      isNew: true,
     },
     {
       id: 'p-002',
@@ -113,6 +141,7 @@ const PRODUCTS_DATA = {
       kcal: 12,
       inStock: true,
       tags: ['Kotimainen', 'Luomu'],
+      isNew: true,
     },
     {
       id: 'p-006',
@@ -164,6 +193,7 @@ const PRODUCTS_DATA = {
       kcal: 360,
       inStock: true,
       tags: [],
+      isNew: true,
     },
     {
       id: 'p-009',
@@ -236,7 +266,6 @@ const PRODUCTS_DATA = {
   ],
 };
 
-// Ylläpidetään keskitettyjä tyylimäärittelyitä badgeille, jotta UI pysyy yhtenäisenä
 const storageLabels: Record<
   string,
   {label: string; color: string; bg: string}
@@ -253,27 +282,16 @@ const tagColors: Record<string, {bg: string; color: string}> = {
   Suomalainen: {bg: '#ede9fe', color: '#7c3aed'},
 };
 
-/**
- * ProductsPage-komponentti
- * Vastaa tuotteiden listaamisesta, filtteröinnistä ja ostoskoriin lisäämisestä.
- * Sisältää monipuolisen hakulogiikan, joka reagoi reaaliaikaisesti käyttäjän syötteisiin.
- */
 export function ProductsPage() {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [onlyInStock, setOnlyInStock] = useState(false);
-
-  // Säilytetään lisättyjen tuotteiden ID:t väliaikaisesti, jotta voimme
-  // näyttää painikkeessa "Lisätty ✓" -animaation ilman erillistä tilaa per tuote.
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [addedIds, setAddedIds] = useState<string[]>([]);
-  const {addItem} = useCart();
 
-  // Yhdistetty filtteröintilogiikka. Tämä ajetaan aina uudestaan,
-  // kun jokin state (search, category, inStock) muuttuu.
   const filtered = PRODUCTS_DATA.products.filter((p) => {
     const matchesCat =
       activeCategory === 'all' || p.categoryId === activeCategory;
-    // Haku kohdistuu nimeen, brändiin, SKU:hun ja kuvaukseen laajan osumatarkkuuden takaamiseksi.
     const matchesSearch =
       !search ||
       p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -281,29 +299,38 @@ export function ProductsPage() {
       p.sku.toLowerCase().includes(search.toLowerCase()) ||
       p.description.toLowerCase().includes(search.toLowerCase());
     const matchesStock = !onlyInStock || p.inStock;
-
     return matchesCat && matchesSearch && matchesStock;
   });
 
-  const handleAddToCart = (product: (typeof PRODUCTS_DATA.products)[0]) => {
-    // Viedään tuote CartContextin hallinnoimaan globaaliin ostoskoriin
-    addItem({
-      id: product.id,
-      name: product.name,
-      description: `${product.brand} · ${product.packageSize}`,
-      price: product.pricePerUnit,
-    });
-
-    // Luodaan UX-efekti: lisätään ID listaan visuaalista palautetta varten
-    // ja poistetaan se 1.5 sekunnin kuluttua.
-    setAddedIds((prev) => [...prev, product.id]);
-    setTimeout(
-      () => setAddedIds((prev) => prev.filter((id) => id !== product.id)),
-      1500
-    );
+  const incrementQuantity = (productId: string) => {
+    setQuantities((prev) => ({
+      ...prev,
+      [productId]: (prev[productId] || 0) + 1,
+    }));
   };
 
-  // Apu-funktiot datan hakemiseen kategorioiden taulusta
+  const decrementQuantity = (productId: string) => {
+    setQuantities((prev) => ({
+      ...prev,
+      [productId]: Math.max(0, (prev[productId] || 0) - 1),
+    }));
+  };
+
+  const addToCart = (productId: string) => {
+    const qty = quantities[productId] || 0;
+    if (qty > 0) {
+      setAddedIds((prev) => [...prev, productId]);
+      setTimeout(() => {
+        setAddedIds((prev) => prev.filter((id) => id !== productId));
+      }, 2000);
+      // Reset quantity after adding to cart
+      setQuantities((prev) => ({
+        ...prev,
+        [productId]: 0,
+      }));
+    }
+  };
+
   const getCategoryColor = (categoryId: string) => {
     return (
       PRODUCTS_DATA.categories.find((c) => c.id === categoryId)?.color ??
@@ -326,7 +353,7 @@ export function ProductsPage() {
         minHeight: '100vh',
       }}
     >
-      {/* Header-osio: Kertoo käyttäjälle päivämäärän ja tuotteiden kokonaismäärän */}
+      {/* Header */}
       <div
         style={{
           background: 'linear-gradient(135deg, #0f2444 0%, #1e3a5f 100%)',
@@ -369,7 +396,7 @@ export function ProductsPage() {
       </div>
 
       <div style={{maxWidth: 1280, margin: '0 auto', padding: '2rem 1.5rem'}}>
-        {/* Kategoriatabit: Renderöidään dynaamisesti PRODUCTS_DATA.categories -listasta */}
+        {/* Category tabs */}
         <div style={{overflowX: 'auto', marginBottom: '1.5rem'}}>
           <div
             style={{display: 'flex', gap: '0.5rem', minWidth: 'max-content'}}
@@ -427,7 +454,7 @@ export function ProductsPage() {
           </div>
         </div>
 
-        {/* Hakupalkki ja filtterit */}
+        {/* Filters bar */}
         <div
           style={{
             backgroundColor: 'white',
@@ -493,9 +520,8 @@ export function ProductsPage() {
           </div>
         </div>
 
-        {/* Tuotteiden grid-näkymä. Käyttää Framer Motionia animaatioihin */}
+        {/* Products grid */}
         {filtered.length === 0 ? (
-          // Virhetila: Renderöidään, jos hakuehdot ovat liian tiukat
           <div
             style={{
               textAlign: 'center',
@@ -505,268 +531,176 @@ export function ProductsPage() {
               color: '#94a3b8',
             }}
           >
-            <AlertCircle
-              size={40}
-              style={{marginBottom: '0.75rem', display: 'inline-block'}}
-            />
+            <AlertCircle size={40} style={{marginBottom: '0.75rem'}} />
             <p>Ei hakuasi vastaavia tuotteita.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filtered.map((product, i) => {
-              const catColor = getCategoryColor(product.categoryId);
-              const storageInfo = storageLabels[product.storage];
+              const quantity = quantities[product.id] || 0;
               const isAdded = addedIds.includes(product.id);
-
               return (
                 <motion.div
                   key={product.id}
-                  // Animaatio: Tuotteet liukuvat pehmeästi ylöspäin yksi kerrallaan
                   initial={{opacity: 0, y: 16}}
                   animate={{opacity: 1, y: 0}}
-                  transition={{duration: 0.35, delay: i * 0.05}}
+                  transition={{duration: 0.35, delay: i * 0.03}}
                   style={{
                     backgroundColor: 'white',
-                    borderRadius: 16,
-                    overflow: 'hidden',
-                    boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+                    borderRadius: 12,
+                    overflow: 'visible',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
                     border: '1px solid #f1f5f9',
                     display: 'flex',
                     flexDirection: 'column',
-                    // Loppuunmyydyt tuotteet himmennetään UX:n parantamiseksi
-                    opacity: product.inStock ? 1 : 0.7,
+                    position: 'relative',
+                    opacity: product.inStock ? 1 : 0.6,
                   }}
                 >
-                  {/* Visuaalinen indikaattori kategorian väristä */}
+                  {/* Category icon as product visual */}
                   <div
                     style={{
-                      height: 5,
-                      backgroundColor: catColor,
-                      opacity: product.inStock ? 1 : 0.4,
+                      width: '100%',
+                      height: 180,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: '#f8fafc',
+                      fontSize: '4rem',
                     }}
-                  />
+                  >
+                    {PRODUCTS_DATA.categories.find(
+                      (c) => c.id === product.categoryId
+                    )?.icon ?? '📦'}
+                  </div>
 
+                  {/* Content */}
                   <div
                     style={{
-                      padding: '1.25rem',
+                      padding: '1rem',
                       flex: 1,
                       display: 'flex',
                       flexDirection: 'column',
                     }}
                   >
+                    {/* Product name */}
+                    <h3
+                      style={{
+                        color: '#0f2444',
+                        fontWeight: 600,
+                        fontSize: '0.9rem',
+                        margin: 0,
+                        marginBottom: '0.5rem',
+                        lineHeight: 1.3,
+                        minHeight: '2.6rem',
+                      }}
+                    >
+                      {product.name}
+                    </h3>
+
+                    {/* Price */}
+                    <div style={{marginBottom: '0.5rem'}}>
+                      <div
+                        style={{
+                          color: '#0f2444',
+                          fontWeight: 800,
+                          fontSize: '1.5rem',
+                          lineHeight: 1,
+                        }}
+                      >
+                        {product.pricePerUnit.toFixed(2).replace('.', ',')} €
+                      </div>
+                      <div
+                        style={{
+                          color: '#94a3b8',
+                          fontSize: '0.75rem',
+                          marginTop: '0.2rem',
+                        }}
+                      >
+                        per {product.unit}
+                      </div>
+                    </div>
+
+                    {/* Quantity controls */}
                     <div
                       style={{
                         display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'flex-start',
-                        marginBottom: '0.625rem',
-                      }}
-                    >
-                      <div style={{flex: 1}}>
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            marginBottom: '0.25rem',
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontSize: '0.7rem',
-                              fontWeight: 700,
-                              color: catColor,
-                              backgroundColor: `${catColor}15`,
-                              padding: '0.15rem 0.5rem',
-                              borderRadius: 4,
-                            }}
-                          >
-                            {getCategoryName(product.categoryId).toUpperCase()}
-                          </span>
-                          {!product.inStock && (
-                            <span
-                              style={{
-                                fontSize: '0.7rem',
-                                fontWeight: 700,
-                                color: '#dc2626',
-                                backgroundColor: '#fee2e2',
-                                padding: '0.15rem 0.5rem',
-                                borderRadius: 4,
-                              }}
-                            >
-                              EI SAATAVILLA
-                            </span>
-                          )}
-                        </div>
-                        <h3
-                          style={{
-                            color: '#0f2444',
-                            fontWeight: 700,
-                            fontSize: '1rem',
-                            margin: 0,
-                            lineHeight: 1.3,
-                          }}
-                        >
-                          {product.name}
-                        </h3>
-                        <div
-                          style={{
-                            color: '#64748b',
-                            fontSize: '0.78rem',
-                            marginTop: '0.2rem',
-                          }}
-                        >
-                          {product.brand}
-                        </div>
-                      </div>
-                      <div
-                        style={{
-                          textAlign: 'right',
-                          flexShrink: 0,
-                          marginLeft: '0.75rem',
-                        }}
-                      >
-                        <div
-                          style={{
-                            color: '#f97316',
-                            fontWeight: 800,
-                            fontSize: '1.15rem',
-                          }}
-                        >
-                          {product.pricePerUnit.toFixed(2)} €
-                        </div>
-                        <div style={{color: '#94a3b8', fontSize: '0.72rem'}}>
-                          / {product.unit}
-                        </div>
-                      </div>
-                    </div>
-
-                    <p
-                      style={{
-                        color: '#64748b',
-                        fontSize: '0.83rem',
-                        lineHeight: 1.55,
-                        marginBottom: '0.875rem',
-                      }}
-                    >
-                      {product.description}
-                    </p>
-
-                    {/* Tarkat tuotetiedot (pakkauskoko, sku, säilytys, minimitilaus) */}
-                    <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: '1fr 1fr',
+                        alignItems: 'center',
                         gap: '0.5rem',
-                        marginBottom: '0.875rem',
-                        padding: '0.75rem',
-                        backgroundColor: '#f8fafc',
-                        borderRadius: 10,
+                        marginTop: 'auto',
+                        marginBottom: '0.75rem',
                       }}
                     >
-                      <div
+                      <button
+                        onClick={() => decrementQuantity(product.id)}
+                        disabled={!product.inStock || quantity === 0}
                         style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 8,
+                          border: '1px solid #e2e8f0',
+                          backgroundColor: 'white',
+                          cursor:
+                            product.inStock && quantity > 0
+                              ? 'pointer'
+                              : 'not-allowed',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '0.375rem',
+                          justifyContent: 'center',
+                          transition: 'all 0.2s',
+                          opacity: !product.inStock || quantity === 0 ? 0.5 : 1,
                         }}
                       >
-                        <Box size={13} color="#94a3b8" />
-                        <span style={{fontSize: '0.75rem', color: '#64748b'}}>
-                          {product.packageSize}
-                        </span>
-                      </div>
+                        <Minus size={16} color="#64748b" />
+                      </button>
+
                       <div
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.375rem',
+                          flex: 1,
+                          textAlign: 'center',
+                          fontWeight: 600,
+                          fontSize: '0.9rem',
+                          color: '#0f2444',
                         }}
                       >
-                        <Tag size={13} color="#94a3b8" />
-                        <span style={{fontSize: '0.75rem', color: '#64748b'}}>
-                          SKU: {product.sku}
-                        </span>
+                        {quantity} kpl
                       </div>
-                      <div
+
+                      <button
+                        onClick={() => incrementQuantity(product.id)}
+                        disabled={!product.inStock}
                         style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 8,
+                          border: '1px solid #f97316',
+                          backgroundColor: '#f97316',
+                          cursor: product.inStock ? 'pointer' : 'not-allowed',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '0.375rem',
+                          justifyContent: 'center',
+                          transition: 'all 0.2s',
+                          opacity: !product.inStock ? 0.5 : 1,
                         }}
                       >
-                        <Thermometer size={13} color={storageInfo.color} />
-                        <span
-                          style={{
-                            fontSize: '0.72rem',
-                            fontWeight: 600,
-                            color: storageInfo.color,
-                            backgroundColor: storageInfo.bg,
-                            padding: '0.1rem 0.4rem',
-                            borderRadius: 4,
-                          }}
-                        >
-                          {storageInfo.label}
-                        </span>
-                      </div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.375rem',
-                        }}
-                      >
-                        <Package size={13} color="#94a3b8" />
-                        <span style={{fontSize: '0.75rem', color: '#64748b'}}>
-                          Min. {product.minOrder} ltk
-                        </span>
-                      </div>
+                        <Plus size={16} color="white" />
+                      </button>
                     </div>
 
-                    {/* Tuotetagit (esim. Luomu, Kotimainen) */}
-                    {product.tags.length > 0 && (
-                      <div
-                        style={{
-                          display: 'flex',
-                          gap: '0.375rem',
-                          flexWrap: 'wrap',
-                          marginBottom: '0.875rem',
-                        }}
-                      >
-                        {product.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            style={{
-                              padding: '0.2rem 0.6rem',
-                              borderRadius: 20,
-                              fontSize: '0.72rem',
-                              fontWeight: 600,
-                              backgroundColor: tagColors[tag]?.bg ?? '#f1f5f9',
-                              color: tagColors[tag]?.color ?? '#64748b',
-                            }}
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Ostoskoripainike
-                     * Estetty (disabled), jos tuotetta ei ole varastossa.
-                     * Väri muuttuu hetkellisesti vihreäksi (isAdded), kun tuote lisätään.
-                     */}
-                    <button
-                      onClick={() =>
-                        product.inStock && handleAddToCart(product)
-                      }
-                      disabled={!product.inStock}
+                    {/* Add to cart button */}
+                    <motion.button
+                      onClick={() => addToCart(product.id)}
+                      disabled={!product.inStock || quantity === 0}
+                      whileTap={{scale: 0.95}}
                       style={{
-                        marginTop: 'auto',
                         width: '100%',
-                        padding: '0.7rem',
+                        padding: '0.75rem',
                         borderRadius: 10,
                         border: 'none',
-                        cursor: product.inStock ? 'pointer' : 'not-allowed',
+                        cursor:
+                          product.inStock && quantity > 0
+                            ? 'pointer'
+                            : 'not-allowed',
                         fontFamily: "'Space Grotesk', sans-serif",
                         fontWeight: 600,
                         fontSize: '0.9rem',
@@ -775,21 +709,65 @@ export function ProductsPage() {
                         justifyContent: 'center',
                         gap: '0.5rem',
                         transition: 'all 0.2s',
-                        backgroundColor: !product.inStock
-                          ? '#e2e8f0'
-                          : isAdded
-                            ? '#22c55e' // Vihreä onnistumisen väri
-                            : '#f97316', // Oranssi oletusväri
-                        color: !product.inStock ? '#94a3b8' : 'white',
+                        backgroundColor:
+                          !product.inStock || quantity === 0
+                            ? '#e2e8f0'
+                            : isAdded
+                              ? '#22c55e'
+                              : '#0f2444',
+                        color:
+                          !product.inStock || quantity === 0
+                            ? '#94a3b8'
+                            : 'white',
+                        position: 'relative',
+                        overflow: 'visible',
                       }}
                     >
-                      <ShoppingCart size={16} />
-                      {!product.inStock
-                        ? 'Ei saatavilla'
-                        : isAdded
-                          ? 'Lisätty! ✓'
-                          : 'Lisää tilaukseen'}
-                    </button>
+                      {isAdded ? (
+                        <>
+                          <Check size={16} />
+                          Lisätty!
+                        </>
+                      ) : (
+                        <>
+                          <ShoppingCart size={16} />
+                          Lisää ostoskoriin
+                        </>
+                      )}
+
+                      {/* Success animation */}
+                      <AnimatePresence>
+                        {isAdded && (
+                          <motion.div
+                            initial={{scale: 0, opacity: 0}}
+                            animate={{scale: 1, opacity: 1}}
+                            exit={{scale: 0, opacity: 0}}
+                            transition={{
+                              type: 'spring',
+                              stiffness: 500,
+                              damping: 25,
+                            }}
+                            style={{
+                              position: 'absolute',
+                              top: -40,
+                              left: '50%',
+                              transform: 'translateX(-50%)',
+                              backgroundColor: '#22c55e',
+                              color: 'white',
+                              padding: '0.5rem 1rem',
+                              borderRadius: 8,
+                              fontSize: '0.8rem',
+                              fontWeight: 700,
+                              boxShadow: '0 4px 12px rgba(34,197,94,0.4)',
+                              whiteSpace: 'nowrap',
+                              zIndex: 10,
+                            }}
+                          >
+                            ✓ {quantity} kpl lisätty!
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.button>
                   </div>
                 </motion.div>
               );

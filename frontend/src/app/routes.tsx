@@ -1,51 +1,68 @@
-import {Navigate, Route, Routes} from 'react-router-dom';
+import {createBrowserRouter} from 'react-router';
+import {Root} from './layouts/Root';
 import {AdminRoot} from './layouts/AdminRoot';
 import {DriverRoot} from './layouts/DriverRoot';
-import {Root} from './layouts/Root';
 import {StoreRoot} from './layouts/StoreRoot';
-import {AdminDashboard} from './pages/AdminDashboard';
-import {AdminLogin} from './pages/AdminLogin';
-import {CartPage} from './pages/CartPage';
-import {DriverDashboard} from './pages/DriverDashboard';
-import {ExampleTablePage} from './pages/ExampleTablePage';
 import {LandingPage} from './pages/LandingPage';
-import {LoginPage} from './pages/LoginPage';
-import {PricingPage} from './pages/PricingPage';
+import {AboutPage} from './pages/AboutPage.tsx';
 import {ProductsPage} from './pages/ProductsPage';
+import {PricingPage} from './pages/PricingPage';
+import {LoginPage} from './pages/LoginPage';
 import {RegisterPage} from './pages/RegisterPage';
+import {CartPage} from './pages/CartPage';
+import {AdminLogin} from './pages/AdminLogin';
+import {AdminDashboard} from './pages/AdminDashboard';
+import {DriverDashboard} from './pages/DriverDashboard';
 import {StoreDashboard} from './pages/StoreDashboard';
 
-export function AppRoutes() {
-  return (
-    // Kaikki reitit keskitetään tänne, jotta navigaatio on yhdessä paikassa.
-    <Routes>
-      {/* Root on yhteinen layout, joka lisää Navbarin ja Footerin kaikille alasivuille. */}
-      <Route element={<Root />}>
-        {/* Etusivu avautuu juuripolusta / */}
-        <Route index element={<LandingPage />} />
-        {/* Julkiset sivut */}
-        <Route path="products" element={<ProductsPage />} />
-        <Route path="pricing" element={<PricingPage />} />
-        <Route path="cart" element={<CartPage />} />
-        <Route path="login" element={<LoginPage />} />
-        <Route path="register" element={<RegisterPage />} />
-        {/* Adminin alireitit pidetään omassa haarassaan */}
-        <Route path="admin" element={<AdminRoot />}>
-          <Route index element={<AdminDashboard />} />
-          <Route path="login" element={<AdminLogin />} />
-        </Route>
-        {/* Muut roolikohtaiset dashboardit */}
-        <Route path="driver" element={<DriverRoot />}>
-          <Route index element={<DriverDashboard />} />
-        </Route>
-        <Route path="store" element={<StoreRoot />}>
-          <Route index element={<StoreDashboard />} />
-        </Route>
-        {/* Esimerkkisivu taulukolle tai demoille */}
-        <Route path="example-table" element={<ExampleTablePage />} />
-        {/* Tuntematon polku ohjataan takaisin etusivulle */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    </Routes>
-  );
-}
+export const router = createBrowserRouter([
+  {
+    path: '/',
+    Component: Root,
+    children: [
+      {index: true, Component: LandingPage},
+      {path: 'meista', Component: AboutPage},
+      {path: 'tuotteet', Component: ProductsPage},
+      {path: 'hinnoittelu', Component: PricingPage},
+      {path: 'Kirjaudu', Component: LoginPage},
+      {path: 'kirjaudu', Component: LoginPage},
+      {path: 'login', Component: LoginPage},
+      {path: 'Rekisteröidy', Component: RegisterPage},
+      {path: 'rekisteröidy', Component: RegisterPage},
+      {path: 'register', Component: RegisterPage},
+      {path: 'ostoskori', Component: CartPage},
+      {path: 'cart', Component: CartPage},
+      {path: 'products', Component: ProductsPage},
+      {path: 'pricing', Component: PricingPage},
+    ],
+  },
+  {
+    path: '/admin',
+    Component: AdminRoot,
+    children: [{index: true, Component: AdminDashboard}],
+  },
+  {
+    path: '/admin/login',
+    Component: AdminLogin,
+  },
+  {
+    path: '/driver',
+    Component: DriverRoot,
+    children: [{index: true, Component: DriverDashboard}],
+  },
+  {
+    path: '/kuljettaja',
+    Component: DriverRoot,
+    children: [{index: true, Component: DriverDashboard}],
+  },
+  {
+    path: '/store',
+    Component: StoreRoot,
+    children: [{index: true, Component: StoreDashboard}],
+  },
+  {
+    path: '/tuotetiedot',
+    Component: StoreRoot,
+    children: [{index: true, Component: StoreDashboard}],
+  },
+]);

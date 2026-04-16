@@ -1,20 +1,15 @@
-import {BrowserRouter} from 'react-router-dom';
-import {AuthProvider} from './contexts/AuthContext';
+import {RouterProvider} from 'react-router';
 import {CartProvider} from './contexts/CartContext';
-import {AppRoutes} from './routes';
-import '../styles/index.css';
+import {AuthProvider} from './contexts/AuthContext';
+import {router} from './routes';
+import '../styles/fonts.css';
 
 export default function App() {
   return (
-    // BrowserRouter pitää URL-osoitteen ja näkymän synkassa koko sovelluksessa.
-    <BrowserRouter>
-      {/* AuthProvider ja CartProvider ympäröivät koko appia, jotta tila säilyy reiteillä. */}
-      <AuthProvider>
-        <CartProvider>
-          {/* AppRoutes määrittää, mikä sivu renderöidään nykyisen reitin mukaan. */}
-          <AppRoutes />
-        </CartProvider>
-      </AuthProvider>
-    </BrowserRouter>
+    <AuthProvider>
+      <CartProvider>
+        <RouterProvider router={router} />
+      </CartProvider>
+    </AuthProvider>
   );
 }
