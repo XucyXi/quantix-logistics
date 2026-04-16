@@ -25,8 +25,15 @@ export const router = createBrowserRouter([
       {path: 'tuotteet', Component: ProductsPage},
       {path: 'hinnoittelu', Component: PricingPage},
       {path: 'Kirjaudu', Component: LoginPage},
+      {path: 'kirjaudu', Component: LoginPage},
+      {path: 'login', Component: LoginPage},
       {path: 'Rekisteröidy', Component: RegisterPage},
+      {path: 'rekisteröidy', Component: RegisterPage},
+      {path: 'register', Component: RegisterPage},
       {path: 'ostoskori', Component: CartPage},
+      {path: 'cart', Component: CartPage},
+      {path: 'products', Component: ProductsPage},
+      {path: 'pricing', Component: PricingPage},
     ],
   },
   {
@@ -44,7 +51,17 @@ export const router = createBrowserRouter([
     children: [{index: true, Component: DriverDashboard}],
   },
   {
+    path: '/kuljettaja',
+    Component: DriverRoot,
+    children: [{index: true, Component: DriverDashboard}],
+  },
+  {
     path: '/store',
+    Component: StoreRoot,
+    children: [{index: true, Component: StoreDashboard}],
+  },
+  {
+    path: '/tuotetiedot',
     Component: StoreRoot,
     children: [{index: true, Component: StoreDashboard}],
   },
