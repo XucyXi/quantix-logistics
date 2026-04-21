@@ -2,7 +2,6 @@ import {createBrowserRouter} from 'react-router';
 import {Root} from './layouts/Root';
 import {AdminRoot} from './layouts/AdminRoot';
 import {DriverRoot} from './layouts/DriverRoot';
-import {StoreRoot} from './layouts/StoreRoot';
 import {LandingPage} from './pages/LandingPage';
 import {AboutPage} from './pages/AboutPage.tsx';
 import {ProductsPage} from './pages/ProductsPage';
@@ -13,7 +12,6 @@ import {CartPage} from './pages/CartPage';
 import {AdminLogin} from './pages/AdminLogin';
 import {AdminDashboard} from './pages/AdminDashboard';
 import {DriverDashboard} from './pages/DriverDashboard';
-import {StoreDashboard} from './pages/StoreDashboard';
 
 export const router = createBrowserRouter([
   {
@@ -54,15 +52,5 @@ export const router = createBrowserRouter([
     path: '/kuljettaja',
     Component: DriverRoot,
     children: [{index: true, Component: DriverDashboard}],
-  },
-  {
-    path: '/store',
-    Component: StoreRoot,
-    children: [{index: true, Component: StoreDashboard}],
-  },
-  {
-    path: '/tuotetiedot',
-    Component: StoreRoot,
-    children: [{index: true, Component: StoreDashboard}],
   },
 ]);
