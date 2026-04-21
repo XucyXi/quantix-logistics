@@ -13,6 +13,7 @@ import {
   ShoppingCart,
   Check,
 } from 'lucide-react';
+import {useCart} from '../contexts/CartContext';
 
 // Mock wholesale product catalog simulating API response
 const PRODUCTS_DATA = {
@@ -283,6 +284,7 @@ const tagColors: Record<string, {bg: string; color: string}> = {
 };
 
 export function ProductsPage() {
+  const {addItem} = useCart();
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [onlyInStock, setOnlyInStock] = useState(false);
@@ -318,7 +320,19 @@ export function ProductsPage() {
 
   const addToCart = (productId: string) => {
     const qty = quantities[productId] || 0;
-    if (qty > 0) {
+    const product = PRODUCTS_DATA.products.find((p) => p.id === productId);
+
+    if (qty > 0 && product) {
+      for (let i = 0; i < qty; i += 1) {
+        addItem({
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          price: product.pricePerUnit,
+          dietTags: product.tags,
+        });
+      }
+
       setAddedIds((prev) => [...prev, productId]);
       setTimeout(() => {
         setAddedIds((prev) => prev.filter((id) => id !== productId));

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import teamImage from '../../../Meistä.png';
 import tiimiBkg from '../../../Meistä.png';
+import introVideo from '../../../intro.mp4';
 
 const teamImg = teamImage;
 const warehouseImg =
@@ -240,6 +241,243 @@ export function AboutPage() {
               </Link>
             </div>
           </motion.div>
+        </div>
+      </section>
+
+      {/* Intro */}
+      <section style={{backgroundColor: 'white', padding: '5rem 1.5rem'}}>
+        <div style={{maxWidth: 1280, margin: '0 auto'}}>
+          <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-12 items-center">
+            <motion.div
+              initial={{opacity: 0, x: -30}}
+              whileInView={{opacity: 1, x: 0}}
+              transition={{duration: 0.7}}
+              viewport={{once: true}}
+            >
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.375rem 1rem',
+                  borderRadius: 30,
+                  backgroundColor: 'rgba(249,115,22,0.1)',
+                  border: '1px solid rgba(249,115,22,0.2)',
+                  marginBottom: '1rem',
+                }}
+              >
+                <Users size={16} color="#f97316" />
+                <span
+                  style={{
+                    color: '#f97316',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  Meistä lyhyesti
+                </span>
+              </div>
+
+              <h2
+                style={{
+                  color: '#0f2444',
+                  fontSize: 'clamp(1.9rem, 3vw, 2.7rem)',
+                  fontWeight: 800,
+                  lineHeight: 1.15,
+                  margin: '0 0 1rem',
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                Rakennamme ruokalogistiikasta läpinäkyvämpää arkea koko
+                ketjulle.
+              </h2>
+
+              <p
+                style={{
+                  color: '#475569',
+                  fontSize: '1.05rem',
+                  lineHeight: 1.8,
+                  margin: '0 0 1rem',
+                }}
+              >
+                Quantix Logistics syntyi tarpeesta yhdistää jakelukeskukset,
+                kuljettajat ja kaupat yhteen selkeään näkymään. Tavoitteemme on
+                vähentää epävarmuutta, nopeuttaa päätöksentekoa ja tehdä
+                toimitusketjusta aidosti ennakoitava.
+              </p>
+
+              <p
+                style={{
+                  color: '#475569',
+                  fontSize: '1.05rem',
+                  lineHeight: 1.8,
+                  margin: 0,
+                }}
+              >
+                Kun tieto kulkee reaaliajassa, myös hävikki, viiveet ja
+                ylimääräinen säätö vähenevät. Siksi rakennamme järjestelmää,
+                jossa jokainen toimitus näkyy, jokainen rooli tietää mitä tehdä
+                ja koko ketju toimii yhtenä kokonaisuutena.
+              </p>
+            </motion.div>
+
+            <motion.div
+              initial={{opacity: 0, x: 30}}
+              whileInView={{opacity: 1, x: 0}}
+              transition={{duration: 0.7, delay: 0.1}}
+              viewport={{once: true}}
+              style={{
+                background:
+                  'linear-gradient(180deg, rgba(15,36,68,0.98) 0%, rgba(23,50,79,0.96) 100%)',
+                borderRadius: 24,
+                padding: '1.5rem',
+                color: 'white',
+                boxShadow: '0 18px 40px rgba(15,36,68,0.22)',
+                border: '1px solid rgba(255,255,255,0.08)',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '1rem',
+                  marginBottom: '1rem',
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      color: '#f97316',
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      marginBottom: '0.25rem',
+                    }}
+                  >
+                    Introvideo
+                  </div>
+                  <h3
+                    style={{
+                      margin: 0,
+                      fontSize: '1.15rem',
+                      fontWeight: 800,
+                      color: 'white',
+                    }}
+                  >
+                    Katso lyhyt esittely
+                  </h3>
+                </div>
+
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    padding: '0.45rem 0.8rem',
+                    borderRadius: 999,
+                    backgroundColor: 'rgba(249,115,22,0.14)',
+                    color: '#f97316',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    border: '1px solid rgba(249,115,22,0.25)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  noin 40 s
+                </div>
+              </div>
+
+              <div
+                style={{
+                  width: '100%',
+                  borderRadius: 20,
+                  backgroundColor: '#000000',
+                  boxShadow: '0 18px 40px rgba(0,0,0,0.28)',
+                  overflow: 'hidden',
+                  aspectRatio: '9 / 14',
+                  minHeight: 360,
+                }}
+              >
+                <video
+                  controls
+                  playsInline
+                  preload="metadata"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'block',
+                    objectFit: 'cover',
+                    objectPosition: 'center 38%',
+                  }}
+                >
+                  <source src={introVideo} type="video/mp4" />
+                  Selaimesi ei tue videotoistoa.
+                </video>
+              </div>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                  gap: '0.75rem',
+                  marginTop: '1rem',
+                }}
+              >
+                {[
+                  {label: 'Reaaliaikainen näkyvyys', value: '24/7'},
+                  {label: 'Yksi yhteinen näkymä', value: 'Koko ketju'},
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    style={{
+                      backgroundColor: 'rgba(255,255,255,0.06)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: 14,
+                      padding: '0.95rem 1rem',
+                    }}
+                  >
+                    <div
+                      style={{
+                        color: 'rgba(255,255,255,0.62)',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        marginBottom: '0.3rem',
+                      }}
+                    >
+                      {item.label}
+                    </div>
+                    <div style={{fontSize: '1rem', fontWeight: 800}}>
+                      {item.value}
+                    </div>
+                  </div>
+                ))}
+                <div
+                  style={{
+                    backgroundColor: 'rgba(249,115,22,0.12)',
+                    border: '1px solid rgba(249,115,22,0.22)',
+                    borderRadius: 14,
+                    padding: '0.95rem 1rem',
+                  }}
+                >
+                  <div
+                    style={{
+                      color: '#f97316',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      marginBottom: '0.3rem',
+                    }}
+                  >
+                    Käytännössä
+                  </div>
+                  <div style={{fontSize: '1rem', fontWeight: 800}}>
+                    Vähemmän säätöä
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         </div>
       </section>
 
