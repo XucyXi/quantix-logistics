@@ -1,5 +1,6 @@
 import {useEffect} from 'react';
 import {Outlet, useLocation} from 'react-router-dom';
+import {ChatBot} from '../components/layout/ChatBot';
 import {Footer} from '../components/layout/Footer';
 import {Navbar} from '../components/layout/Navbar';
 
@@ -19,6 +20,7 @@ export function Root() {
         {/* Outlet renderöi nykyisen lapsireitin sisällön tähän kohtaan. */}
         <Outlet />
       </main>
+      <ChatBot />
       {/* Footer pysyy sivun alareunassa myös lyhyillä sivuilla. */}
       <Footer />
     </div>
