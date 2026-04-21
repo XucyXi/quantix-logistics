@@ -47,13 +47,11 @@ export function Navbar() {
     customer: 'Asiakas',
     admin: 'Ylläpito',
     driver: 'Kuljettaja',
-    store: 'Kauppa',
   };
 
   const roleDashboard: Record<string, string> = {
     admin: '/admin',
     driver: '/driver',
-    store: '/store',
     customer: '/tuotteet',
   };
 
@@ -533,19 +531,6 @@ export function Navbar() {
                     }}
                   >
                     🚚 Kuljettaja
-                  </Link>
-                  <Link
-                    to="/store"
-                    onClick={() => setMobileOpen(false)}
-                    style={{
-                      color: 'rgba(255,255,255,0.7)',
-                      textDecoration: 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                    }}
-                  >
-                    🏪 Kauppa
                   </Link>
                 </div>
               )}
