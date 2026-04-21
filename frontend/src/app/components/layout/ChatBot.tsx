@@ -120,7 +120,7 @@ export function ChatBot() {
             initial={{opacity: 0, y: 100}}
             animate={{opacity: 1, y: 0}}
             exit={{opacity: 0, y: 100}}
-            className="fixed bottom-6 right-6 z-50 w-[380px] h-[550px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200"
+            className="fixed bottom-6 right-6 z-50 w-95 h-137.5 bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200"
           >
             <div className="bg-blue-600 p-4 text-white flex justify-between items-center">
               <span className="font-bold">Quantix Logistics Chat</span>
