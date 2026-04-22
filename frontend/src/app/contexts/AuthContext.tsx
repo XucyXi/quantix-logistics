@@ -1,13 +1,20 @@
 import React, {createContext, useContext, useState} from 'react';
 
 export type UserRole = 'customer' | 'admin' | 'driver';
+export type UserTier = 'standard' | 'business';
 
 export interface User {
   id: string;
   name: string;
   email: string;
   role: UserRole;
+  tier?: UserTier;
   company?: string;
+}
+
+// Apufunktio tarkistaa, onko käyttäjä business-asiakas
+export function isBusinessCustomer(user: User | null): boolean {
+  return user?.tier === 'business';
 }
 
 interface AuthContextType {
@@ -27,16 +34,26 @@ const MOCK_USERS: (User & {password: string})[] = [
     email: 'asiakas@demo.fi',
     password: 'demo123',
     role: 'customer',
+    tier: 'standard',
   },
   {
     id: '2',
+    name: 'Yritysasiakas Oy',
+    email: 'yritys@demo.fi',
+    password: 'business123',
+    role: 'customer',
+    tier: 'business',
+    company: 'Yritysasiakas Oy',
+  },
+  {
+    id: '3',
     name: 'Päivi Mäkinen',
     email: 'admin@quantix.fi',
     password: 'admin123',
     role: 'admin',
   },
   {
-    id: '3',
+    id: '4',
     name: 'Jukka Leinonen',
     email: 'kuljettaja@quantix.fi',
     password: 'driver123',

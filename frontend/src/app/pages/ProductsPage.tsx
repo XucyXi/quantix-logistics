@@ -14,6 +14,9 @@ import {
   Check,
 } from 'lucide-react';
 import {useCart} from '../contexts/CartContext';
+import {useAuth} from '../contexts/AuthContext';
+
+const BUSINESS_DISCOUNT = 0.15;
 
 // Mock wholesale product catalog simulating API response
 const PRODUCTS_DATA = {
@@ -285,6 +288,8 @@ const tagColors: Record<string, {bg: string; color: string}> = {
 
 export function ProductsPage() {
   const {addItem} = useCart();
+  const {user} = useAuth();
+  const isBusinessCustomer = user?.tier === 'business';
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [onlyInStock, setOnlyInStock] = useState(false);
@@ -614,25 +619,88 @@ export function ProductsPage() {
 
                     {/* Price */}
                     <div style={{marginBottom: '0.5rem'}}>
-                      <div
-                        style={{
-                          color: '#0f2444',
-                          fontWeight: 800,
-                          fontSize: '1.5rem',
-                          lineHeight: 1,
-                        }}
-                      >
-                        {product.pricePerUnit.toFixed(2).replace('.', ',')} €
-                      </div>
-                      <div
-                        style={{
-                          color: '#94a3b8',
-                          fontSize: '0.75rem',
-                          marginTop: '0.2rem',
-                        }}
-                      >
-                        per {product.unit}
-                      </div>
+                      {isBusinessCustomer ? (
+                        <>
+                          <div
+                            style={{
+                              color: '#0f2444',
+                              fontWeight: 800,
+                              fontSize: '1.5rem',
+                              lineHeight: 1,
+                            }}
+                          >
+                            {(product.pricePerUnit * (1 - BUSINESS_DISCOUNT))
+                              .toFixed(2)
+                              .replace('.', ',')}{' '}
+                            €
+                          </div>
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              marginTop: '0.2rem',
+                            }}
+                          >
+                            <span
+                              style={{
+                                color: '#94a3b8',
+                                fontSize: '0.875rem',
+                                textDecoration: 'line-through',
+                              }}
+                            >
+                              {product.pricePerUnit
+                                .toFixed(2)
+                                .replace('.', ',')}{' '}
+                              €
+                            </span>
+                            <span
+                              style={{
+                                backgroundColor: '#22c55e',
+                                color: 'white',
+                                fontSize: '0.7rem',
+                                padding: '0.15rem 0.4rem',
+                                borderRadius: '4px',
+                                fontWeight: 600,
+                              }}
+                            >
+                              -15%
+                            </span>
+                          </div>
+                          <div
+                            style={{
+                              color: '#94a3b8',
+                              fontSize: '0.75rem',
+                              marginTop: '0.1rem',
+                            }}
+                          >
+                            per {product.unit}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div
+                            style={{
+                              color: '#0f2444',
+                              fontWeight: 800,
+                              fontSize: '1.5rem',
+                              lineHeight: 1,
+                            }}
+                          >
+                            {product.pricePerUnit.toFixed(2).replace('.', ',')}{' '}
+                            €
+                          </div>
+                          <div
+                            style={{
+                              color: '#94a3b8',
+                              fontSize: '0.75rem',
+                              marginTop: '0.2rem',
+                            }}
+                          >
+                            per {product.unit}
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     {/* Quantity controls */}
