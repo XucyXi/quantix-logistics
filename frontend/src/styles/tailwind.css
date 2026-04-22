@@ -1,0 +1,7 @@
+/* Tuo Tailwind CSS v4:n ydintyylit ja utility-luokat käyttöön. */
+@import 'tailwindcss';
+/* Aktivoi tailwindcss-animate-paketin animaatioutiliteetit (esim. animate-in/out). */
+@plugin "tailwindcss-animate";
+
+/* Määrittää mistä tiedostoista Tailwind etsii käytettyjä className-luokkia. */
+@source "../**/*.{js,ts,jsx,tsx}";
