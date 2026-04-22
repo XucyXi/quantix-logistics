@@ -25,8 +25,8 @@ const loadPricingPage = async () => {
 };
 
 const loadLoginPage = async () => {
-  const module = await import('./pages/LoginPage');
-  return {Component: module.LoginPage};
+  const module = await import('./pages/AdminLoginPage');
+  return {Component: module.AdminLogin};
 };
 
 const loadRegisterPage = async () => {
