@@ -39,8 +39,17 @@ const deliveryOptions = [
 ];
 
 export function CartPage() {
-  const {items, removeItem, updateQuantity, clearCart, totalItems, totalPrice} =
-    useCart();
+  const {
+    items,
+    removeItem,
+    updateQuantity,
+    clearCart,
+    totalItems,
+    totalPrice,
+    totalPriceWithDiscount,
+    discount,
+    isBusinessCustomer,
+  } = useCart();
   const [delivery, setDelivery] = useState('standard');
   const [orderDone, setOrderDone] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -48,7 +57,7 @@ export function CartPage() {
 
   const deliveryPrice =
     deliveryOptions.find((d) => d.id === delivery)?.price ?? 0;
-  const total = totalPrice + deliveryPrice;
+  const total = totalPriceWithDiscount + deliveryPrice;
   const vat = total * 0.14;
   const totalWithVat = total;
 
@@ -659,8 +668,34 @@ export function CartPage() {
                     }}
                   >
                     <span>Tuotteet ({totalItems} kpl)</span>
-                    <span>{totalPrice.toFixed(2)} €</span>
+                    <span>
+                      {isBusinessCustomer ? (
+                        <span>
+                          <span style={{textDecoration: 'line-through', color: '#94a3b8', marginRight: '0.5rem'}}>
+                            {totalPrice.toFixed(2)} €
+                          </span>
+                          <span style={{color: '#22c55e', fontWeight: 600}}>
+                            {totalPriceWithDiscount.toFixed(2)} €
+                          </span>
+                        </span>
+                      ) : (
+                        <span>{totalPrice.toFixed(2)} €</span>
+                      )}
+                    </span>
                   </div>
+                  {isBusinessCustomer && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: '0.875rem',
+                        color: '#22c55e',
+                      }}
+                    >
+                      <span>Business-alennus (15%)</span>
+                      <span>-{discount.toFixed(2)} €</span>
+                    </div>
+                  )}
                   <div
                     style={{
                       display: 'flex',
