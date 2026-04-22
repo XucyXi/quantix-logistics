@@ -72,19 +72,7 @@ export function CartPage() {
   };
 
   if (showCheckout) {
-    return (
-      <Checkout
-        totalItems={totalItems}
-        totalPrice={totalPrice}
-        totalPriceWithDiscount={totalPriceWithDiscount}
-        discount={discount}
-        isBusinessCustomer={isBusinessCustomer}
-        deliveryPrice={deliveryPrice}
-        onConfirmOrder={handleOrder}
-        onBack={() => setShowCheckout(false)}
-        loading={loading}
-      />
-    );
+    return <Checkout />;
   }
 
   if (orderDone) {
