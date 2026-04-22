@@ -1,21 +1,15 @@
-import {BrowserRouter} from 'react-router-dom';
-import {Navbar} from './components/layout/Navbar';
-import {AuthProvider} from './contexts/AuthContext';
+import {RouterProvider} from 'react-router';
 import {CartProvider} from './contexts/CartContext';
-import {LandingPage} from './pages/LandingPage';
-import '../styles/index.css';
+import {AuthProvider} from './contexts/AuthContext';
+import {router} from './routes';
+import '../styles/fonts.css';
 
 export default function App() {
   return (
-    // Router + contextit pidetaan Appin juuritasolla,
-    // jotta kaikki alikomponentit saavat tarvittavan tilan.
-    <BrowserRouter>
-      <AuthProvider>
-        <CartProvider>
-          <Navbar />
-          <LandingPage />
-        </CartProvider>
-      </AuthProvider>
-    </BrowserRouter>
+    <AuthProvider>
+      <CartProvider>
+        <RouterProvider router={router} />
+      </CartProvider>
+    </AuthProvider>
   );
 }

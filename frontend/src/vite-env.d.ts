@@ -1,2 +1,2 @@
-// Viten asiakastyyppien deklarointi TypeScriptille.
-/// <reference types="vite/client" />
+// Sallitaan tavalliset CSS-sivuvaikutusimportit (esim. import './styles/index.css').
+declare module '*.css';

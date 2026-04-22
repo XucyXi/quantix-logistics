@@ -1,4 +1,4 @@
-import React, {createContext, useContext, useState, useEffect} from 'react';
+import React, {createContext, useContext, useState} from 'react';
 
 export type UserRole = 'customer' | 'admin' | 'driver';
 
@@ -45,17 +45,21 @@ const MOCK_USERS: (User & {password: string})[] = [
 ];
 
 export function AuthProvider({children}: {children: React.ReactNode}) {
-  // Säilytetään käyttäjä localStoragessa, jotta sessio säilyy refreshin yli.
+  // Luetaan käyttäjä localStoragesta heti alussa, jotta kirjautuminen säilyy sivun päivityksessä.
   const [user, setUser] = useState<User | null>(() => {
     try {
       const saved = localStorage.getItem('quantix_user');
       return saved ? JSON.parse(saved) : null;
     } catch {
+      // Jos localStoragen data on rikki, jatketaan turvallisesti ilman käyttäjää.
       return null;
     }
   });
 
   const login = (email: string, password: string, role?: UserRole): boolean => {
+    // Role on valinnainen: jos roolia ei anneta, hyväksytään mikä tahansa rooli.
+    // Paluuarvo boolean pitää kirjautumisformin yksinkertaisena:
+    // UI voi näyttää virheen ilman try/catch-rakennetta.
     const found = MOCK_USERS.find(
       (u) =>
         u.email === email &&
@@ -63,6 +67,8 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
         (!role || u.role === role)
     );
     if (found) {
+      // Salasanaa ei tallenneta sovelluksen tilaan eikä localStorageen.
+      // Nimen vaihto _-muuttujaan dokumentoi, että arvo poistetaan tarkoituksella.
       const {password: _, ...userWithoutPassword} = found;
       setUser(userWithoutPassword);
       localStorage.setItem('quantix_user', JSON.stringify(userWithoutPassword));
@@ -72,6 +78,7 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
   };
 
   const logout = () => {
+    // Tyhjennetään sekä React-tila että localStorage, jotta uloskirjautuminen on varma.
     setUser(null);
     localStorage.removeItem('quantix_user');
   };
