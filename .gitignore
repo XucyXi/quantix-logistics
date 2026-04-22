@@ -1,0 +1,17 @@
+# env
+.env
+.env.*
+
+# node
+node_modules/
+
+# logs
+logs/
+*.log
+
+# OS
+.DS_Store
+
+# build
+dist/
+
