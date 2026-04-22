@@ -656,7 +656,7 @@ export function ProductsPage() {
                             </span>
                             <span
                               style={{
-                                backgroundColor: '#22c55e',
+                                backgroundColor: '#ef4444',
                                 color: 'white',
                                 fontSize: '0.7rem',
                                 padding: '0.15rem 0.4rem',
