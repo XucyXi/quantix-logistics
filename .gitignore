@@ -1,4 +1,22 @@
-node_modules
+# Your current rules (Essential for security!)
+# env
+.env
+.env.*
+
+# node
+node_modules/
+
+# logs
+logs/
+*.log
+
+# OS
+.DS_Store
+
+# build
+dist/
+
+# Added from the dev branch (Team standards)
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
