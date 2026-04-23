@@ -2,6 +2,7 @@ import {createBrowserRouter} from 'react-router';
 import {Root} from './layouts/Root';
 import {AdminRoot} from './layouts/AdminRoot';
 import {DriverRoot} from './layouts/DriverRoot';
+import {ForgotPasswordPage} from './pages/ForgotPassword';
 
 const loadLandingPage = async () => {
   const module = await import('./pages/LandingPage');
@@ -69,6 +70,7 @@ export const router = createBrowserRouter([
       {path: 'rekisteröidy', lazy: loadRegisterPage},
       {path: 'register', lazy: loadRegisterPage},
       {path: 'ostoskori', lazy: loadCartPage},
+      {path: 'forgot-password', Component: ForgotPasswordPage},
       {path: 'cart', lazy: loadCartPage},
       {path: 'products', lazy: loadProductsPage},
       {path: 'pricing', lazy: loadPricingPage},
