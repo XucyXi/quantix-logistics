@@ -5,6 +5,7 @@ import {
   Popup,
   Polyline,
   ZoomControl,
+  useMap,
 } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import {useEffect, useState} from 'react';
@@ -14,6 +15,17 @@ interface MapProps {
   startCoords: [number, number]; // lat, lng
   endCoords: [number, number]; // lat, lng
 }
+
+const RouteWatcher = ({coords}: {coords: [number, number][]}) => {
+  const map = useMap();
+  useEffect(() => {
+    if (coords && coords.length > 0) {
+      map.fitBounds(coords, {padding: [50, 50]});
+    }
+  }, [coords, map]);
+
+  return null;
+};
 
 export const Map = ({startCoords, endCoords}: MapProps) => {
   const [route, setRoute] = useState<[number, number][]>([]);
@@ -33,7 +45,7 @@ export const Map = ({startCoords, endCoords}: MapProps) => {
   return (
     <MapContainer
       center={startCoords}
-      zoom={13}
+      zoom={8}
       style={{height: '60vh', width: '100%', touchAction: 'none'}}
       zoomControl={false}
     >
@@ -58,6 +70,7 @@ export const Map = ({startCoords, endCoords}: MapProps) => {
         weight={5}
         opacity={0.7}
       />
+      <RouteWatcher coords={route} />
     </MapContainer>
   );
 };
