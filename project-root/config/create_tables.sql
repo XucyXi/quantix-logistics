@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS USERS (
     password_hash VARCHAR(255) NOT NULL,
     role ENUM('customer', 'driver', 'admin') NOT NULL DEFAULT 'customer',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    INDEX idx_user_role (role)
 );
 
 -- 2. CUSTOMER_PROFILES table (Business Layer)
@@ -33,6 +34,7 @@ CREATE TABLE IF NOT EXISTS DRIVER_PROFILES (
     vehicle_info VARCHAR(255),
     active BOOLEAN DEFAULT TRUE,
     FOREIGN KEY (user_id) REFERENCES USERS(user_id) ON DELETE CASCADE
+    INDEX idx_driver_active (active)
 );
 
 -- 4. PRODUCTS table (Operations Layer)
@@ -57,6 +59,9 @@ CREATE TABLE IF NOT EXISTS ORDERS (
     total_price DECIMAL(10,2) DEFAULT 0.00,
     FOREIGN KEY (customer_id) REFERENCES USERS(user_id) ON DELETE CASCADE,
     FOREIGN KEY (driver_id) REFERENCES USERS(user_id) ON DELETE SET NULL
+
+    INDEX idx_orders_driver_status (driver_id, status),
+    INDEX idx_orders_customer (customer_id)
 );
 
 -- 6. ORDER_ITEMS table
@@ -68,6 +73,9 @@ CREATE TABLE IF NOT EXISTS ORDER_ITEMS (
     unit_price DECIMAL(10,2) NOT NULL,
     FOREIGN KEY (order_id) REFERENCES ORDERS(order_id) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES PRODUCTS(product_id) ON DELETE CASCADE
+
+    INDEX idx_order_items_order (order_id),
+    INDEX idx_order_items_product (product_id)
 );
 
 -- 7. DELIVERY_TRACKING table
@@ -79,6 +87,7 @@ CREATE TABLE IF NOT EXISTS DELIVERY_TRACKING (
     longitude DECIMAL(10,6) DEFAULT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES ORDERS(order_id) ON DELETE CASCADE
+    INDEX idx_tracking_order (order_id)
 );
 
 -- 8. ANNOUNCEMENTS table

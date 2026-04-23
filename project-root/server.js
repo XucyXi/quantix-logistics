@@ -18,7 +18,6 @@ try {
     app.use('/api/products', productRoutes);
     app.use('/api/orders', orderRoutes);
 
-
     app.listen(3000, () => console.log('Server running on port 3000'));
 } catch (err) {
     console.error("Failed to start server:", err);

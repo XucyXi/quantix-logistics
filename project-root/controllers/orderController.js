@@ -36,10 +36,69 @@ async function createOrder(req, res) {
       });
     }
   }
+
+async function getAssignedOrders(req, res) {
+    try {
+      const driverId = req.user.user_id;
   
+      const orders = await orderService.getAssignedOrders(driverId);
   
+      res.json(orders);
+  
+    } catch (err) {
+      console.error(err);
+  
+      res.status(500).json({
+        error: err.message || 'Failed to fetch assigned orders'
+      });
+    }
+  }
+
+  async function assignDriverToOrder(req, res) {
+    try {
+      const orderId = req.params.id;
+  
+      const result = await orderService.assignDriverToOrder(orderId);
+  
+      res.json(result);
+  
+    } catch (err) {
+      console.error(err);
+  
+      res.status(500).json({
+        error: err.message || 'Failed to assign driver'
+      });
+    }
+  }
+  
+  async function updateOrderStatus(req, res) {
+    try {
+      const orderId = req.params.id;
+      const driverId = req.user.user_id;
+      const { newStatus } = req.body;
+  
+      const result = await orderService.updateOrderStatus(
+        orderId,
+        driverId,
+        newStatus
+      );
+  
+      res.json(result);
+  
+    } catch (err) {
+      console.error(err);
+  
+      res.status(400).json({
+        error: err.message || 'Failed to update order status'
+      });
+    }
+  }
+
 
 module.exports = {
     createOrder,
-    getOrder
+    getOrder,
+    getAssignedOrders,
+    assignDriverToOrder,
+    updateOrderStatus
 }

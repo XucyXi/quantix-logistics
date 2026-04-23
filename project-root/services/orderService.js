@@ -126,11 +126,247 @@ order.items = items;
 
 return order;
 }
+
+async function assignDriverToOrder(orderId) {
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [drivers] = await connection.query(
+      `
+      SELECT dp.user_id
+      FROM DRIVER_PROFILES dp
+      JOIN USERS u ON dp.user_id = u.user_id
+      WHERE dp.active = TRUE
+        AND u.role = 'driver'
+      LIMIT 1
+      `
+    );
+
+    if (!drivers.length) {
+      throw new Error('No available drivers');
+    }
+
+    const driverId = drivers[0].user_id;
+
+    const [orderResult] = await connection.query(
+      `
+      UPDATE ORDERS
+      SET driver_id = ?, status = 'assigned'
+      WHERE order_id = ?
+        AND driver_id IS NULL
+      `,
+      [driverId, orderId]
+    );
+
+    if (orderResult.affectedRows === 0) {
+      throw new Error('Order not found or already assigned');
+    }
+
+    // Mark driver as inactive (USES idx_driver_active)
+    await connection.query(
+      `
+      UPDATE DRIVER_PROFILES
+      SET active = FALSE
+      WHERE user_id = ?
+      `,
+      [driverId]
+    );
+
+    await connection.commit();
+
+    return {
+      order_id: orderId,
+      driver_id: driverId
+    };
+
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
+}
+
+async function updateOrderStatus(orderId, driverId, newStatus) {
+  const connection = await pool.getConnection();
+
+  const validTransitions = {
+    assigned: ['in_progress'],
+    in_progress: ['in_transit', 'stuck'],
+    in_transit: ['done'],
+    done: [],
+    stuck: []
+  };  
+
+  //  status ENUM('pending','assigned','in_progress','in_transit','done','stuck') DEFAULT 'pending',
+
+
+  try {
+    await connection.beginTransaction();
+
+    const [orders] = await connection.query(
+      `SELECT status, driver_id 
+       FROM ORDERS 
+       WHERE order_id = ? AND driver_id = ?`,
+      [orderId, driverId]
+    );
+    
+    if (!orders.length) {
+      throw new Error('Order not found or not assigned to this driver');
+    }
+
+    const order = orders[0];
+
+    if (order.driver_id !== driverId) {
+      throw new Error('Unauthorized: Not your order');
+    }
+
+    const expectedNext = validTransitions[order.status];
+
+    if (!expectedNext.includes(newStatus)) {
+      throw new Error(
+        `Invalid status transition: ${order.status} → ${newStatus}`
+      );
+    }
+
+    await connection.query(
+      `UPDATE ORDERS SET status = ? WHERE order_id = ?`,
+      [newStatus, orderId]
+    );
+
+    if (newStatus === 'done') {
+      await connection.query(
+        `UPDATE DRIVER_PROFILES
+         SET active = TRUE
+         WHERE user_id = ?`,
+        [driverId]
+      );
+    }
+
+    await connection.commit();
+
+    return {
+      order_id: orderId,
+      status: newStatus
+    };
+
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
+}
+
+
+const ACTIVE_STATUSES = ['assigned', 'in_progress', 'in_transit'];
+
+async function getAssignedOrders(driverId) {
+  if (!driverId) {
+    throw new Error('Driver ID is required');
+  }
+
+  const [rows] = await pool.query(
+    `
+SELECT 
+  o.order_id,
+  o.status,
+  o.delivery_address,
+  o.notes,
+  o.ordered_at,
+  o.scheduled_delivery,
+
+  -- Customer info
+  cp.company_name,
+  cp.address AS customer_address,
+  cp.tel AS customer_tel,
+
+  -- Driver info
+  dp.vehicle_info,
+  dp.active AS driver_active,
+
+  -- Items
+  oi.product_id,
+  oi.quantity,
+  oi.unit_price,
+
+  -- Product info
+  p.name AS product_name
+
+FROM ORDERS o
+
+-- Customer profile 
+JOIN CUSTOMER_PROFILES cp
+  ON o.customer_id = cp.user_id
+
+-- Driver profile (Order might not be assigned yet)
+LEFT JOIN DRIVER_PROFILES dp
+  ON o.driver_id = dp.user_id
+
+-- Order items
+LEFT JOIN ORDER_ITEMS oi
+  ON o.order_id = oi.order_id
+
+-- Product info
+LEFT JOIN PRODUCTS p
+  ON oi.product_id = p.product_id
+
+WHERE o.driver_id = ?
+AND o.status IN (?, ?, ?)
+
+ORDER BY o.order_id;
+
+    `,
+    [driverId, ...ACTIVE_STATUSES]
+  );
+
+  // If nothing matches → empty array
+  if (!rows.length) {
+    return [];
+  }
+
+  return shapeOrders(rows);
+}
+
+function shapeOrders(rows) {
+    const ordersMap = {};
   
+    for (const row of rows) {
+  
+      // Create order if not exists
+      if (!ordersMap[row.order_id]) {
+        ordersMap[row.order_id] = {
+          order_id: row.order_id,
+          status: row.status,
+          delivery_address: row.delivery_address,
+          notes: row.notes,
+          customer: {
+            company_name: row.company_name,
+            tel: row.tel
+          },
+          items: []
+        };
+      }
+  
+      // Skip null items (LEFT JOIN case)
+      if (row.product_id) {
+        ordersMap[row.order_id].items.push({
+          name: row.product_name,
+          quantity: row.quantity
+        });
+      }
+    }
+  
+    return Object.values(ordersMap);
+  }
+
 
 module.exports = {
 createOrder,
-// insertOrderItems,
-// createOrderWithItems,
-getOrderById
+getOrderById,
+assignDriverToOrder,
+getAssignedOrders,
+updateOrderStatus
 };
