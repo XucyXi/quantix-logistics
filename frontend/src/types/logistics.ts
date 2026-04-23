@@ -21,3 +21,5 @@ export interface DeliveryTracking {
   longitude: number;
   updated_at: string;
 }
+
+export const WAREHOUSE_COORDS: [number, number] = [60.205, 24.887];
