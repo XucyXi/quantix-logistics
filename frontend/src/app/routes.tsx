@@ -3,6 +3,7 @@ import {Root} from './layouts/Root';
 import {AdminRoot} from './layouts/AdminRoot';
 import {DriverRoot} from './layouts/DriverRoot';
 import {ForgotPasswordPage} from './pages/ForgotPassword';
+import {DriverMapTestPage} from './pages/DriverMapTestPage';
 
 const loadLandingPage = async () => {
   const module = await import('./pages/LandingPage');
@@ -88,6 +89,11 @@ export const router = createBrowserRouter([
   {
     path: '/driver',
     Component: DriverRoot,
+    children: [{index: true, lazy: loadDriverDashboard}],
+  },
+  {
+    path: '/driver/maptest',
+    Component: DriverMapTestPage,
     children: [{index: true, lazy: loadDriverDashboard}],
   },
   {
