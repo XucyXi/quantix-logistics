@@ -13,6 +13,7 @@ import {
   CheckCircle,
   ArrowRight,
 } from 'lucide-react';
+import quantixPropaganda from '../../../quanitxlogvideo1.mp4';
 import teamImage from '../../../Meistä.png';
 import tiimiBkg from '../../../Meistä.png';
 import introVideo from '../../../intro.mp4';
@@ -942,11 +943,24 @@ export function AboutPage() {
                 boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
               }}
             >
-              <img
-                src={teamTeamImg}
-                alt="Quantix Logistics tiimi varastolla"
-                style={{width: '100%', display: 'block', height: 'auto'}}
-              />
+              <video
+                controls
+                playsInline
+                preload="metadata"
+                style={{
+                  width: '100%',
+                  aspectRatio: '16 / 9', // Pitää videon oikeassa muodossa
+                  display: 'block',
+                  objectFit: 'cover', // 'cover' täyttää tilan, 'contain' jättää mustat reunat
+                  objectPosition: 'center 38%', // Alkuperäinen rajauksesi
+                  borderRadius: '12px', // Sopii yhteen alla olevan divin kanssa
+                  boxShadow: '0 20px 40px rgba(0,0,0,0.4)', // Tuo syvyyttä teatteritilaan
+                  backgroundColor: '#000',
+                }}
+              >
+                <source src={quantixPropaganda} type="video/mp4" />
+                Selaimesi ei tue videotoistoa.
+              </video>
             </motion.div>
             <motion.div
               initial={{opacity: 0, y: 20}}
