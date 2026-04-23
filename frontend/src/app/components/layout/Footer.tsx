@@ -153,11 +153,11 @@ export function Footer() {
               }}
             >
               {[
-                {to: '/kirjaudu', label: 'Asiakkaan kirjautuminen'},
-                {to: '/rekisteröidy', label: 'Rekisteröityminen'},
+                {to: '/login', label: 'Asiakkaan kirjautuminen'},
+                {to: '/register', label: 'Rekisteröityminen'},
                 {to: '/admin/login', label: 'Ylläpito'},
-                {to: '/kuljettaja', label: 'Kuljettajan portaali'},
-                {to: '/tuotetiedot', label: 'Kaupan portaali'},
+                {to: '/driver', label: 'Kuljettajan portaali'},
+                {to: '/store', label: 'Kaupan portaali'},
               ].map((link) => (
                 <li key={link.to}>
                   <Link
