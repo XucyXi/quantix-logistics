@@ -1,4 +1,3 @@
-// src/pages/DriverMapTestPage.tsx
 import {Map} from '../components/Map';
 import {useState} from 'react';
 
