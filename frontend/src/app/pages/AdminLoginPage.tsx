@@ -223,6 +223,8 @@ export function LoginPage() {
               Kuljettaja: kuljettaja@quantix.fi / driver123
               <br />
               Asiakas: asiakas@demo.fi / demo123
+              <br />
+              Yritys: yritys@demo.fi / business123
             </div>
 
             {error && (

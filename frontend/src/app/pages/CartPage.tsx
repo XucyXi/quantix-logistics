@@ -72,19 +72,7 @@ export function CartPage() {
   };
 
   if (showCheckout) {
-    return (
-      <Checkout
-        totalItems={totalItems}
-        totalPrice={totalPrice}
-        totalPriceWithDiscount={totalPriceWithDiscount}
-        discount={discount}
-        isBusinessCustomer={isBusinessCustomer}
-        deliveryPrice={deliveryPrice}
-        onConfirmOrder={handleOrder}
-        onBack={() => setShowCheckout(false)}
-        loading={loading}
-      />
-    );
+    return <Checkout />;
   }
 
   if (orderDone) {
@@ -689,7 +677,13 @@ export function CartPage() {
                     <span>
                       {isBusinessCustomer ? (
                         <span>
-                          <span style={{textDecoration: 'line-through', color: '#94a3b8', marginRight: '0.5rem'}}>
+                          <span
+                            style={{
+                              textDecoration: 'line-through',
+                              color: '#94a3b8',
+                              marginRight: '0.5rem',
+                            }}
+                          >
                             {totalPrice.toFixed(2)} €
                           </span>
                           <span style={{color: '#22c55e', fontWeight: 600}}>
@@ -775,9 +769,10 @@ export function CartPage() {
                     justifyContent: 'center',
                     gap: '0.5rem',
                     transition: 'background 0.2s',
-                    boxShadow: items.length === 0
-                      ? 'none'
-                      : '0 4px 16px rgba(249,115,22,0.3)',
+                    boxShadow:
+                      items.length === 0
+                        ? 'none'
+                        : '0 4px 16px rgba(249,115,22,0.3)',
                   }}
                 >
                   {items.length === 0 ? (

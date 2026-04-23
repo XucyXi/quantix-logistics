@@ -48,7 +48,7 @@ const loadPricingPage = async () => {
 };
 
 const loadLoginPage = async () => {
-  const module = await import('./pages/LoginPage');
+  const module = await import('./pages/AdminLoginPage');
   return {Component: module.LoginPage};
 };
 
@@ -124,9 +124,6 @@ export const router = createBrowserRouter([
     path: '/store',
     Component: StoreRoot,
     children: [{index: true, Component: StoreDashboard}],
-    path: '/driver/maptest',
-    Component: DriverMapTestPage,
-    children: [{index: true, lazy: loadDriverDashboard}],
   },
   {
     path: '/kuljettaja',
