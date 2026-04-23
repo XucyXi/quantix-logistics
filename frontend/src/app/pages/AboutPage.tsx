@@ -13,10 +13,10 @@ import {
   CheckCircle,
   ArrowRight,
 } from 'lucide-react';
-import quantixPropaganda from '../../../dist/assets/quanitxlogvideo1.mp4';
-import teamImage from '../../../dist/assets/Meistä-75no8aTM.png';
-import tiimiBkg from '../../../dist/assets/Meistä-75no8aTM.png';
-import introVideo from '../../../dist/assets/intro-B8-aknO9.mp4';
+import quantixPropaganda from '../../../quanitxlogvideo1.mp4';
+import teamImage from '../../../Meistä.png';
+import tiimiBkg from '../../../Meistä.png';
+import introVideo from '../../../intro.mp4';
 
 const teamImg = teamImage;
 const warehouseImg =
