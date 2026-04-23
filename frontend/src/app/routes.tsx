@@ -25,6 +25,57 @@ import {DriverDeliveriesPage} from './pages/DriverDeliversPage';
 import {DriverMapPage} from './pages/DriverMapPage';
 import {DriverProfilePage} from './pages/DriverProfilePage';
 import {StoreDashboard} from './pages/StoreDashboard';
+import {DriverMapTestPage} from './pages/DriverMapTestPage';
+
+const loadLandingPage = async () => {
+  const module = await import('./pages/LandingPage');
+  return {Component: module.LandingPage};
+};
+
+const loadAboutPage = async () => {
+  const module = await import('./pages/AboutPage');
+  return {Component: module.AboutPage};
+};
+
+const loadProductsPage = async () => {
+  const module = await import('./pages/ProductsPage');
+  return {Component: module.ProductsPage};
+};
+
+const loadPricingPage = async () => {
+  const module = await import('./pages/PricingPage');
+  return {Component: module.PricingPage};
+};
+
+const loadLoginPage = async () => {
+  const module = await import('./pages/LoginPage');
+  return {Component: module.LoginPage};
+};
+
+const loadRegisterPage = async () => {
+  const module = await import('./pages/RegisterPage');
+  return {Component: module.RegisterPage};
+};
+
+const loadCartPage = async () => {
+  const module = await import('./pages/CartPage');
+  return {Component: module.CartPage};
+};
+
+const loadAdminLogin = async () => {
+  const module = await import('./pages/AdminLogin');
+  return {Component: module.AdminLogin};
+};
+
+const loadAdminDashboard = async () => {
+  const module = await import('./pages/AdminDashboard');
+  return {Component: module.AdminDashboard};
+};
+
+const loadDriverDashboard = async () => {
+  const module = await import('./pages/DriverDashboard');
+  return {Component: module.DriverDashboard};
+};
 
 export const router = createBrowserRouter([
   {
@@ -73,5 +124,13 @@ export const router = createBrowserRouter([
     path: '/store',
     Component: StoreRoot,
     children: [{index: true, Component: StoreDashboard}],
+    path: '/driver/maptest',
+    Component: DriverMapTestPage,
+    children: [{index: true, lazy: loadDriverDashboard}],
+  },
+  {
+    path: '/kuljettaja',
+    Component: DriverRoot,
+    children: [{index: true, lazy: loadDriverDashboard}],
   },
 ]);

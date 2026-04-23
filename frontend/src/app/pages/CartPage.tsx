@@ -12,6 +12,7 @@ import {
   Leaf,
 } from 'lucide-react';
 import {useCart} from '../contexts/CartContext';
+import {Checkout} from './Checkout';
 
 const tagColors: Record<string, {bg: string; color: string}> = {
   Gluteeniton: {bg: '#fef3c7', color: '#d97706'},
@@ -39,16 +40,26 @@ const deliveryOptions = [
 ];
 
 export function CartPage() {
-  const {items, removeItem, updateQuantity, clearCart, totalItems, totalPrice} =
-    useCart();
+  const {
+    items,
+    removeItem,
+    updateQuantity,
+    clearCart,
+    totalItems,
+    totalPrice,
+    totalPriceWithDiscount,
+    discount,
+    isBusinessCustomer,
+  } = useCart();
   const [delivery, setDelivery] = useState('standard');
   const [orderDone, setOrderDone] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showCheckout, setShowCheckout] = useState(false);
   const navigate = useNavigate();
 
   const deliveryPrice =
     deliveryOptions.find((d) => d.id === delivery)?.price ?? 0;
-  const total = totalPrice + deliveryPrice;
+  const total = totalPriceWithDiscount + deliveryPrice;
   const vat = total * 0.14;
   const totalWithVat = total;
 
@@ -59,6 +70,22 @@ export function CartPage() {
     clearCart();
     setOrderDone(true);
   };
+
+  if (showCheckout) {
+    return (
+      <Checkout
+        totalItems={totalItems}
+        totalPrice={totalPrice}
+        totalPriceWithDiscount={totalPriceWithDiscount}
+        discount={discount}
+        isBusinessCustomer={isBusinessCustomer}
+        deliveryPrice={deliveryPrice}
+        onConfirmOrder={handleOrder}
+        onBack={() => setShowCheckout(false)}
+        loading={loading}
+      />
+    );
+  }
 
   if (orderDone) {
     return (
@@ -659,8 +686,34 @@ export function CartPage() {
                     }}
                   >
                     <span>Tuotteet ({totalItems} kpl)</span>
-                    <span>{totalPrice.toFixed(2)} €</span>
+                    <span>
+                      {isBusinessCustomer ? (
+                        <span>
+                          <span style={{textDecoration: 'line-through', color: '#94a3b8', marginRight: '0.5rem'}}>
+                            {totalPrice.toFixed(2)} €
+                          </span>
+                          <span style={{color: '#22c55e', fontWeight: 600}}>
+                            {totalPriceWithDiscount.toFixed(2)} €
+                          </span>
+                        </span>
+                      ) : (
+                        <span>{totalPrice.toFixed(2)} €</span>
+                      )}
+                    </span>
                   </div>
+                  {isBusinessCustomer && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: '0.875rem',
+                        color: '#22c55e',
+                      }}
+                    >
+                      <span>Business-alennus (15%)</span>
+                      <span>-{discount.toFixed(2)} €</span>
+                    </div>
+                  )}
                   <div
                     style={{
                       display: 'flex',
@@ -704,34 +757,34 @@ export function CartPage() {
                 </div>
 
                 <button
-                  onClick={handleOrder}
-                  disabled={loading}
+                  onClick={() => setShowCheckout(true)}
+                  disabled={loading || items.length === 0}
                   style={{
                     width: '100%',
                     padding: '0.9rem',
                     borderRadius: 10,
                     border: 'none',
-                    backgroundColor: loading ? '#94a3b8' : '#f97316',
+                    backgroundColor: items.length === 0 ? '#94a3b8' : '#f97316',
                     color: 'white',
                     fontWeight: 800,
                     fontSize: '1rem',
-                    cursor: loading ? 'not-allowed' : 'pointer',
+                    cursor: items.length === 0 ? 'not-allowed' : 'pointer',
                     fontFamily: "'Space Grotesk', sans-serif",
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '0.5rem',
                     transition: 'background 0.2s',
-                    boxShadow: loading
+                    boxShadow: items.length === 0
                       ? 'none'
                       : '0 4px 16px rgba(249,115,22,0.3)',
                   }}
                 >
-                  {loading ? (
-                    'Lähetetään tilausta...'
+                  {items.length === 0 ? (
+                    'Ostoskori tyhjä'
                   ) : (
                     <>
-                      Tilaa nyt
+                      Siirry kassalle
                       <ArrowRight size={18} />
                     </>
                   )}
