@@ -948,11 +948,14 @@ export function AboutPage() {
                 playsInline
                 preload="metadata"
                 style={{
-                  width: '50%',
-                  height: '100%',
+                  width: '100%',
+                  aspectRatio: '16 / 9', // Pitää videon oikeassa muodossa
                   display: 'block',
-                  objectFit: 'cover',
-                  objectPosition: 'center 38%',
+                  objectFit: 'cover', // 'cover' täyttää tilan, 'contain' jättää mustat reunat
+                  objectPosition: 'center 38%', // Alkuperäinen rajauksesi
+                  borderRadius: '12px', // Sopii yhteen alla olevan divin kanssa
+                  boxShadow: '0 20px 40px rgba(0,0,0,0.4)', // Tuo syvyyttä teatteritilaan
+                  backgroundColor: '#000',
                 }}
               >
                 <source src={quantixPropaganda} type="video/mp4" />
