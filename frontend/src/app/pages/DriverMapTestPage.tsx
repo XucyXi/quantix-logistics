@@ -1,4 +1,4 @@
-import {Map} from '../components/Map';
+import {Map} from '../components/delivery-tracking/Map';
 import {useState} from 'react';
 
 export const DriverMapTestPage = () => {
