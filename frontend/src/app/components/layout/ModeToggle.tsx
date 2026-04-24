@@ -5,7 +5,7 @@ export function ModeToggle() {
   const {theme, setTheme} = useTheme();
 
   // Koska teema voi olla "system", tarkistetaan onko laite oikeasti tummassa vai vaaleassa tilassa,
-  // jotta tiedämme kumpaan suuntaan nappia pitää vaihtaa.
+  // jotta tiedämme kumpaan suuntaan sitten nappia pitääkin vaihtaa.
   const isDark =
     theme === 'dark' ||
     (theme === 'system' &&

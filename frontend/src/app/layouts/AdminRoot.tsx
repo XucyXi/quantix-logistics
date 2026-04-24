@@ -16,7 +16,6 @@ import {
   Map,
 } from 'lucide-react';
 import {useAuth} from '../contexts/AuthContext';
-// HUOM: Varmista että tämä polku on oikein sinun projektissasi!
 import {ModeToggle} from '../components/layout/ModeToggle.tsx';
 
 const navItems = [
@@ -68,7 +67,7 @@ export function AdminRoot() {
   };
 
   return (
-    // MUUTOS: Käytetään Tailwind-luokkia dynaamisiin väreihin
+    // !! Käytetään tässä Tailwind-luokkia dynaamisiin väreihin kaverit !!
     <div className="flex min-h-screen bg-background text-foreground font-sans">
       {/* Mobile Overlay */}
       {isMobile && sidebarOpen && (
