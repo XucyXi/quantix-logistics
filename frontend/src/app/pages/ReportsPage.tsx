@@ -37,125 +37,64 @@ const categoryData = [
 
 export function ReportsPage() {
   return (
-    <div style={{fontFamily: "'Space Grotesk', sans-serif"}}>
-      {/* Header */}
+    <div className="font-sans">
       <motion.div
         initial={{opacity: 0, y: -10}}
         animate={{opacity: 1, y: 0}}
-        style={{
-          marginBottom: '1.5rem',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '1rem',
-        }}
+        className="mb-6 flex justify-between items-center flex-wrap gap-4"
       >
         <div>
-          <h1
-            style={{
-              color: '#0f2444',
-              fontWeight: 800,
-              fontSize: '1.4rem',
-              marginBottom: '0.5rem',
-            }}
-          >
+          <h1 className="text-foreground font-extrabold text-2xl mb-2 m-0">
             Raportit
           </h1>
-          <p style={{color: '#64748b', fontSize: '0.85rem', margin: 0}}>
+          <p className="text-muted-foreground text-sm m-0">
             Liiketoiminnan analytiikka ja raportit
           </p>
         </div>
-        <div style={{display: 'flex', gap: '0.75rem', flexWrap: 'wrap'}}>
-          <button
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.75rem 1.25rem',
-              borderRadius: 10,
-              border: '1px solid #e2e8f0',
-              backgroundColor: 'white',
-              color: '#64748b',
-              cursor: 'pointer',
-              fontSize: '0.9rem',
-              fontWeight: 600,
-              fontFamily: "'Space Grotesk', sans-serif",
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = '#f97316';
-              e.currentTarget.style.color = '#f97316';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = '#e2e8f0';
-              e.currentTarget.style.color = '#64748b';
-            }}
-          >
+        <div className="flex gap-3 flex-wrap">
+          <button className="flex items-center gap-2 px-5 py-3 rounded-xl border border-border bg-card text-muted-foreground cursor-pointer text-sm font-semibold transition-colors hover:border-primary hover:text-primary">
             <Calendar size={18} />
             Valitse aikaväli
           </button>
-          <button
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.75rem 1.25rem',
-              borderRadius: 10,
-              border: 'none',
-              backgroundColor: '#f97316',
-              color: 'white',
-              cursor: 'pointer',
-              fontSize: '0.9rem',
-              fontWeight: 600,
-              fontFamily: "'Space Grotesk', sans-serif",
-              transition: 'background 0.2s',
-            }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.backgroundColor = '#ea580c')
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.backgroundColor = '#f97316')
-            }
-          >
+          <button className="flex items-center gap-2 px-5 py-3 rounded-xl border-none bg-primary text-primary-foreground cursor-pointer text-sm font-semibold transition-colors hover:bg-primary/90">
             <Download size={18} />
             Lataa raportti
           </button>
         </div>
       </motion.div>
 
-      {/* Stats */}
-      <div
-        className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4"
-        style={{marginBottom: '1.5rem'}}
-      >
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
         {[
           {
             label: 'Kokonaisliikevaihto',
             value: '206 000 €',
             icon: DollarSign,
-            color: '#16a34a',
+            colorClass: 'text-green-500',
+            bgClass: 'bg-green-500/10',
             change: '+12.5%',
           },
           {
             label: 'Tilauksia yhteensä',
             value: '1 058',
             icon: Package,
-            color: '#2563eb',
+            colorClass: 'text-blue-500',
+            bgClass: 'bg-blue-500/10',
             change: '+8.3%',
           },
           {
             label: 'Toimituksia',
             value: '892',
             icon: Truck,
-            color: '#f97316',
+            colorClass: 'text-orange-500',
+            bgClass: 'bg-orange-500/10',
             change: '+15.2%',
           },
           {
             label: 'Keskiarvo / tilaus',
             value: '195 €',
             icon: TrendingUp,
-            color: '#8b5cf6',
+            colorClass: 'text-purple-500',
+            bgClass: 'bg-purple-500/10',
             change: '+3.8%',
           },
         ].map((stat, idx) => (
@@ -164,85 +103,34 @@ export function ReportsPage() {
             initial={{opacity: 0, y: 20}}
             animate={{opacity: 1, y: 0}}
             transition={{delay: idx * 0.05}}
-            style={{
-              backgroundColor: 'white',
-              borderRadius: 14,
-              padding: '1.25rem',
-              boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-              border: '1px solid #f1f5f9',
-            }}
+            className="bg-card rounded-2xl p-5 shadow-sm border border-border"
           >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                marginBottom: '0.75rem',
-              }}
-            >
+            <div className="flex justify-between items-start mb-3">
               <div
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 10,
-                  backgroundColor: `${stat.color}15`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center ${stat.bgClass}`}
               >
-                <stat.icon size={20} color={stat.color} />
+                <stat.icon size={20} className={stat.colorClass} />
               </div>
-              <span
-                style={{fontSize: '0.75rem', fontWeight: 700, color: '#16a34a'}}
-              >
+              <span className="text-xs font-bold text-green-500">
                 {stat.change}
               </span>
             </div>
-            <div
-              style={{
-                fontSize: '1.5rem',
-                fontWeight: 800,
-                color: '#0f2444',
-                lineHeight: 1,
-                marginBottom: '0.375rem',
-              }}
-            >
+            <div className="text-2xl font-extrabold text-foreground leading-none mb-1.5">
               {stat.value}
             </div>
-            <div style={{color: '#64748b', fontSize: '0.8rem'}}>
-              {stat.label}
-            </div>
+            <div className="text-muted-foreground text-xs">{stat.label}</div>
           </motion.div>
         ))}
       </div>
 
-      {/* Charts */}
-      <div
-        className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4"
-        style={{marginBottom: '1.5rem'}}
-      >
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4 mb-6">
         <motion.div
           initial={{opacity: 0, x: -20}}
           animate={{opacity: 1, x: 0}}
           transition={{delay: 0.2}}
-          style={{
-            backgroundColor: 'white',
-            borderRadius: 16,
-            padding: '1.5rem',
-            boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-            border: '1px solid #f1f5f9',
-          }}
+          className="bg-card rounded-2xl p-6 shadow-sm border border-border"
         >
-          <h3
-            style={{
-              color: '#0f2444',
-              fontWeight: 700,
-              fontSize: '0.95rem',
-              margin: 0,
-              marginBottom: '1.25rem',
-            }}
-          >
+          <h3 className="text-foreground font-bold text-base m-0 mb-5">
             Kuukausittainen liikevaihto
           </h3>
           <ResponsiveContainer width="100%" height={250}>
@@ -250,6 +138,7 @@ export function ReportsPage() {
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="#e2e8f0"
+                strokeOpacity={0.2}
                 vertical={false}
               />
               <XAxis
@@ -266,20 +155,17 @@ export function ReportsPage() {
               <Tooltip
                 contentStyle={{
                   borderRadius: '10px',
-                  border: '1px solid #e2e8f0',
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  fontSize: '0.8rem',
-                  backgroundColor: '#ffffff',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                  border: '1px solid var(--color-border)',
+                  backgroundColor: 'var(--color-card)',
+                  color: 'var(--color-foreground)',
                 }}
               />
               <Line
-                key="line-revenue"
                 type="monotone"
                 dataKey="revenue"
                 stroke="#f97316"
                 strokeWidth={3}
-                dot={{fill: '#f97316', r: 5, strokeWidth: 2, stroke: '#fff'}}
+                dot={{fill: '#f97316', r: 5, strokeWidth: 2}}
                 name="Liikevaihto (€)"
                 isAnimationActive={false}
               />
@@ -291,23 +177,9 @@ export function ReportsPage() {
           initial={{opacity: 0, x: 20}}
           animate={{opacity: 1, x: 0}}
           transition={{delay: 0.3}}
-          style={{
-            backgroundColor: 'white',
-            borderRadius: 16,
-            padding: '1.5rem',
-            boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-            border: '1px solid #f1f5f9',
-          }}
+          className="bg-card rounded-2xl p-6 shadow-sm border border-border"
         >
-          <h3
-            style={{
-              color: '#0f2444',
-              fontWeight: 700,
-              fontSize: '0.95rem',
-              margin: 0,
-              marginBottom: '1.25rem',
-            }}
-          >
+          <h3 className="text-foreground font-bold text-base m-0 mb-5">
             Myynti kategorioittain
           </h3>
           <ResponsiveContainer width="100%" height={250}>
@@ -315,6 +187,7 @@ export function ReportsPage() {
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="#e2e8f0"
+                strokeOpacity={0.2}
                 vertical={false}
               />
               <XAxis
@@ -331,15 +204,12 @@ export function ReportsPage() {
               <Tooltip
                 contentStyle={{
                   borderRadius: '10px',
-                  border: '1px solid #e2e8f0',
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  fontSize: '0.8rem',
-                  backgroundColor: '#ffffff',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                  border: '1px solid var(--color-border)',
+                  backgroundColor: 'var(--color-card)',
+                  color: 'var(--color-foreground)',
                 }}
               />
               <Bar
-                key="bar-category"
                 dataKey="amount"
                 fill="#2563eb"
                 radius={[6, 6, 0, 0]}
@@ -351,28 +221,13 @@ export function ReportsPage() {
         </motion.div>
       </div>
 
-      {/* Quick Reports */}
       <motion.div
         initial={{opacity: 0, y: 20}}
         animate={{opacity: 1, y: 0}}
         transition={{delay: 0.4}}
-        style={{
-          backgroundColor: 'white',
-          borderRadius: 16,
-          padding: '1.5rem',
-          boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-          border: '1px solid #f1f5f9',
-        }}
+        className="bg-card rounded-2xl p-6 shadow-sm border border-border"
       >
-        <h3
-          style={{
-            color: '#0f2444',
-            fontWeight: 700,
-            fontSize: '0.95rem',
-            margin: 0,
-            marginBottom: '1.25rem',
-          }}
-        >
+        <h3 className="text-foreground font-bold text-base m-0 mb-5">
           Pika-raportit
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -392,65 +247,20 @@ export function ReportsPage() {
               desc: 'Toimitusaikojen ja -tehokkuuden analyysi',
               icon: Truck,
             },
-          ].map((report, idx) => (
+          ].map((report) => (
             <div
               key={report.title}
-              style={{
-                padding: '1.25rem',
-                borderRadius: 12,
-                border: '1px solid #e2e8f0',
-                transition: 'all 0.2s',
-                cursor: 'pointer',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#f97316';
-                e.currentTarget.style.backgroundColor = '#fff7ed';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#e2e8f0';
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}
+              className="p-5 rounded-xl border border-border transition-all cursor-pointer hover:border-primary hover:bg-primary/5"
             >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  marginBottom: '0.75rem',
-                }}
-              >
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 10,
-                    backgroundColor: '#f0f9ff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <report.icon size={20} color="#f97316" />
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <report.icon size={20} className="text-primary" />
                 </div>
-                <h4
-                  style={{
-                    color: '#0f2444',
-                    fontWeight: 700,
-                    fontSize: '0.9rem',
-                    margin: 0,
-                  }}
-                >
+                <h4 className="text-foreground font-bold text-sm m-0">
                   {report.title}
                 </h4>
               </div>
-              <p
-                style={{
-                  color: '#64748b',
-                  fontSize: '0.85rem',
-                  margin: 0,
-                  lineHeight: 1.5,
-                }}
-              >
+              <p className="text-muted-foreground text-xs m-0 leading-relaxed">
                 {report.desc}
               </p>
             </div>

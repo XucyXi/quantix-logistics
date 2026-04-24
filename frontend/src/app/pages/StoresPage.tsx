@@ -42,84 +42,60 @@ const stores = [
 
 export function StoresPage() {
   return (
-    <div style={{fontFamily: "'Space Grotesk', sans-serif"}}>
-      <div style={{marginBottom: '1.5rem'}}>
-        <h1
-          style={{
-            color: '#0f2444',
-            fontWeight: 800,
-            fontSize: '1.4rem',
-            margin: 0,
-          }}
-        >
-          Kaupat
-        </h1>
-        <p
-          style={{color: '#64748b', fontSize: '0.85rem', margin: '0.5rem 0 0'}}
-        >
+    <div className="font-sans">
+      <div className="mb-6">
+        <h1 className="text-foreground font-extrabold text-2xl m-0">Kaupat</h1>
+        <p className="text-muted-foreground text-sm mt-2 mb-0">
           Asiakaskauppojen hallinta ja seuranta
         </p>
       </div>
 
-      <div
-        className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4"
-        style={{marginBottom: '1.5rem'}}
-      >
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
         {[
-          {label: 'Kauppoja', value: '48', icon: Store, color: '#f97316'},
-          {label: 'Aktiivisia', value: '42', icon: Truck, color: '#16a34a'},
+          {
+            label: 'Kauppoja',
+            value: '48',
+            icon: Store,
+            colorClass: 'text-orange-500',
+            bgClass: 'bg-orange-500/10',
+          },
+          {
+            label: 'Aktiivisia',
+            value: '42',
+            icon: Truck,
+            colorClass: 'text-green-500',
+            bgClass: 'bg-green-500/10',
+          },
           {
             label: 'Tilauksia tänään',
             value: '126',
             icon: Package,
-            color: '#2563eb',
+            colorClass: 'text-blue-500',
+            bgClass: 'bg-blue-500/10',
           },
           {
             label: 'Yhteyshenkilöitä',
             value: '48',
             icon: Users,
-            color: '#8b5cf6',
+            colorClass: 'text-purple-500',
+            bgClass: 'bg-purple-500/10',
           },
         ].map((stat) => (
           <div
             key={stat.label}
-            style={{
-              backgroundColor: 'white',
-              borderRadius: 14,
-              padding: '1rem',
-              border: '1px solid #e2e8f0',
-              boxShadow: '0 1px 8px rgba(0,0,0,0.05)',
-            }}
+            className="bg-card rounded-2xl p-4 border border-border shadow-sm"
           >
-            <div
-              style={{display: 'flex', alignItems: 'center', gap: '0.75rem'}}
-            >
+            <div className="flex items-center gap-3">
               <div
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 10,
-                  backgroundColor: `${stat.color}15`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${stat.bgClass}`}
               >
-                <stat.icon size={20} color={stat.color} />
+                <stat.icon size={20} className={stat.colorClass} />
               </div>
               <div>
-                <div
-                  style={{
-                    fontSize: '1.25rem',
-                    fontWeight: 800,
-                    color: '#0f2444',
-                    lineHeight: 1,
-                  }}
-                >
+                <div className="text-xl font-extrabold text-foreground leading-none mb-1">
                   {stat.value}
                 </div>
-                <div style={{color: '#64748b', fontSize: '0.8rem'}}>
+                <div className="text-muted-foreground text-xs">
                   {stat.label}
                 </div>
               </div>
@@ -144,26 +120,18 @@ export function StoresPage() {
           <MasterTableRow key={store.id}>
             <MasterTableCell>{store.id}</MasterTableCell>
             <MasterTableCell>
-              <div style={{fontWeight: 600, color: '#0f2444'}}>
-                {store.name}
-              </div>
+              <div className="font-semibold text-foreground">{store.name}</div>
             </MasterTableCell>
             <MasterTableCell>{store.city}</MasterTableCell>
             <MasterTableCell>{store.contact}</MasterTableCell>
             <MasterTableCell>{store.orders}</MasterTableCell>
             <MasterTableCell>
               <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  padding: '0.35rem 0.7rem',
-                  borderRadius: 999,
-                  backgroundColor:
-                    store.status === 'Aktiivinen' ? '#dcfce7' : '#fef3c7',
-                  color: store.status === 'Aktiivinen' ? '#166534' : '#a16207',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                }}
+                className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold ${
+                  store.status === 'Aktiivinen'
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                    : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
+                }`}
               >
                 {store.status}
               </span>

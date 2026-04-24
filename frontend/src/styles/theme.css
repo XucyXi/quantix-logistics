@@ -1,37 +1,52 @@
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
+  /* Quantix Vaalea Teema */
   --font-size: 16px;
   --font-family: 'Space Grotesk', sans-serif;
+
   --background: #ffffff;
-  --foreground: #0f2444;
+  --foreground: #0f2444; /* Tummansininen teksti */
+
   --card: #ffffff;
   --card-foreground: #0f2444;
+
   --popover: #ffffff;
   --popover-foreground: #0f2444;
-  --primary: #0f2444;
+
+  --primary: #0f2444; /* Tummansininen nappi */
   --primary-foreground: #ffffff;
-  --secondary: #f97316;
+
+  --secondary: #f97316; /* Oranssi nappi */
   --secondary-foreground: #ffffff;
+
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
+
   --accent: #fff7ed;
   --accent-foreground: #f97316;
+
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
+
   --border: #e2e8f0;
   --input: transparent;
   --input-background: #f8fafc;
   --switch-background: #cbd5e1;
+
+  --ring: #f97316; /* Oranssi focus-rengas */
+
+  --radius: 0.625rem;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: #f97316;
+
+  /* Chartit & Sidebar */
   --chart-1: #f97316;
   --chart-2: #0f2444;
   --chart-3: #ea580c;
   --chart-4: #1e3a5f;
   --chart-5: #fb923c;
-  --radius: 0.625rem;
+
   --sidebar: #0f2444;
   --sidebar-foreground: #ffffff;
   --sidebar-primary: #f97316;
@@ -43,40 +58,53 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
-  --font-weight-medium: 500;
-  --font-weight-normal: 400;
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  /* Quantix Tumma Teema */
+  --background: #09152b; /* Erittäin tumma yönsininen */
+  --foreground: #f8fafc; /* Vaalea teksti */
+
+  --card: #0f2444; /* Tummansininen kortti */
+  --card-foreground: #f8fafc;
+
+  --popover: #0f2444;
+  --popover-foreground: #f8fafc;
+
+  --primary: #f97316; /* Tummassa teemassa napit ovat oransseja, jotta ne erottuvat taustasta */
+  --primary-foreground: #ffffff;
+
+  --secondary: #1e3a5f; /* Vaaleampi sininen kakkosnapille */
+  --secondary-foreground: #ffffff;
+
+  --muted: #1e3a5f;
+  --muted-foreground: #94a3b8;
+
+  --accent: rgba(249, 115, 22, 0.15); /* Kevyt oranssi hover-efekti */
+  --accent-foreground: #f97316;
+
+  --destructive: #991b1b;
+  --destructive-foreground: #f8fafc;
+
+  --border: #1e3a5f;
+  --input: transparent;
+  --input-background: #0f2444;
+  --switch-background: #1e3a5f;
+
+  --ring: #f97316;
+
+  /* Chartit ja Sidebarit pidetään samoina, paitsi sidebarin tausta */
+  --chart-1: #f97316;
+  --chart-2: #3b82f6; /* Vaaleampi sininen erottumaan yötaustasta */
+  --chart-3: #ea580c;
+  --chart-4: #60a5fa;
+  --chart-5: #fb923c;
+
+  --sidebar: #050b16; /* Lähes musta sininen sidebarille erottamaan sen kortista */
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #f97316;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(249, 115, 22, 0.15);
+  --sidebar-accent-foreground: #f97316;
+  --sidebar-border: #1e3a5f;
+  --sidebar-ring: #f97316;
 }
 
 @theme inline {
@@ -149,11 +177,6 @@
       opacity: 1;
     }
   }
-
-  /**
-  * Default typography styles for HTML elements (h1-h4, p, label, button, input).
-  * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
-  */
 
   html {
     font-size: var(--font-size);

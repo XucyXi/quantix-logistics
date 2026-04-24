@@ -26,7 +26,7 @@ const initialVehicles: Vehicle[] = [
     y: 40,
     targetX: 50,
     targetY: 60,
-    color: '#2563eb',
+    color: '#3b82f6',
   },
   {
     id: 'VEH-002',
@@ -38,7 +38,7 @@ const initialVehicles: Vehicle[] = [
     y: 55,
     targetX: 15,
     targetY: 75,
-    color: '#16a34a',
+    color: '#22c55e',
   },
   {
     id: 'VEH-003',
@@ -75,13 +75,11 @@ export function LiveMapPage() {
       setVehicles((prev) =>
         prev.map((vehicle) => {
           if (vehicle.status === 'idle') return vehicle;
-
           const dx = vehicle.targetX - vehicle.x;
           const dy = vehicle.targetY - vehicle.y;
           const distance = Math.sqrt(dx * dx + dy * dy);
 
           if (distance < 2) {
-            // Saavutettu kohde, valitse uusi satunnainen kohde
             return {
               ...vehicle,
               x: vehicle.targetX,
@@ -90,8 +88,6 @@ export function LiveMapPage() {
               targetY: Math.random() * 80 + 10,
             };
           }
-
-          // Liiku kohti tavoitetta
           const speed = 0.5;
           return {
             ...vehicle,
@@ -101,68 +97,71 @@ export function LiveMapPage() {
         })
       );
     }, 50);
-
     return () => clearInterval(interval);
   }, []);
 
   const statusStyles = {
-    active: {bg: '#dcfce7', color: '#16a34a', label: 'Aktiivinen'},
-    idle: {bg: '#fee2e2', color: '#dc2626', label: 'Pysähdyksissä'},
-    delayed: {bg: '#fef3c7', color: '#d97706', label: 'Myöhässä'},
+    active: {
+      bg: 'bg-green-100 dark:bg-green-900/30',
+      color: 'text-green-600 dark:text-green-400',
+      label: 'Aktiivinen',
+    },
+    idle: {
+      bg: 'bg-red-100 dark:bg-red-900/30',
+      color: 'text-red-600 dark:text-red-400',
+      label: 'Pysähdyksissä',
+    },
+    delayed: {
+      bg: 'bg-amber-100 dark:bg-amber-900/30',
+      color: 'text-amber-600 dark:text-amber-400',
+      label: 'Myöhässä',
+    },
   };
 
   return (
-    <div style={{fontFamily: "'Space Grotesk', sans-serif"}}>
-      {/* Header */}
+    <div className="font-sans">
       <motion.div
         initial={{opacity: 0, y: -10}}
         animate={{opacity: 1, y: 0}}
-        style={{marginBottom: '1.5rem'}}
+        className="mb-6"
       >
-        <h1
-          style={{
-            color: '#0f2444',
-            fontWeight: 800,
-            fontSize: '1.4rem',
-            marginBottom: '0.5rem',
-          }}
-        >
+        <h1 className="text-foreground font-extrabold text-2xl mb-2">
           Reaaliaikainen seuranta
         </h1>
-        <p style={{color: '#64748b', fontSize: '0.85rem', margin: 0}}>
+        <p className="text-muted-foreground text-sm m-0">
           Seuraa ajoneuvoja reaaliajassa kartalla
         </p>
       </motion.div>
 
-      {/* Stats */}
-      <div
-        className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4"
-        style={{marginBottom: '1.5rem'}}
-      >
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
         {[
           {
-            label: 'Aktiivisia ajoneuvoja',
+            label: 'Aktiivisia',
             value: vehicles.filter((v) => v.status === 'active').length,
             icon: Truck,
-            color: '#16a34a',
+            colorClass: 'text-green-500',
+            bgClass: 'bg-green-500/10',
           },
           {
             label: 'Pysähdyksissä',
             value: vehicles.filter((v) => v.status === 'idle').length,
             icon: MapPin,
-            color: '#dc2626',
+            colorClass: 'text-red-500',
+            bgClass: 'bg-red-500/10',
           },
           {
-            label: 'Keskimääräinen nopeus',
+            label: 'Keskinopeus',
             value: `${Math.round(vehicles.reduce((sum, v) => sum + v.speed, 0) / vehicles.length)} km/h`,
             icon: Navigation,
-            color: '#2563eb',
+            colorClass: 'text-blue-500',
+            bgClass: 'bg-blue-500/10',
           },
           {
-            label: 'Aktiivisia reittejä',
+            label: 'Reittejä',
             value: vehicles.filter((v) => v.status === 'active').length,
             icon: Activity,
-            color: '#f97316',
+            colorClass: 'text-orange-500',
+            bgClass: 'bg-orange-500/10',
           },
         ].map((stat, idx) => (
           <motion.div
@@ -170,104 +169,38 @@ export function LiveMapPage() {
             initial={{opacity: 0, y: 20}}
             animate={{opacity: 1, y: 0}}
             transition={{delay: idx * 0.05}}
-            style={{
-              backgroundColor: 'white',
-              borderRadius: 14,
-              padding: '1.25rem',
-              boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-              border: '1px solid #f1f5f9',
-            }}
+            className="bg-card rounded-2xl p-5 shadow-sm border border-border"
           >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                marginBottom: '0.75rem',
-              }}
-            >
+            <div className="flex justify-between items-start mb-3">
               <div
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 10,
-                  backgroundColor: `${stat.color}15`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center ${stat.bgClass}`}
               >
-                <stat.icon size={20} color={stat.color} />
+                <stat.icon size={20} className={stat.colorClass} />
               </div>
             </div>
-            <div
-              style={{
-                fontSize: '1.5rem',
-                fontWeight: 800,
-                color: '#0f2444',
-                lineHeight: 1,
-                marginBottom: '0.375rem',
-              }}
-            >
+            <div className="text-2xl font-extrabold text-foreground leading-none mb-1.5">
               {stat.value}
             </div>
-            <div style={{color: '#64748b', fontSize: '0.8rem'}}>
-              {stat.label}
-            </div>
+            <div className="text-muted-foreground text-xs">{stat.label}</div>
           </motion.div>
         ))}
       </div>
 
-      {/* Map and Vehicle List */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Map */}
         <motion.div
           initial={{opacity: 0, x: -20}}
           animate={{opacity: 1, x: 0}}
           transition={{delay: 0.2}}
-          className="lg:col-span-2"
-          style={{
-            backgroundColor: 'white',
-            borderRadius: 16,
-            padding: '1.5rem',
-            boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-            border: '1px solid #f1f5f9',
-          }}
+          className="lg:col-span-2 bg-card rounded-2xl p-6 shadow-sm border border-border"
         >
-          <h3
-            style={{
-              color: '#0f2444',
-              fontWeight: 700,
-              fontSize: '0.95rem',
-              margin: 0,
-              marginBottom: '1.25rem',
-            }}
-          >
+          <h3 className="text-foreground font-bold text-base m-0 mb-5">
             Live-kartta
           </h3>
-
-          {/* SVG Map */}
-          <div
-            style={{
-              position: 'relative',
-              width: '100%',
-              paddingTop: '75%',
-              backgroundColor: '#f8fafc',
-              borderRadius: 12,
-              overflow: 'hidden',
-            }}
-          >
+          <div className="relative w-full pt-[75%] bg-muted/30 rounded-xl overflow-hidden border border-border">
             <svg
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-              }}
+              className="absolute top-0 left-0 w-full h-full"
               viewBox="0 0 100 100"
             >
-              {/* Grid lines */}
               <defs>
                 <pattern
                   id="grid"
@@ -278,20 +211,20 @@ export function LiveMapPage() {
                   <path
                     d="M 10 0 L 0 0 0 10"
                     fill="none"
-                    stroke="#e2e8f0"
-                    strokeWidth="0.2"
+                    className="stroke-border"
+                    strokeWidth="0.5"
                   />
                 </pattern>
               </defs>
               <rect width="100" height="100" fill="url(#grid)" />
 
-              {/* Roads/Routes */}
+              {/* Roads */}
               <line
                 x1="30"
                 y1="40"
                 x2="50"
                 y2="60"
-                stroke="#cbd5e1"
+                className="stroke-muted-foreground/30"
                 strokeWidth="0.5"
                 strokeDasharray="1,1"
               />
@@ -300,7 +233,7 @@ export function LiveMapPage() {
                 y1="55"
                 x2="15"
                 y2="75"
-                stroke="#cbd5e1"
+                className="stroke-muted-foreground/30"
                 strokeWidth="0.5"
                 strokeDasharray="1,1"
               />
@@ -309,12 +242,12 @@ export function LiveMapPage() {
                 y1="35"
                 x2="55"
                 y2="45"
-                stroke="#cbd5e1"
+                className="stroke-muted-foreground/30"
                 strokeWidth="0.5"
                 strokeDasharray="1,1"
               />
 
-              {/* Cities/Waypoints */}
+              {/* Cities */}
               {[
                 {x: 30, y: 40, name: 'HKI'},
                 {x: 50, y: 60, name: 'TRE'},
@@ -326,16 +259,13 @@ export function LiveMapPage() {
                     cx={city.x}
                     cy={city.y}
                     r="1.5"
-                    fill="#64748b"
-                    opacity="0.3"
+                    className="fill-muted-foreground opacity-30"
                   />
                   <text
                     x={city.x}
                     y={city.y - 3}
                     textAnchor="middle"
-                    fill="#64748b"
-                    fontSize="2.5"
-                    fontWeight="600"
+                    className="fill-muted-foreground text-[2.5px] font-semibold"
                   >
                     {city.name}
                   </text>
@@ -345,7 +275,6 @@ export function LiveMapPage() {
               {/* Vehicles */}
               {vehicles.map((vehicle) => (
                 <g key={vehicle.id}>
-                  {/* Pulse effect for active vehicles */}
                   {vehicle.status === 'active' && (
                     <motion.circle
                       cx={vehicle.x}
@@ -353,10 +282,7 @@ export function LiveMapPage() {
                       r="3"
                       fill={vehicle.color}
                       opacity="0.3"
-                      animate={{
-                        r: [3, 6, 3],
-                        opacity: [0.3, 0, 0.3],
-                      }}
+                      animate={{r: [3, 6, 3], opacity: [0.3, 0, 0.3]}}
                       transition={{
                         duration: 2,
                         repeat: Infinity,
@@ -364,19 +290,10 @@ export function LiveMapPage() {
                       }}
                     />
                   )}
-
-                  {/* Vehicle marker */}
                   <motion.g
-                    animate={{
-                      x: vehicle.x,
-                      y: vehicle.y,
-                    }}
-                    transition={{
-                      type: 'spring',
-                      stiffness: 50,
-                      damping: 10,
-                    }}
-                    style={{cursor: 'pointer'}}
+                    animate={{x: vehicle.x, y: vehicle.y}}
+                    transition={{type: 'spring', stiffness: 50, damping: 10}}
+                    className="cursor-pointer"
                     onClick={() => setSelectedVehicle(vehicle.id)}
                   >
                     <circle
@@ -384,13 +301,19 @@ export function LiveMapPage() {
                       cy="0"
                       r="2"
                       fill={vehicle.color}
-                      stroke="white"
+                      stroke="currentColor"
+                      className="stroke-card"
                       strokeWidth="0.5"
                     />
-                    <circle cx="0" cy="0" r="1" fill="white" />
+                    <circle
+                      cx="0"
+                      cy="0"
+                      r="1"
+                      fill="currentColor"
+                      className="fill-card"
+                    />
                   </motion.g>
 
-                  {/* Label when selected */}
                   {selectedVehicle === vehicle.id && (
                     <motion.g
                       initial={{opacity: 0, scale: 0.8}}
@@ -403,17 +326,15 @@ export function LiveMapPage() {
                         width="20"
                         height="6"
                         rx="1"
-                        fill="white"
-                        stroke={vehicle.color}
-                        strokeWidth="0.3"
+                        className="fill-card stroke-border"
+                        strokeWidth="0.5"
                       />
                       <text
                         x={vehicle.x + 13}
                         y={vehicle.y - 0.5}
                         textAnchor="middle"
                         fill={vehicle.color}
-                        fontSize="2"
-                        fontWeight="700"
+                        className="text-[2px] font-bold"
                       >
                         {vehicle.id}
                       </text>
@@ -425,36 +346,16 @@ export function LiveMapPage() {
           </div>
         </motion.div>
 
-        {/* Vehicle List */}
         <motion.div
           initial={{opacity: 0, x: 20}}
           animate={{opacity: 1, x: 0}}
           transition={{delay: 0.3}}
-          style={{
-            backgroundColor: 'white',
-            borderRadius: 16,
-            padding: '1.5rem',
-            boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-            border: '1px solid #f1f5f9',
-            maxHeight: '600px',
-            overflowY: 'auto',
-          }}
+          className="bg-card rounded-2xl p-6 shadow-sm border border-border max-h-[600px] overflow-y-auto"
         >
-          <h3
-            style={{
-              color: '#0f2444',
-              fontWeight: 700,
-              fontSize: '0.95rem',
-              margin: 0,
-              marginBottom: '1.25rem',
-            }}
-          >
+          <h3 className="text-foreground font-bold text-base m-0 mb-5">
             Ajoneuvot ({vehicles.length})
           </h3>
-
-          <div
-            style={{display: 'flex', flexDirection: 'column', gap: '0.75rem'}}
-          >
+          <div className="flex flex-col gap-3">
             <AnimatePresence>
               {vehicles.map((vehicle) => {
                 const statusStyle = statusStyles[vehicle.status];
@@ -464,99 +365,38 @@ export function LiveMapPage() {
                     initial={{opacity: 0, y: 10}}
                     animate={{opacity: 1, y: 0}}
                     exit={{opacity: 0, y: -10}}
-                    style={{
-                      padding: '1rem',
-                      borderRadius: 12,
-                      border:
-                        selectedVehicle === vehicle.id
-                          ? `2px solid ${vehicle.color}`
-                          : '1px solid #e2e8f0',
-                      backgroundColor:
-                        selectedVehicle === vehicle.id
-                          ? `${vehicle.color}08`
-                          : 'transparent',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}
                     onClick={() => setSelectedVehicle(vehicle.id)}
                     whileHover={{scale: 1.02}}
+                    className={`p-4 rounded-xl cursor-pointer transition-all ${
+                      selectedVehicle === vehicle.id
+                        ? 'border-2 border-primary bg-primary/5'
+                        : 'border border-border bg-transparent'
+                    }`}
                   >
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.75rem',
-                        marginBottom: '0.75rem',
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 8,
-                          backgroundColor: `${vehicle.color}15`,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-muted">
                         <Truck size={18} color={vehicle.color} />
                       </div>
-                      <div style={{flex: 1}}>
-                        <div
-                          style={{
-                            color: '#0f2444',
-                            fontWeight: 700,
-                            fontSize: '0.85rem',
-                          }}
-                        >
+                      <div className="flex-1">
+                        <div className="text-foreground font-bold text-sm">
                           {vehicle.id}
                         </div>
-                        <div style={{color: '#64748b', fontSize: '0.75rem'}}>
+                        <div className="text-muted-foreground text-xs">
                           {vehicle.driver}
                         </div>
                       </div>
                     </div>
-
-                    <div
-                      style={{
-                        fontSize: '0.8rem',
-                        color: '#64748b',
-                        marginBottom: '0.5rem',
-                      }}
-                    >
+                    <div className="text-xs text-muted-foreground mb-2">
                       {vehicle.route}
                     </div>
-
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                      }}
-                    >
+                    <div className="flex justify-between items-center">
                       <span
-                        style={{
-                          padding: '0.25rem 0.625rem',
-                          borderRadius: 12,
-                          fontSize: '0.7rem',
-                          fontWeight: 600,
-                          backgroundColor: statusStyle.bg,
-                          color: statusStyle.color,
-                        }}
+                        className={`px-2.5 py-1 rounded-full text-[0.7rem] font-semibold ${statusStyle.bg} ${statusStyle.color}`}
                       >
                         {statusStyle.label}
                       </span>
                       {vehicle.speed > 0 && (
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                            color: '#64748b',
-                            fontSize: '0.75rem',
-                          }}
-                        >
+                        <div className="flex items-center gap-1 text-muted-foreground text-xs">
                           <Navigation size={12} />
                           <span>{vehicle.speed} km/h</span>
                         </div>

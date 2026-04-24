@@ -107,17 +107,22 @@ const routesData: Route[] = [
 
 const statusStyles = {
   active: {
-    bg: '#dcfce7',
-    color: '#16a34a',
+    bg: 'bg-green-100 dark:bg-green-900/30',
+    color: 'text-green-600 dark:text-green-400',
     label: 'Aktiivinen',
-    badge: '#22c55e',
+    badge: 'bg-green-500',
   },
-  done: {bg: '#dbeafe', color: '#2563eb', label: 'Valmis', badge: '#3b82f6'},
+  done: {
+    bg: 'bg-blue-100 dark:bg-blue-900/30',
+    color: 'text-blue-600 dark:text-blue-400',
+    label: 'Valmis',
+    badge: 'bg-blue-500',
+  },
   pending: {
-    bg: '#fef3c7',
-    color: '#d97706',
+    bg: 'bg-amber-100 dark:bg-amber-900/30',
+    color: 'text-amber-600 dark:text-amber-400',
     label: 'Odottaa',
-    badge: '#f59e0b',
+    badge: 'bg-amber-500',
   },
 };
 
@@ -146,70 +151,32 @@ export function RoutesPage() {
   };
 
   return (
-    <div style={{fontFamily: "'Space Grotesk', sans-serif"}}>
-      {/* Header */}
+    <div className="font-sans">
       <motion.div
         initial={{opacity: 0, y: -10}}
         animate={{opacity: 1, y: 0}}
-        style={{marginBottom: '1.5rem'}}
+        className="mb-6"
       >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '0.5rem',
-          }}
-        >
-          <h1
-            style={{
-              color: '#0f2444',
-              fontWeight: 800,
-              fontSize: '1.4rem',
-              margin: 0,
-            }}
-          >
+        <div className="flex justify-between items-center mb-2">
+          <h1 className="text-foreground font-extrabold text-2xl m-0">
             Reittien hallinta
           </h1>
-          <button
-            style={{
-              padding: '0.5rem 1rem',
-              borderRadius: 8,
-              border: 'none',
-              backgroundColor: '#f97316',
-              color: 'white',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              fontFamily: "'Space Grotesk', sans-serif",
-              transition: 'background 0.2s',
-            }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.backgroundColor = '#ea580c')
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.backgroundColor = '#f97316')
-            }
-          >
+          <button className="px-4 py-2 rounded-lg border-none bg-primary text-primary-foreground cursor-pointer text-sm font-semibold transition-colors hover:bg-primary/90">
             Päivitä
           </button>
         </div>
-        <p style={{color: '#64748b', fontSize: '0.85rem', margin: 0}}>
+        <p className="text-muted-foreground text-sm m-0">
           {counts.all} reittiä tänään · {counts.done} valmista
         </p>
       </motion.div>
 
-      {/* Stats Cards */}
-      <div
-        className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4"
-        style={{marginBottom: '1.5rem'}}
-      >
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
         {(
           [
-            {key: 'all', label: 'Kaikki reitit', color: '#0f2444'},
-            {key: 'active', label: 'Aktiivisia', color: '#22c55e'},
-            {key: 'done', label: 'Valmiita', color: '#3b82f6'},
-            {key: 'pending', label: 'Odottaa', color: '#f59e0b'},
+            {key: 'all', label: 'Kaikki reitit', colorClass: 'text-foreground'},
+            {key: 'active', label: 'Aktiivisia', colorClass: 'text-green-500'},
+            {key: 'done', label: 'Valmiita', colorClass: 'text-blue-500'},
+            {key: 'pending', label: 'Odottaa', colorClass: 'text-amber-500'},
           ] as const
         ).map((item, idx) => (
           <motion.div
@@ -218,94 +185,49 @@ export function RoutesPage() {
             animate={{opacity: 1, y: 0}}
             transition={{delay: idx * 0.05}}
             whileHover={{y: -2}}
-            style={{
-              backgroundColor: 'white',
-              borderRadius: 14,
-              padding: '1.25rem',
-              boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-              border:
-                activeFilter === item.key
-                  ? `2px solid ${item.color}`
-                  : '1px solid #f1f5f9',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
             onClick={() => setActiveFilter(item.key)}
+            className={`bg-card rounded-2xl p-5 shadow-sm border cursor-pointer transition-all ${
+              activeFilter === item.key
+                ? 'border-primary ring-1 ring-primary/50'
+                : 'border-border'
+            }`}
           >
             <div
-              style={{
-                fontSize: '1.75rem',
-                fontWeight: 800,
-                color: item.color,
-                lineHeight: 1,
-                marginBottom: '0.5rem',
-              }}
+              className={`text-3xl font-extrabold leading-none mb-2 ${item.colorClass}`}
             >
               {counts[item.key]}
             </div>
-            <div style={{color: '#64748b', fontSize: '0.85rem'}}>
-              {item.label}
-            </div>
+            <div className="text-muted-foreground text-sm">{item.label}</div>
           </motion.div>
         ))}
       </div>
 
-      {/* Search Bar */}
       <motion.div
         initial={{opacity: 0}}
         animate={{opacity: 1}}
         transition={{delay: 0.3}}
-        style={{marginBottom: '1.5rem'}}
+        className="mb-6"
       >
-        <div style={{position: 'relative'}}>
+        <div className="relative">
           <Search
             size={18}
-            color="#94a3b8"
-            style={{
-              position: 'absolute',
-              left: '1rem',
-              top: '50%',
-              transform: 'translateY(-50%)',
-            }}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
           />
           <input
             type="text"
             placeholder="Hae reittinumero, kuljettajaa, alue..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '0.875rem 1rem 0.875rem 3rem',
-              borderRadius: 10,
-              border: '1.5px solid #e2e8f0',
-              fontSize: '0.9rem',
-              fontFamily: "'Space Grotesk', sans-serif",
-              outline: 'none',
-              transition: 'border 0.2s',
-              boxSizing: 'border-box',
-              backgroundColor: 'white',
-            }}
-            onFocus={(e) => (e.target.style.borderColor = '#f97316')}
-            onBlur={(e) => (e.target.style.borderColor = '#e2e8f0')}
+            className="w-full py-3.5 pl-11 pr-4 rounded-xl border-2 border-border bg-input-background text-foreground text-sm outline-none transition-colors focus:border-primary"
           />
         </div>
       </motion.div>
 
-      {/* Filter Tabs */}
       <motion.div
         initial={{opacity: 0}}
         animate={{opacity: 1}}
         transition={{delay: 0.4}}
-        style={{
-          backgroundColor: 'white',
-          borderRadius: 16,
-          padding: '1rem 1.5rem',
-          marginBottom: '1rem',
-          display: 'flex',
-          gap: '0.75rem',
-          boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-          border: '1px solid #f1f5f9',
-        }}
+        className="bg-card rounded-2xl p-4 mb-4 flex gap-3 shadow-sm border border-border"
       >
         {[
           {key: 'all', label: 'Kaikki'},
@@ -316,48 +238,27 @@ export function RoutesPage() {
           <button
             key={tab.key}
             onClick={() => setActiveFilter(tab.key as typeof activeFilter)}
-            style={{
-              padding: '0.5rem 1.25rem',
-              borderRadius: 8,
-              border: 'none',
-              backgroundColor:
-                activeFilter === tab.key ? '#0f2444' : 'transparent',
-              color: activeFilter === tab.key ? 'white' : '#64748b',
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-              fontWeight: activeFilter === tab.key ? 600 : 500,
-              fontFamily: "'Space Grotesk', sans-serif",
-              transition: 'all 0.2s',
-            }}
+            className={`px-5 py-2 rounded-lg border-none cursor-pointer text-sm font-semibold transition-all ${
+              activeFilter === tab.key
+                ? 'bg-foreground text-background'
+                : 'bg-transparent text-muted-foreground hover:bg-muted/50'
+            }`}
           >
             {tab.label}
           </button>
         ))}
       </motion.div>
 
-      {/* Routes Table */}
       <motion.div
         initial={{opacity: 0, y: 20}}
         animate={{opacity: 1, y: 0}}
         transition={{delay: 0.5}}
-        style={{
-          backgroundColor: 'white',
-          borderRadius: 16,
-          boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-          border: '1px solid #f1f5f9',
-          overflow: 'hidden',
-        }}
+        className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden"
       >
-        <div style={{overflowX: 'auto', WebkitOverflowScrolling: 'touch'}}>
-          <table
-            style={{
-              width: '100%',
-              borderCollapse: 'collapse',
-              minWidth: '800px',
-            }}
-          >
+        <div className="overflow-x-auto overflow-y-hidden">
+          <table className="w-full border-collapse min-w-[800px]">
             <thead>
-              <tr style={{backgroundColor: '#f8fafc'}}>
+              <tr className="bg-muted/50 border-b border-border">
                 {[
                   'REITTI',
                   'KULJETTAJA',
@@ -368,23 +269,15 @@ export function RoutesPage() {
                   'TILA',
                 ].map((h, idx) => (
                   <th
-                    key={`header-${idx}`}
-                    style={{
-                      padding: '1rem 1.25rem',
-                      textAlign: 'left',
-                      fontSize: '0.7rem',
-                      fontWeight: 700,
-                      color: '#94a3b8',
-                      letterSpacing: '0.05em',
-                      whiteSpace: 'nowrap',
-                    }}
+                    key={idx}
+                    className="p-4 text-left text-xs font-bold text-muted-foreground tracking-wider whitespace-nowrap"
                   >
                     {h}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-border">
               <AnimatePresence>
                 {filteredRoutes.map((route, i) => {
                   const st = statusStyles[route.status];
@@ -395,154 +288,60 @@ export function RoutesPage() {
                       animate={{opacity: 1}}
                       exit={{opacity: 0}}
                       transition={{delay: i * 0.02}}
-                      style={{
-                        borderTop: '1px solid #f1f5f9',
-                        backgroundColor: 'white',
-                        transition: 'background-color 0.2s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#f8fafc';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'white';
-                      }}
+                      className="hover:bg-muted/30 transition-colors"
                     >
-                      <td style={{padding: '1rem 1.25rem'}}>
+                      <td className="p-4">
                         <div>
-                          <div
-                            style={{
-                              fontWeight: 700,
-                              color: '#0f2444',
-                              fontSize: '0.9rem',
-                            }}
-                          >
+                          <div className="font-bold text-foreground text-sm">
                             {route.id}
                           </div>
-                          <div
-                            style={{
-                              fontSize: '0.75rem',
-                              color: '#94a3b8',
-                              marginTop: '0.125rem',
-                            }}
-                          >
+                          <div className="text-xs text-muted-foreground mt-0.5">
                             {route.time}
                           </div>
                         </div>
                       </td>
-                      <td style={{padding: '1rem 1.25rem'}}>
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.75rem',
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: 36,
-                              height: 36,
-                              borderRadius: '50%',
-                              backgroundColor: '#0f2444',
-                              color: 'white',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '0.75rem',
-                              fontWeight: 700,
-                            }}
-                          >
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-bold">
                             {route.initials}
                           </div>
-                          <span
-                            style={{
-                              fontSize: '0.875rem',
-                              color: '#374151',
-                              fontWeight: 500,
-                            }}
-                          >
+                          <span className="text-sm text-foreground font-medium">
                             {route.driver}
                           </span>
                         </div>
                       </td>
-                      <td style={{padding: '1rem 1.25rem'}}>
-                        <span
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.375rem',
-                            fontSize: '0.85rem',
-                            color: '#64748b',
-                          }}
-                        >
-                          <MapPin size={14} color="#94a3b8" />
-                          {route.area}
+                      <td className="p-4">
+                        <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                          <MapPin size={14} /> {route.area}
                         </span>
                       </td>
-                      <td style={{padding: '1rem 1.25rem'}}>
-                        <span
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.375rem',
-                            fontSize: '0.85rem',
-                            color: '#64748b',
-                          }}
-                        >
-                          <Package size={14} color="#94a3b8" />
-                          {route.truck}
+                      <td className="p-4">
+                        <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                          <Package size={14} /> {route.truck}
                         </span>
                       </td>
-                      <td
-                        style={{
-                          padding: '1rem 1.25rem',
-                          fontSize: '0.875rem',
-                          color: '#374151',
-                          fontWeight: 600,
-                        }}
-                      >
-                        {route.stops}
-                        <span style={{color: '#94a3b8', fontWeight: 400}}>
-                          {' '}
+                      <td className="p-4 text-sm text-foreground font-semibold">
+                        {route.stops}{' '}
+                        <span className="text-muted-foreground font-normal">
                           paikkoja
                         </span>
                       </td>
-                      <td style={{padding: '1rem 1.25rem', minWidth: 140}}>
+                      <td className="p-4 min-w-[140px]">
                         <div>
-                          <div
-                            style={{
-                              backgroundColor: '#f1f5f9',
-                              borderRadius: 8,
-                              height: 8,
-                              overflow: 'hidden',
-                              marginBottom: '0.375rem',
-                            }}
-                          >
+                          <div className="bg-muted rounded-lg h-2 overflow-hidden mb-1.5">
                             <div
-                              style={{
-                                height: '100%',
-                                width: `${route.progress}%`,
-                                backgroundColor: st.badge,
-                                borderRadius: 8,
-                                transition: 'width 0.3s',
-                              }}
+                              className={`h-full rounded-lg transition-all duration-300 ${st.badge}`}
+                              style={{width: `${route.progress}%`}}
                             />
                           </div>
-                          <span style={{fontSize: '0.75rem', color: '#64748b'}}>
+                          <span className="text-xs text-muted-foreground">
                             {route.progress}%
                           </span>
                         </div>
                       </td>
-                      <td style={{padding: '1rem 1.25rem'}}>
+                      <td className="p-4">
                         <span
-                          style={{
-                            padding: '0.375rem 0.875rem',
-                            borderRadius: 20,
-                            fontSize: '0.8rem',
-                            fontWeight: 600,
-                            backgroundColor: st.bg,
-                            color: st.color,
-                            whiteSpace: 'nowrap',
-                          }}
+                          className={`inline-flex items-center px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap ${st.bg} ${st.color}`}
                         >
                           {st.label}
                         </span>
@@ -554,12 +353,9 @@ export function RoutesPage() {
             </tbody>
           </table>
         </div>
-
         {filteredRoutes.length === 0 && (
-          <div style={{padding: '3rem', textAlign: 'center'}}>
-            <p style={{color: '#94a3b8', fontSize: '0.9rem'}}>
-              Ei reittejä löytynyt hakuehdoilla.
-            </p>
+          <div className="p-12 text-center text-muted-foreground text-sm">
+            Ei reittejä löytynyt hakuehdoilla.
           </div>
         )}
       </motion.div>

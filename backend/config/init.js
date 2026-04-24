@@ -13,7 +13,7 @@ async function initDB() {
       host: process.env.DB_HOST,
       user: process.env.DB_ADMIN_USER,
       password: process.env.DB_ADMIN_PASS,
-      multipleStatements: true
+      multipleStatements: true,
     });
 
     console.log('Connected to MySQL server as admin');
@@ -34,9 +34,9 @@ async function initDB() {
 
     await connection.query(`USE \`${process.env.DB_NAME}\`;`);
 
-    const resetPath = path.join(__dirname, 'config/reset_tables.sql');
-    const createPath = path.join(__dirname, 'config/create_tables.sql');
-    const seedPath = path.join(__dirname, 'config/seed.sql');
+    const resetPath = path.join(__dirname, '/reset_tables.sql');
+    const createPath = path.join(__dirname, '/create_tables.sql');
+    const seedPath = path.join(__dirname, '/seed.sql');
 
     if (isReset) {
       console.log(' RESET MODE ');
@@ -52,7 +52,6 @@ async function initDB() {
       const seedSQL = fs.readFileSync(seedPath, 'utf-8');
       await connection.query(seedSQL);
       console.log('Database seeded');
-
     } else {
       console.log(' NORMAL MODE ');
 
@@ -62,7 +61,6 @@ async function initDB() {
     }
 
     console.log('DB initialization complete');
-
   } catch (err) {
     console.error('DB INIT ERROR:', err);
   } finally {

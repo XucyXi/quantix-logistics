@@ -38,79 +38,62 @@ const users = [
 
 export function UsersPage() {
   return (
-    <div style={{fontFamily: "'Space Grotesk', sans-serif"}}>
-      <div style={{marginBottom: '1.5rem'}}>
-        <h1
-          style={{
-            color: '#0f2444',
-            fontWeight: 800,
-            fontSize: '1.4rem',
-            margin: 0,
-          }}
-        >
+    <div className="font-sans">
+      <div className="mb-6">
+        <h1 className="text-foreground font-extrabold text-2xl m-0">
           Käyttäjät
         </h1>
-        <p
-          style={{color: '#64748b', fontSize: '0.85rem', margin: '0.5rem 0 0'}}
-        >
+        <p className="text-muted-foreground text-sm mt-2 mb-0">
           Järjestelmän käyttäjät ja roolit
         </p>
       </div>
 
-      <div
-        className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4"
-        style={{marginBottom: '1.5rem'}}
-      >
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
         {[
-          {label: 'Käyttäjiä', value: '24', icon: Users, color: '#2563eb'},
-          {label: 'Adminit', value: '3', icon: Shield, color: '#8b5cf6'},
-          {label: 'Aktiiviset', value: '19', icon: UserCheck, color: '#16a34a'},
+          {
+            label: 'Käyttäjiä',
+            value: '24',
+            icon: Users,
+            colorClass: 'text-blue-500',
+            bgClass: 'bg-blue-500/10',
+          },
+          {
+            label: 'Adminit',
+            value: '3',
+            icon: Shield,
+            colorClass: 'text-purple-500',
+            bgClass: 'bg-purple-500/10',
+          },
+          {
+            label: 'Aktiiviset',
+            value: '19',
+            icon: UserCheck,
+            colorClass: 'text-green-500',
+            bgClass: 'bg-green-500/10',
+          },
           {
             label: 'Viime kirjautuminen',
             value: '10 min',
             icon: Clock,
-            color: '#f97316',
+            colorClass: 'text-orange-500',
+            bgClass: 'bg-orange-500/10',
           },
         ].map((stat) => (
           <div
             key={stat.label}
-            style={{
-              backgroundColor: 'white',
-              borderRadius: 14,
-              padding: '1rem',
-              border: '1px solid #e2e8f0',
-              boxShadow: '0 1px 8px rgba(0,0,0,0.05)',
-            }}
+            className="bg-card rounded-2xl p-4 border border-border shadow-sm"
           >
-            <div
-              style={{display: 'flex', alignItems: 'center', gap: '0.75rem'}}
-            >
+            <div className="flex items-center gap-3">
               <div
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 10,
-                  backgroundColor: `${stat.color}15`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${stat.bgClass}`}
               >
-                <stat.icon size={20} color={stat.color} />
+                <stat.icon size={20} className={stat.colorClass} />
               </div>
               <div>
-                <div
-                  style={{
-                    fontSize: '1.25rem',
-                    fontWeight: 800,
-                    color: '#0f2444',
-                    lineHeight: 1,
-                  }}
-                >
+                <div className="text-xl font-extrabold text-foreground leading-none mb-1">
                   {stat.value}
                 </div>
-                <div style={{color: '#64748b', fontSize: '0.8rem'}}>
+                <div className="text-muted-foreground text-xs">
                   {stat.label}
                 </div>
               </div>
@@ -119,6 +102,7 @@ export function UsersPage() {
         ))}
       </div>
 
+      {/* Huom: Varmista että MasterTable itse ei sisällä myöskään inline-tyylejä omassa tiedostossaan! */}
       <MasterTable
         title="Käyttäjähallinta"
         description="Käyttäjät, sähköpostit, roolit ja viimeisin kirjautuminen"
@@ -134,7 +118,7 @@ export function UsersPage() {
           <MasterTableRow key={user.id}>
             <MasterTableCell>{user.id}</MasterTableCell>
             <MasterTableCell>
-              <div style={{fontWeight: 600, color: '#0f2444'}}>{user.name}</div>
+              <div className="font-semibold text-foreground">{user.name}</div>
             </MasterTableCell>
             <MasterTableCell>{user.email}</MasterTableCell>
             <MasterTableCell>{user.role}</MasterTableCell>

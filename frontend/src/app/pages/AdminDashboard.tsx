@@ -10,14 +10,12 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
-// Yksinkertaistetut PWA-tilastot
 const statCards = [
-  {label: 'Reittejä', value: '12', icon: Truck, color: '#3b82f6'},
-  {label: 'Toimitettu', value: '284', icon: Package, color: '#22c55e'},
-  {label: 'Hälytykset', value: '4', icon: AlertTriangle, color: '#ef4444'},
+  {label: 'Reittejä', value: '12', icon: Truck, color: 'text-blue-500'},
+  {label: 'Toimitettu', value: '284', icon: Package, color: 'text-green-500'},
+  {label: 'Hälytykset', value: '4', icon: AlertTriangle, color: 'text-red-500'},
 ];
 
-// Yksinkertaistettu mock data
 const initialRoutes = [
   {
     id: 'R-2401',
@@ -62,13 +60,12 @@ interface SwipeCardProps {
   onApprove: (id: string) => void;
 }
 
-// Uusi Swipe-liuku Ylläpidon reittien nopeaan kuittaamiseen
 function SwipeableRouteCard({route, onApprove}: SwipeCardProps) {
   const x = useMotionValue(0);
   const background = useTransform(
     x,
     [-150, 0, 150],
-    ['#ef4444', '#ffffff', '#16a34a']
+    ['var(--color-destructive)', 'var(--color-card)', '#16a34a']
   );
 
   const handleDragEnd = (e: any, info: PanInfo) => {
@@ -81,34 +78,13 @@ function SwipeableRouteCard({route, onApprove}: SwipeCardProps) {
   };
 
   return (
-    <motion.div
-      style={{position: 'relative', marginBottom: '1rem', touchAction: 'pan-y'}}
-    >
+    <motion.div className="relative mb-4 touch-pan-y">
       <motion.div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          borderRadius: 20,
-          background,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 1.5rem',
-        }}
+        className="absolute inset-0 rounded-2xl flex items-center justify-between px-6"
+        style={{background}}
       >
-        <div style={{color: 'white', fontWeight: 800, fontSize: '1.1rem'}}>
-          ✕ Peruuta
-        </div>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            color: 'white',
-            fontWeight: 800,
-            fontSize: '1.1rem',
-          }}
-        >
+        <div className="text-white font-extrabold text-lg">✕ Peruuta</div>
+        <div className="flex items-center gap-2 text-white font-extrabold text-lg">
           Vahvista <CheckCircle size={26} />
         </div>
       </motion.div>
@@ -118,68 +94,34 @@ function SwipeableRouteCard({route, onApprove}: SwipeCardProps) {
         dragConstraints={{left: 0, right: 0}}
         dragElastic={0.2}
         onDragEnd={handleDragEnd}
-        style={{
-          x,
-          backgroundColor: 'white',
-          borderRadius: 20,
-          padding: '1.5rem',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
-          border: '2px solid #e2e8f0',
-          position: 'relative',
-          cursor: 'grab',
-        }}
-        whileTap={{cursor: 'grabbing'}}
+        style={{x}}
+        className="bg-card rounded-2xl p-6 shadow-sm border border-border relative cursor-grab active:cursor-grabbing"
       >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            marginBottom: '1rem',
-          }}
-        >
-          <h3
-            style={{
-              fontSize: '1.4rem',
-              fontWeight: 800,
-              color: '#0f2444',
-              margin: 0,
-            }}
-          >
+        <div className="flex justify-between mb-4">
+          <h3 className="text-2xl font-extrabold text-foreground m-0">
             {route.id}
           </h3>
           <span
-            style={{
-              backgroundColor:
-                route.status === 'active' ? '#dcfce7' : '#fef3c7',
-              color: route.status === 'active' ? '#16a34a' : '#d97706',
-              padding: '0.375rem 0.875rem',
-              borderRadius: 14,
-              fontSize: '0.9rem',
-              fontWeight: 800,
-            }}
+            className={`px-3.5 py-1.5 rounded-full text-sm font-extrabold ${
+              route.status === 'active'
+                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+            }`}
           >
             {route.status === 'active' ? 'AJOSSA' : 'ODOTTAA'}
           </span>
         </div>
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem',
-            color: '#475569',
-            fontSize: '1.05rem',
-            fontWeight: 600,
-          }}
-        >
-          <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
-            <Truck size={22} color="#94a3b8" /> {route.driver} ({route.truck})
+        <div className="flex flex-col gap-3 text-muted-foreground text-base font-semibold">
+          <div className="flex items-center gap-3">
+            <Truck size={22} className="text-muted-foreground" /> {route.driver}{' '}
+            ({route.truck})
           </div>
-          <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
-            <MapPin size={22} color="#94a3b8" /> {route.area}
+          <div className="flex items-center gap-3">
+            <MapPin size={22} className="text-muted-foreground" /> {route.area}
           </div>
-          <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
-            <Package size={22} color="#94a3b8" /> {route.done} / {route.stops}{' '}
-            paikkaa hoidettu
+          <div className="flex items-center gap-3">
+            <Package size={22} className="text-muted-foreground" /> {route.done}{' '}
+            / {route.stops} paikkaa hoidettu
           </div>
         </div>
       </motion.div>
@@ -195,65 +137,17 @@ export function AdminDashboard() {
   };
 
   return (
-    <div
-      style={{
-        fontFamily: "'Space Grotesk', sans-serif",
-        backgroundColor: '#f1f5f9',
-        minHeight: '100vh',
-        paddingBottom: '5rem',
-      }}
-    >
-      {/* PWA Mobiili Header */}
-      <div
-        style={{
-          background: 'linear-gradient(135deg, #0f2444 0%, #1e3a5f 100%)',
-          padding: '2rem 1.5rem',
-          color: 'white',
-          borderBottomLeftRadius: 24,
-          borderBottomRightRadius: 24,
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            marginBottom: '1.5rem',
-          }}
-        >
+    <div className="font-sans min-h-screen pb-20">
+      {/* Header */}
+      <div className="bg-gradient-to-br from-primary to-blue-900 dark:from-sidebar dark:to-background p-8 text-primary-foreground rounded-b-3xl shadow-md">
+        <div className="flex justify-between items-start mb-6">
           <div>
-            <h1
-              style={{
-                fontSize: '2rem',
-                fontWeight: 800,
-                margin: '0 0 0.25rem 0',
-              }}
-            >
-              Ajokeskus
-            </h1>
-            <p
-              style={{
-                color: 'rgba(255,255,255,0.7)',
-                margin: 0,
-                fontSize: '1.1rem',
-              }}
-            >
+            <h1 className="text-3xl font-extrabold m-0 mb-1">Ajokeskus</h1>
+            <p className="text-primary-foreground/70 m-0 text-lg">
               Tilannekatsaus
             </p>
           </div>
-          <button
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 16,
-              backgroundColor: 'rgba(255,255,255,0.1)',
-              border: 'none',
-              color: 'white',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
+          <button className="w-14 h-14 rounded-2xl bg-white/10 border-none text-white flex items-center justify-center hover:bg-white/20 transition-colors cursor-pointer">
             <RefreshCw size={28} />
           </button>
         </div>
@@ -262,78 +156,42 @@ export function AdminDashboard() {
           {statCards.map((stat) => (
             <div
               key={stat.label}
-              style={{
-                backgroundColor: 'rgba(255,255,255,0.1)',
-                borderRadius: 16,
-                padding: '1.25rem 1rem',
-                textAlign: 'center',
-              }}
+              className="bg-white/10 rounded-2xl p-5 text-center backdrop-blur-sm"
             >
-              <div
-                style={{
-                  fontSize: '2rem',
-                  fontWeight: 800,
-                  marginBottom: '0.25rem',
-                }}
-              >
-                {stat.value}
-              </div>
-              <div style={{fontSize: '0.9rem', opacity: 0.8}}>{stat.label}</div>
+              <div className="text-3xl font-extrabold mb-1">{stat.value}</div>
+              <div className="text-sm opacity-80">{stat.label}</div>
             </div>
           ))}
         </div>
       </div>
 
-      <div style={{padding: '1.5rem'}}>
-        {/* Hälytykset erittäin isoilla korteilla */}
-        <h2
-          style={{
-            fontSize: '1.4rem',
-            fontWeight: 800,
-            color: '#0f2444',
-            marginBottom: '1rem',
-          }}
-        >
+      <div className="p-6">
+        <h2 className="text-2xl font-extrabold text-foreground mb-4">
           Huomiota vaativat
         </h2>
-        <div className="grid grid-cols-1 gap-4 mb-8 md:grid-cols-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           {alerts.map((alert, i) => (
             <div
               key={i}
-              style={{
-                backgroundColor:
-                  alert.type === 'warning' ? '#fffbeb' : '#eff6ff',
-                border: `2px solid ${alert.type === 'warning' ? '#fde68a' : '#bfdbfe'}`,
-                borderRadius: 20,
-                padding: '1.5rem',
-                display: 'flex',
-                gap: '1.25rem',
-                alignItems: 'center',
-              }}
+              className={`flex items-center gap-5 p-6 rounded-2xl border-2 ${
+                alert.type === 'warning'
+                  ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/50'
+                  : 'bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-900/50'
+              }`}
             >
               <AlertTriangle
                 size={36}
-                color={alert.type === 'warning' ? '#d97706' : '#3b82f6'}
-                style={{flexShrink: 0}}
+                className={`shrink-0 ${
+                  alert.type === 'warning'
+                    ? 'text-amber-600 dark:text-amber-500'
+                    : 'text-blue-600 dark:text-blue-500'
+                }`}
               />
-              <div style={{flex: 1}}>
-                <div
-                  style={{
-                    color: '#0f2444',
-                    fontWeight: 800,
-                    fontSize: '1.15rem',
-                    marginBottom: '0.25rem',
-                  }}
-                >
+              <div className="flex-1">
+                <div className="text-foreground font-extrabold text-lg mb-1">
                   {alert.msg}
                 </div>
-                <div
-                  style={{
-                    color: '#64748b',
-                    fontSize: '0.95rem',
-                    fontWeight: 600,
-                  }}
-                >
+                <div className="text-muted-foreground text-sm font-semibold">
                   Tänään klo {alert.time}
                 </div>
               </div>
@@ -341,15 +199,7 @@ export function AdminDashboard() {
           ))}
         </div>
 
-        {/* Reitit Swipe-korteilla (Ylläpidon kuittaukset) */}
-        <h2
-          style={{
-            fontSize: '1.4rem',
-            fontWeight: 800,
-            color: '#0f2444',
-            marginBottom: '1rem',
-          }}
-        >
+        <h2 className="text-2xl font-extrabold text-foreground mb-4">
           Avoimet reitit ({routes.length})
         </h2>
         {routes.length > 0 ? (
@@ -361,104 +211,48 @@ export function AdminDashboard() {
             />
           ))
         ) : (
-          <div
-            style={{
-              textAlign: 'center',
-              padding: '4rem 1rem',
-              color: '#94a3b8',
-            }}
-          >
+          <div className="text-center py-16 text-muted-foreground">
             <CheckCircle
               size={64}
-              color="#22c55e"
-              style={{margin: '0 auto 1rem', opacity: 0.5}}
+              className="mx-auto mb-4 opacity-50 text-green-500"
             />
-            <p style={{fontSize: '1.2rem', fontWeight: 700}}>
-              Kaikki reitit vahvistettu!
-            </p>
+            <p className="text-xl font-bold">Kaikki reitit vahvistettu!</p>
           </div>
         )}
 
-        {/* Isot PWA Pikatoimintonapit */}
-        <h2
-          style={{
-            fontSize: '1.4rem',
-            fontWeight: 800,
-            color: '#0f2444',
-            marginTop: '2.5rem',
-            marginBottom: '1rem',
-          }}
-        >
+        <h2 className="text-2xl font-extrabold text-foreground mt-10 mb-4">
           Pikatoiminnot
         </h2>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <button
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '1.75rem',
-              backgroundColor: 'white',
-              border: '2px solid #e2e8f0',
-              borderRadius: 20,
-              fontSize: '1.2rem',
-              fontWeight: 800,
-              color: '#0f2444',
-            }}
-          >
-            <div
-              style={{display: 'flex', alignItems: 'center', gap: '1.25rem'}}
-            >
-              <div
-                style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: 16,
-                  backgroundColor: '#fef3c7',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Package size={28} color="#d97706" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button className="flex items-center justify-between p-7 bg-card border-2 border-border rounded-2xl text-xl font-extrabold text-foreground hover:bg-accent hover:border-primary transition-all group">
+            <div className="flex items-center gap-5">
+              <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Package
+                  size={28}
+                  className="text-amber-600 dark:text-amber-500"
+                />
               </div>
               Uusi pikatilaus
             </div>
-            <ArrowRight size={28} color="#94a3b8" />
+            <ArrowRight
+              size={28}
+              className="text-muted-foreground group-hover:text-primary transition-colors"
+            />
           </button>
-          <button
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '1.75rem',
-              backgroundColor: 'white',
-              border: '2px solid #e2e8f0',
-              borderRadius: 20,
-              fontSize: '1.2rem',
-              fontWeight: 800,
-              color: '#0f2444',
-            }}
-          >
-            <div
-              style={{display: 'flex', alignItems: 'center', gap: '1.25rem'}}
-            >
-              <div
-                style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: 16,
-                  backgroundColor: '#dcfce7',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Truck size={28} color="#16a34a" />
+          <button className="flex items-center justify-between p-7 bg-card border-2 border-border rounded-2xl text-xl font-extrabold text-foreground hover:bg-accent hover:border-primary transition-all group">
+            <div className="flex items-center gap-5">
+              <div className="w-14 h-14 rounded-2xl bg-green-100 dark:bg-green-900/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Truck
+                  size={28}
+                  className="text-green-600 dark:text-green-500"
+                />
               </div>
               Hallitse kuljettajia
             </div>
-            <ArrowRight size={28} color="#94a3b8" />
+            <ArrowRight
+              size={28}
+              className="text-muted-foreground group-hover:text-primary transition-colors"
+            />
           </button>
         </div>
       </div>

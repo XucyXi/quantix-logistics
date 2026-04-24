@@ -16,6 +16,8 @@ import {
   Map,
 } from 'lucide-react';
 import {useAuth} from '../contexts/AuthContext';
+// HUOM: Varmista että tämä polku on oikein sinun projektissasi!
+import {ModeToggle} from '../components/layout/ModeToggle.tsx';
 
 const navItems = [
   {to: '/admin', icon: LayoutDashboard, label: 'Kojelauta'},
@@ -35,7 +37,6 @@ export function AdminRoot() {
   const navigate = useNavigate();
   const {user, logout} = useAuth();
 
-  // Tarkista näytön koko
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 1024);
@@ -67,91 +68,43 @@ export function AdminRoot() {
   };
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        minHeight: '100vh',
-        backgroundColor: '#f1f5f9',
-        fontFamily: "'Space Grotesk', sans-serif",
-      }}
-    >
+    // MUUTOS: Käytetään Tailwind-luokkia dynaamisiin väreihin
+    <div className="flex min-h-screen bg-background text-foreground font-sans">
       {/* Mobile Overlay */}
       {isMobile && sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            zIndex: 40,
-          }}
+          className="fixed inset-0 bg-black/50 z-40"
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - Tässä pidetään inline-tyylit layoutille, mutta värit classNameen */}
       <aside
+        className="bg-sidebar border-r border-sidebar-border z-50 flex flex-col shrink-0"
         style={{
           width: isMobile ? (sidebarOpen ? 240 : 0) : sidebarOpen ? 240 : 64,
-          backgroundColor: '#0f2444',
           transition: 'width 0.3s ease, transform 0.3s ease',
-          display: 'flex',
-          flexDirection: 'column',
-          flexShrink: 0,
           position: isMobile ? 'fixed' : 'sticky',
           top: 0,
           left: 0,
           height: '100vh',
           overflow: 'hidden',
-          zIndex: 50,
           transform:
             isMobile && !sidebarOpen ? 'translateX(-100%)' : 'translateX(0)',
         }}
       >
         {/* Sidebar header */}
-        <div
-          style={{
-            padding: '1rem',
-            borderBottom: '1px solid rgba(255,255,255,0.08)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            minHeight: 64,
-          }}
-        >
+        <div className="p-4 border-b border-sidebar-border flex items-center justify-between min-h-[64px]">
           {sidebarOpen && (
-            <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 6,
-                  background: 'linear-gradient(135deg, #f97316, #ea580c)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
-              >
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-md bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center shrink-0">
                 <Truck size={15} color="white" />
               </div>
               <div>
-                <div
-                  style={{
-                    color: 'white',
-                    fontWeight: 700,
-                    fontSize: '0.8rem',
-                    lineHeight: 1.2,
-                  }}
-                >
+                <div className="text-white font-bold text-sm leading-tight">
                   QUANTIX
                 </div>
-                <div
-                  style={{
-                    color: '#f97316',
-                    fontWeight: 600,
-                    fontSize: '0.7rem',
-                  }}
-                >
+                <div className="text-orange-500 font-semibold text-xs">
                   YLLÄPITO
                 </div>
               </div>
@@ -159,34 +112,14 @@ export function AdminRoot() {
           )}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 6,
-              backgroundColor: 'rgba(255,255,255,0.08)',
-              border: 'none',
-              color: 'rgba(255,255,255,0.7)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
+            className="w-7 h-7 rounded-md bg-white/10 border-none text-white/70 flex items-center justify-center shrink-0 hover:bg-white/20 transition-colors"
           >
             {sidebarOpen ? <X size={14} /> : <Menu size={14} />}
           </button>
         </div>
 
         {/* Nav items */}
-        <nav
-          style={{
-            flex: 1,
-            padding: '0.75rem 0.5rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.25rem',
-          }}
-        >
+        <nav className="flex-1 p-3 flex flex-col gap-1 overflow-y-auto">
           {navItems.map(({to, icon: Icon, label}) => {
             const active = isActive(to);
             return (
@@ -194,35 +127,16 @@ export function AdminRoot() {
                 key={to}
                 to={to}
                 onClick={closeMobileSidebar}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  padding: '0.6rem 0.75rem',
-                  borderRadius: 8,
-                  textDecoration: 'none',
-                  backgroundColor: active
-                    ? 'rgba(249,115,22,0.15)'
-                    : 'transparent',
-                  color: active ? '#f97316' : 'rgba(255,255,255,0.65)',
-                  transition: 'all 0.2s',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                }}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all whitespace-nowrap overflow-hidden ${
+                  active
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
+                    : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                }`}
               >
-                <Icon size={18} style={{flexShrink: 0}} />
-                {(sidebarOpen || !isMobile) && (
-                  <span
-                    style={{
-                      fontSize: '0.875rem',
-                      fontWeight: active ? 600 : 400,
-                    }}
-                  >
-                    {label}
-                  </span>
-                )}
+                <Icon size={18} className="shrink-0" />
+                {(sidebarOpen || !isMobile) && <span>{label}</span>}
                 {(sidebarOpen || !isMobile) && active && (
-                  <ChevronRight size={14} style={{marginLeft: 'auto'}} />
+                  <ChevronRight size={14} className="ml-auto" />
                 )}
               </Link>
             );
@@ -230,152 +144,62 @@ export function AdminRoot() {
         </nav>
 
         {/* User info at bottom */}
-        <div
-          style={{
-            padding: '1rem 0.75rem',
-            borderTop: '1px solid rgba(255,255,255,0.08)',
-          }}
-        >
+        <div className="p-4 border-t border-sidebar-border">
           {sidebarOpen && user && (
-            <div style={{marginBottom: '0.75rem'}}>
-              <div
-                style={{
-                  color: 'white',
-                  fontWeight: 600,
-                  fontSize: '0.85rem',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
+            <div className="mb-3">
+              <div className="text-sidebar-foreground font-semibold text-sm whitespace-nowrap overflow-hidden text-ellipsis">
                 {user.name}
               </div>
-              <div
-                style={{color: 'rgba(255,255,255,0.45)', fontSize: '0.75rem'}}
-              >
+              <div className="text-sidebar-foreground/50 text-xs">
                 Ylläpitäjä
               </div>
             </div>
           )}
           <button
             onClick={handleLogout}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.625rem',
-              padding: '0.5rem 0.5rem',
-              borderRadius: 6,
-              border: 'none',
-              backgroundColor: 'rgba(239,68,68,0.1)',
-              color: '#f87171',
-              cursor: 'pointer',
-              fontSize: '0.8rem',
-              fontWeight: 500,
-              width: '100%',
-            }}
+            className="flex items-center gap-2.5 p-2 rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20 font-medium text-sm w-full transition-colors"
           >
-            <LogOut size={16} style={{flexShrink: 0}} />
+            <LogOut size={16} className="shrink-0" />
             {sidebarOpen && 'Kirjaudu ulos'}
           </button>
         </div>
       </aside>
 
       {/* Main content */}
-      <div
-        style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          minWidth: 0,
-          width: '100%',
-        }}
-      >
+      <div className="flex-1 flex flex-col min-w-0 w-full">
         {/* Top bar */}
-        <header
-          style={{
-            backgroundColor: 'white',
-            borderBottom: '1px solid #e2e8f0',
-            padding: '0 1rem',
-            height: 64,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexShrink: 0,
-          }}
-        >
-          <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
+        <header className="bg-card border-b border-border h-16 px-4 flex items-center justify-between shrink-0 transition-colors">
+          <div className="flex items-center gap-4">
             {isMobile && (
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 8,
-                  border: '1px solid #e2e8f0',
-                  backgroundColor: 'white',
-                  color: '#64748b',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
+                className="w-9 h-9 rounded-lg border border-border bg-card text-muted-foreground flex items-center justify-center hover:bg-accent transition-colors"
               >
                 <Menu size={20} />
               </button>
             )}
-            <h2 style={{margin: 0, color: '#0f2444', fontSize: '1.1rem'}}>
+            <h2 className="m-0 text-foreground font-semibold text-lg">
               Hallintapaneeli
             </h2>
           </div>
-          <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
-            <div style={{position: 'relative'}}>
-              <Bell size={20} color="#64748b" />
-              <span
-                style={{
-                  position: 'absolute',
-                  top: -4,
-                  right: -4,
-                  width: 14,
-                  height: 14,
-                  borderRadius: '50%',
-                  backgroundColor: '#f97316',
-                  color: 'white',
-                  fontSize: '0.6rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
+          <div className="flex items-center gap-4">
+            {/* Theme toggle */}
+            <ModeToggle />
+
+            <div className="relative cursor-pointer hover:text-primary transition-colors text-muted-foreground">
+              <Bell size={20} />
+              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-primary text-primary-foreground text-[0.6rem] flex items-center justify-center">
                 3
               </span>
             </div>
-            <div
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: '50%',
-                backgroundColor: '#0f2444',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 700,
-                fontSize: '0.85rem',
-              }}
-            >
+            <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm">
               {user?.name?.[0] ?? 'A'}
             </div>
           </div>
         </header>
 
         {/* Page content */}
-        <main
-          style={{
-            flex: 1,
-            padding: isMobile ? '1rem' : '1.5rem',
-            overflowY: 'auto',
-          }}
-        >
+        <main className="flex-1 p-4 lg:p-6 overflow-y-auto">
           <Outlet />
         </main>
       </div>

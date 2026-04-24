@@ -12,24 +12,17 @@ import {
 
 export function SettingsPage() {
   return (
-    <div style={{fontFamily: "'Space Grotesk', sans-serif"}}>
+    <div className="font-sans">
       {/* Header */}
       <motion.div
         initial={{opacity: 0, y: -10}}
         animate={{opacity: 1, y: 0}}
-        style={{marginBottom: '1.5rem'}}
+        className="mb-6"
       >
-        <h1
-          style={{
-            color: '#0f2444',
-            fontWeight: 800,
-            fontSize: '1.4rem',
-            marginBottom: '0.5rem',
-          }}
-        >
+        <h1 className="text-foreground font-extrabold text-2xl m-0 mb-2">
           Asetukset
         </h1>
-        <p style={{color: '#64748b', fontSize: '0.85rem', margin: 0}}>
+        <p className="text-muted-foreground text-sm m-0">
           Hallitse järjestelmän asetuksia ja konfiguraatioita
         </p>
       </motion.div>
@@ -41,121 +34,38 @@ export function SettingsPage() {
           initial={{opacity: 0, y: 20}}
           animate={{opacity: 1, y: 0}}
           transition={{delay: 0.1}}
-          style={{
-            backgroundColor: 'white',
-            borderRadius: 16,
-            padding: '1.5rem',
-            boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-            border: '1px solid #f1f5f9',
-          }}
+          className="bg-card rounded-2xl p-6 shadow-sm border border-border"
         >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              marginBottom: '1.25rem',
-            }}
-          >
-            <div
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 10,
-                backgroundColor: '#dbeafe',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <User size={20} color="#2563eb" />
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+              <User size={20} className="text-blue-600 dark:text-blue-400" />
             </div>
-            <h2
-              style={{
-                color: '#0f2444',
-                fontWeight: 700,
-                fontSize: '1rem',
-                margin: 0,
-              }}
-            >
+            <h2 className="text-foreground font-bold text-base m-0">
               Tilitiedot
             </h2>
           </div>
-          <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+          <div className="flex flex-col gap-4">
             <div>
-              <label
-                style={{
-                  display: 'block',
-                  color: '#64748b',
-                  fontSize: '0.85rem',
-                  marginBottom: '0.5rem',
-                  fontWeight: 600,
-                }}
-              >
+              <label className="block text-muted-foreground text-sm mb-2 font-semibold">
                 Yrityksen nimi
               </label>
               <input
                 type="text"
                 defaultValue="Quantix Logistics Oy"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  borderRadius: 8,
-                  border: '1px solid #e2e8f0',
-                  fontSize: '0.9rem',
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
+                className="w-full p-3 rounded-lg border border-border bg-input-background text-foreground text-sm outline-none transition-colors focus:border-primary"
               />
             </div>
             <div>
-              <label
-                style={{
-                  display: 'block',
-                  color: '#64748b',
-                  fontSize: '0.85rem',
-                  marginBottom: '0.5rem',
-                  fontWeight: 600,
-                }}
-              >
+              <label className="block text-muted-foreground text-sm mb-2 font-semibold">
                 Y-tunnus
               </label>
               <input
                 type="text"
                 defaultValue="1234567-8"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  borderRadius: 8,
-                  border: '1px solid #e2e8f0',
-                  fontSize: '0.9rem',
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
+                className="w-full p-3 rounded-lg border border-border bg-input-background text-foreground text-sm outline-none transition-colors focus:border-primary"
               />
             </div>
-            <button
-              style={{
-                padding: '0.75rem',
-                borderRadius: 8,
-                border: 'none',
-                backgroundColor: '#f97316',
-                color: 'white',
-                cursor: 'pointer',
-                fontSize: '0.9rem',
-                fontWeight: 600,
-                fontFamily: "'Space Grotesk', sans-serif",
-                transition: 'background 0.2s',
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.backgroundColor = '#ea580c')
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.backgroundColor = '#f97316')
-              }
-            >
+            <button className="p-3 rounded-lg border-none bg-primary text-primary-foreground cursor-pointer text-sm font-semibold transition-colors hover:bg-primary/90">
               Tallenna muutokset
             </button>
           </div>
@@ -166,47 +76,17 @@ export function SettingsPage() {
           initial={{opacity: 0, y: 20}}
           animate={{opacity: 1, y: 0}}
           transition={{delay: 0.2}}
-          style={{
-            backgroundColor: 'white',
-            borderRadius: 16,
-            padding: '1.5rem',
-            boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-            border: '1px solid #f1f5f9',
-          }}
+          className="bg-card rounded-2xl p-6 shadow-sm border border-border"
         >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              marginBottom: '1.25rem',
-            }}
-          >
-            <div
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 10,
-                backgroundColor: '#fee2e2',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Lock size={20} color="#dc2626" />
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+              <Lock size={20} className="text-red-600 dark:text-red-400" />
             </div>
-            <h2
-              style={{
-                color: '#0f2444',
-                fontWeight: 700,
-                fontSize: '1rem',
-                margin: 0,
-              }}
-            >
+            <h2 className="text-foreground font-bold text-base m-0">
               Turvallisuus
             </h2>
           </div>
-          <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+          <div className="flex flex-col gap-4">
             {[
               {label: 'Vaihda salasana', desc: 'Päivitä tilisi salasana'},
               {
@@ -220,39 +100,17 @@ export function SettingsPage() {
             ].map((item) => (
               <div
                 key={item.label}
-                style={{
-                  padding: '1rem',
-                  borderRadius: 8,
-                  border: '1px solid #e2e8f0',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.backgroundColor = '#f8fafc')
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.backgroundColor = 'transparent')
-                }
+                className="p-4 rounded-lg border border-border flex justify-between items-center cursor-pointer transition-colors hover:bg-muted/50"
               >
                 <div>
-                  <div
-                    style={{
-                      color: '#0f2444',
-                      fontWeight: 600,
-                      fontSize: '0.9rem',
-                      marginBottom: '0.25rem',
-                    }}
-                  >
+                  <div className="text-foreground font-semibold text-sm mb-1">
                     {item.label}
                   </div>
-                  <div style={{color: '#94a3b8', fontSize: '0.8rem'}}>
+                  <div className="text-muted-foreground text-xs">
                     {item.desc}
                   </div>
                 </div>
-                <Shield size={18} color="#94a3b8" />
+                <Shield size={18} className="text-muted-foreground" />
               </div>
             ))}
           </div>
@@ -263,47 +121,17 @@ export function SettingsPage() {
           initial={{opacity: 0, y: 20}}
           animate={{opacity: 1, y: 0}}
           transition={{delay: 0.3}}
-          style={{
-            backgroundColor: 'white',
-            borderRadius: 16,
-            padding: '1.5rem',
-            boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-            border: '1px solid #f1f5f9',
-          }}
+          className="bg-card rounded-2xl p-6 shadow-sm border border-border"
         >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              marginBottom: '1.25rem',
-            }}
-          >
-            <div
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 10,
-                backgroundColor: '#dcfce7',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Bell size={20} color="#16a34a" />
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+              <Bell size={20} className="text-green-600 dark:text-green-400" />
             </div>
-            <h2
-              style={{
-                color: '#0f2444',
-                fontWeight: 700,
-                fontSize: '1rem',
-                margin: 0,
-              }}
-            >
+            <h2 className="text-foreground font-bold text-base m-0">
               Ilmoitukset
             </h2>
           </div>
-          <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+          <div className="flex flex-col gap-4">
             {[
               {label: 'Sähköposti-ilmoitukset', enabled: true},
               {label: 'Push-ilmoitukset', enabled: true},
@@ -313,44 +141,20 @@ export function SettingsPage() {
             ].map((item) => (
               <div
                 key={item.label}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '0.5rem 0',
-                }}
+                className="flex justify-between items-center py-2"
               >
-                <span
-                  style={{
-                    color: '#374151',
-                    fontSize: '0.9rem',
-                    fontWeight: 500,
-                  }}
-                >
+                <span className="text-foreground text-sm font-medium">
                   {item.label}
                 </span>
                 <div
-                  style={{
-                    width: 44,
-                    height: 24,
-                    borderRadius: 12,
-                    backgroundColor: item.enabled ? '#f97316' : '#e2e8f0',
-                    position: 'relative',
-                    cursor: 'pointer',
-                    transition: 'background 0.2s',
-                  }}
+                  className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors ${
+                    item.enabled ? 'bg-primary' : 'bg-muted-foreground/30'
+                  }`}
                 >
                   <div
-                    style={{
-                      width: 20,
-                      height: 20,
-                      borderRadius: '50%',
-                      backgroundColor: 'white',
-                      position: 'absolute',
-                      top: 2,
-                      left: item.enabled ? 22 : 2,
-                      transition: 'left 0.2s',
-                    }}
+                    className={`w-5 h-5 rounded-full bg-white absolute top-0.5 transition-all ${
+                      item.enabled ? 'left-[22px]' : 'left-0.5'
+                    }`}
                   />
                 </div>
               </div>
@@ -363,123 +167,38 @@ export function SettingsPage() {
           initial={{opacity: 0, y: 20}}
           animate={{opacity: 1, y: 0}}
           transition={{delay: 0.4}}
-          style={{
-            backgroundColor: 'white',
-            borderRadius: 16,
-            padding: '1.5rem',
-            boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-            border: '1px solid #f1f5f9',
-          }}
+          className="bg-card rounded-2xl p-6 shadow-sm border border-border"
         >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              marginBottom: '1.25rem',
-            }}
-          >
-            <div
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 10,
-                backgroundColor: '#fef3c7',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Mail size={20} color="#d97706" />
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+              <Mail size={20} className="text-amber-600 dark:text-amber-400" />
             </div>
-            <h2
-              style={{
-                color: '#0f2444',
-                fontWeight: 700,
-                fontSize: '1rem',
-                margin: 0,
-              }}
-            >
+            <h2 className="text-foreground font-bold text-base m-0">
               Sähköpostiasetukset
             </h2>
           </div>
-          <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+          <div className="flex flex-col gap-4">
             <div>
-              <label
-                style={{
-                  display: 'block',
-                  color: '#64748b',
-                  fontSize: '0.85rem',
-                  marginBottom: '0.5rem',
-                  fontWeight: 600,
-                }}
-              >
+              <label className="block text-muted-foreground text-sm mb-2 font-semibold">
                 SMTP-palvelin
               </label>
               <input
                 type="text"
                 defaultValue="smtp.quantixlogistics.fi"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  borderRadius: 8,
-                  border: '1px solid #e2e8f0',
-                  fontSize: '0.9rem',
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
+                className="w-full p-3 rounded-lg border border-border bg-input-background text-foreground text-sm outline-none transition-colors focus:border-primary"
               />
             </div>
             <div>
-              <label
-                style={{
-                  display: 'block',
-                  color: '#64748b',
-                  fontSize: '0.85rem',
-                  marginBottom: '0.5rem',
-                  fontWeight: 600,
-                }}
-              >
+              <label className="block text-muted-foreground text-sm mb-2 font-semibold">
                 Lähettäjän osoite
               </label>
               <input
                 type="email"
                 defaultValue="noreply@quantixlogistics.fi"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  borderRadius: 8,
-                  border: '1px solid #e2e8f0',
-                  fontSize: '0.9rem',
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
+                className="w-full p-3 rounded-lg border border-border bg-input-background text-foreground text-sm outline-none transition-colors focus:border-primary"
               />
             </div>
-            <button
-              style={{
-                padding: '0.75rem',
-                borderRadius: 8,
-                border: '1px solid #e2e8f0',
-                backgroundColor: 'white',
-                color: '#64748b',
-                cursor: 'pointer',
-                fontSize: '0.9rem',
-                fontWeight: 600,
-                fontFamily: "'Space Grotesk', sans-serif",
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#f97316';
-                e.currentTarget.style.color = '#f97316';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#e2e8f0';
-                e.currentTarget.style.color = '#64748b';
-              }}
-            >
+            <button className="p-3 rounded-lg border border-border bg-card text-muted-foreground cursor-pointer text-sm font-semibold transition-colors hover:text-primary hover:border-primary">
               Testaa yhteys
             </button>
           </div>
@@ -490,223 +209,43 @@ export function SettingsPage() {
           initial={{opacity: 0, y: 20}}
           animate={{opacity: 1, y: 0}}
           transition={{delay: 0.5}}
-          style={{
-            backgroundColor: 'white',
-            borderRadius: 16,
-            padding: '1.5rem',
-            boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-            border: '1px solid #f1f5f9',
-          }}
+          className="bg-card rounded-2xl p-6 shadow-sm border border-border"
         >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              marginBottom: '1.25rem',
-            }}
-          >
-            <div
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 10,
-                backgroundColor: '#ede9fe',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Database size={20} color="#8b5cf6" />
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+              <Database
+                size={20}
+                className="text-purple-600 dark:text-purple-400"
+              />
             </div>
-            <h2
-              style={{
-                color: '#0f2444',
-                fontWeight: 700,
-                fontSize: '1rem',
-                margin: 0,
-              }}
-            >
+            <h2 className="text-foreground font-bold text-base m-0">
               Järjestelmäasetukset
             </h2>
           </div>
-          <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+          <div className="flex flex-col gap-4">
             <div>
-              <label
-                style={{
-                  display: 'block',
-                  color: '#64748b',
-                  fontSize: '0.85rem',
-                  marginBottom: '0.5rem',
-                  fontWeight: 600,
-                }}
-              >
+              <label className="block text-muted-foreground text-sm mb-2 font-semibold">
                 Aikavyöhyke
               </label>
-              <select
-                defaultValue="Europe/Helsinki"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  borderRadius: 8,
-                  border: '1px solid #e2e8f0',
-                  fontSize: '0.9rem',
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  outline: 'none',
-                  backgroundColor: 'white',
-                  cursor: 'pointer',
-                }}
-              >
+              <select className="w-full p-3 rounded-lg border border-border bg-input-background text-foreground text-sm outline-none transition-colors focus:border-primary appearance-none cursor-pointer">
                 <option value="Europe/Helsinki">Helsinki (UTC+2)</option>
                 <option value="Europe/Stockholm">Stockholm (UTC+1)</option>
                 <option value="Europe/Oslo">Oslo (UTC+1)</option>
               </select>
             </div>
             <div>
-              <label
-                style={{
-                  display: 'block',
-                  color: '#64748b',
-                  fontSize: '0.85rem',
-                  marginBottom: '0.5rem',
-                  fontWeight: 600,
-                }}
-              >
+              <label className="block text-muted-foreground text-sm mb-2 font-semibold">
                 Kieli
               </label>
-              <select
-                defaultValue="fi"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  borderRadius: 8,
-                  border: '1px solid #e2e8f0',
-                  fontSize: '0.9rem',
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  outline: 'none',
-                  backgroundColor: 'white',
-                  cursor: 'pointer',
-                }}
-              >
+              <select className="w-full p-3 rounded-lg border border-border bg-input-background text-foreground text-sm outline-none transition-colors focus:border-primary appearance-none cursor-pointer">
                 <option value="fi">Suomi</option>
                 <option value="en">English</option>
                 <option value="sv">Svenska</option>
               </select>
             </div>
-            <button
-              style={{
-                padding: '0.75rem',
-                borderRadius: 8,
-                border: 'none',
-                backgroundColor: '#f97316',
-                color: 'white',
-                cursor: 'pointer',
-                fontSize: '0.9rem',
-                fontWeight: 600,
-                fontFamily: "'Space Grotesk', sans-serif",
-                transition: 'background 0.2s',
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.backgroundColor = '#ea580c')
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.backgroundColor = '#f97316')
-              }
-            >
+            <button className="p-3 rounded-lg border-none bg-primary text-primary-foreground cursor-pointer text-sm font-semibold transition-colors hover:bg-primary/90">
               Tallenna asetukset
             </button>
-          </div>
-        </motion.div>
-
-        {/* Appearance */}
-        <motion.div
-          initial={{opacity: 0, y: 20}}
-          animate={{opacity: 1, y: 0}}
-          transition={{delay: 0.6}}
-          style={{
-            backgroundColor: 'white',
-            borderRadius: 16,
-            padding: '1.5rem',
-            boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-            border: '1px solid #f1f5f9',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              marginBottom: '1.25rem',
-            }}
-          >
-            <div
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 10,
-                backgroundColor: '#fff7ed',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Palette size={20} color="#f97316" />
-            </div>
-            <h2
-              style={{
-                color: '#0f2444',
-                fontWeight: 700,
-                fontSize: '1rem',
-                margin: 0,
-              }}
-            >
-              Ulkoasu
-            </h2>
-          </div>
-          <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-            <div>
-              <label
-                style={{
-                  display: 'block',
-                  color: '#64748b',
-                  fontSize: '0.85rem',
-                  marginBottom: '0.75rem',
-                  fontWeight: 600,
-                }}
-              >
-                Teema
-              </label>
-              <div style={{display: 'flex', gap: '0.75rem'}}>
-                {[
-                  {label: 'Vaalea', value: 'light'},
-                  {label: 'Tumma', value: 'dark'},
-                  {label: 'Auto', value: 'auto'},
-                ].map((theme) => (
-                  <div
-                    key={theme.value}
-                    style={{
-                      flex: 1,
-                      padding: '0.75rem',
-                      borderRadius: 8,
-                      border:
-                        theme.value === 'light'
-                          ? '2px solid #f97316'
-                          : '1px solid #e2e8f0',
-                      backgroundColor:
-                        theme.value === 'light' ? '#fff7ed' : 'transparent',
-                      textAlign: 'center',
-                      cursor: 'pointer',
-                      fontSize: '0.85rem',
-                      fontWeight: 600,
-                      color: theme.value === 'light' ? '#f97316' : '#64748b',
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    {theme.label}
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         </motion.div>
       </div>

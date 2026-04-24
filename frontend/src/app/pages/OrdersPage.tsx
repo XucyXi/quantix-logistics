@@ -85,20 +85,30 @@ const ordersData: Order[] = [
 ];
 
 const statusStyles = {
-  pending: {bg: '#fef3c7', color: '#d97706', label: 'Odottaa', icon: Clock},
+  pending: {
+    bg: 'bg-amber-100 dark:bg-amber-900/30',
+    color: 'text-amber-600 dark:text-amber-400',
+    label: 'Odottaa',
+    icon: Clock,
+  },
   processing: {
-    bg: '#dbeafe',
-    color: '#2563eb',
+    bg: 'bg-blue-100 dark:bg-blue-900/30',
+    color: 'text-blue-600 dark:text-blue-400',
     label: 'Käsittelyssä',
     icon: Package,
   },
   completed: {
-    bg: '#dcfce7',
-    color: '#16a34a',
+    bg: 'bg-green-100 dark:bg-green-900/30',
+    color: 'text-green-600 dark:text-green-400',
     label: 'Valmis',
     icon: CheckCircle,
   },
-  cancelled: {bg: '#fee2e2', color: '#dc2626', label: 'Peruttu', icon: XCircle},
+  cancelled: {
+    bg: 'bg-red-100 dark:bg-red-900/30',
+    color: 'text-red-600 dark:text-red-400',
+    label: 'Peruttu',
+    icon: XCircle,
+  },
 };
 
 export function OrdersPage() {
@@ -125,135 +135,85 @@ export function OrdersPage() {
   };
 
   return (
-    <div style={{fontFamily: "'Space Grotesk', sans-serif"}}>
-      {/* Header */}
+    <div className="font-sans">
       <motion.div
         initial={{opacity: 0, y: -10}}
         animate={{opacity: 1, y: 0}}
-        style={{marginBottom: '1.5rem'}}
+        className="mb-6"
       >
-        <h1
-          style={{
-            color: '#0f2444',
-            fontWeight: 800,
-            fontSize: '1.4rem',
-            marginBottom: '0.5rem',
-          }}
-        >
+        <h1 className="text-foreground font-extrabold text-2xl mb-2">
           Tilaukset
         </h1>
-        <p style={{color: '#64748b', fontSize: '0.85rem', margin: 0}}>
+        <p className="text-muted-foreground text-sm m-0">
           {stats.total} tilausta yhteensä · {stats.completed} valmista
         </p>
       </motion.div>
 
-      {/* Stats */}
-      <div
-        className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4"
-        style={{marginBottom: '1.5rem'}}
-      >
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
         {[
-          {label: 'Yhteensä', value: stats.total, color: '#0f2444'},
-          {label: 'Odottaa', value: stats.pending, color: '#d97706'},
-          {label: 'Käsittelyssä', value: stats.processing, color: '#2563eb'},
-          {label: 'Valmiit', value: stats.completed, color: '#16a34a'},
+          {
+            label: 'Yhteensä',
+            value: stats.total,
+            colorClass: 'text-foreground',
+          },
+          {
+            label: 'Odottaa',
+            value: stats.pending,
+            colorClass: 'text-amber-500',
+          },
+          {
+            label: 'Käsittelyssä',
+            value: stats.processing,
+            colorClass: 'text-blue-500',
+          },
+          {
+            label: 'Valmiit',
+            value: stats.completed,
+            colorClass: 'text-green-500',
+          },
         ].map((stat, idx) => (
           <motion.div
             key={stat.label}
             initial={{opacity: 0, y: 20}}
             animate={{opacity: 1, y: 0}}
             transition={{delay: idx * 0.05}}
-            style={{
-              backgroundColor: 'white',
-              borderRadius: 14,
-              padding: '1.25rem',
-              boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-              border: '1px solid #f1f5f9',
-            }}
+            className="bg-card rounded-2xl p-5 shadow-sm border border-border"
           >
             <div
-              style={{
-                fontSize: '1.75rem',
-                fontWeight: 800,
-                color: stat.color,
-                lineHeight: 1,
-                marginBottom: '0.5rem',
-              }}
+              className={`text-3xl font-extrabold mb-2 leading-none ${stat.colorClass}`}
             >
               {stat.value}
             </div>
-            <div style={{color: '#64748b', fontSize: '0.85rem'}}>
-              {stat.label}
-            </div>
+            <div className="text-muted-foreground text-sm">{stat.label}</div>
           </motion.div>
         ))}
       </div>
 
-      {/* Search & Filter */}
-      <div
-        className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4"
-        style={{marginBottom: '1.5rem'}}
-      >
-        <div style={{position: 'relative'}}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-6">
+        <div className="relative">
           <Search
             size={18}
-            color="#94a3b8"
-            style={{
-              position: 'absolute',
-              left: '1rem',
-              top: '50%',
-              transform: 'translateY(-50%)',
-            }}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
           />
           <input
             type="text"
             placeholder="Hae tilausnumero, asiakas..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '0.875rem 1rem 0.875rem 3rem',
-              borderRadius: 10,
-              border: '1.5px solid #e2e8f0',
-              fontSize: '0.9rem',
-              fontFamily: "'Space Grotesk', sans-serif",
-              outline: 'none',
-              transition: 'border 0.2s',
-              boxSizing: 'border-box',
-              backgroundColor: 'white',
-            }}
-            onFocus={(e) => (e.target.style.borderColor = '#f97316')}
-            onBlur={(e) => (e.target.style.borderColor = '#e2e8f0')}
+            className="w-full py-3.5 pl-11 pr-4 rounded-xl border-2 border-border bg-input-background text-foreground text-sm outline-none transition-colors focus:border-primary"
           />
         </div>
-
-        <div style={{position: 'relative'}}>
+        <div className="relative">
           <Filter
             size={18}
-            color="#94a3b8"
-            style={{
-              position: 'absolute',
-              left: '1rem',
-              top: '50%',
-              transform: 'translateY(-50%)',
-            }}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
           />
           <select
             value={statusFilter}
             onChange={(e) =>
               setStatusFilter(e.target.value as typeof statusFilter)
             }
-            style={{
-              width: '100%',
-              padding: '0.875rem 1rem 0.875rem 3rem',
-              borderRadius: 10,
-              border: '1.5px solid #e2e8f0',
-              fontSize: '0.9rem',
-              fontFamily: "'Space Grotesk', sans-serif",
-              outline: 'none',
-              backgroundColor: 'white',
-              cursor: 'pointer',
-            }}
+            className="w-full py-3.5 pl-11 pr-4 rounded-xl border-2 border-border bg-input-background text-foreground text-sm outline-none cursor-pointer transition-colors focus:border-primary appearance-none"
           >
             <option value="all">Kaikki tilaukset</option>
             <option value="pending">Odottaa</option>
@@ -264,29 +224,16 @@ export function OrdersPage() {
         </div>
       </div>
 
-      {/* Orders Table */}
       <motion.div
         initial={{opacity: 0, y: 20}}
         animate={{opacity: 1, y: 0}}
         transition={{delay: 0.3}}
-        style={{
-          backgroundColor: 'white',
-          borderRadius: 16,
-          boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-          border: '1px solid #f1f5f9',
-          overflow: 'hidden',
-        }}
+        className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden"
       >
-        <div style={{overflowX: 'auto', WebkitOverflowScrolling: 'touch'}}>
-          <table
-            style={{
-              width: '100%',
-              borderCollapse: 'collapse',
-              minWidth: '800px',
-            }}
-          >
+        <div className="overflow-x-auto overflow-y-hidden">
+          <table className="w-full border-collapse min-w-[800px]">
             <thead>
-              <tr style={{backgroundColor: '#f8fafc'}}>
+              <tr className="bg-muted/50 border-b border-border">
                 {[
                   'TILAUSNUMERO',
                   'ASIAKAS',
@@ -296,145 +243,54 @@ export function OrdersPage() {
                   'PÄIVÄMÄÄRÄ',
                   'TILA',
                   '',
-                ].map((h) => (
+                ].map((h, idx) => (
                   <th
-                    key={h}
-                    style={{
-                      padding: '1rem 1.25rem',
-                      textAlign: 'left',
-                      fontSize: '0.7rem',
-                      fontWeight: 700,
-                      color: '#94a3b8',
-                      letterSpacing: '0.05em',
-                      whiteSpace: 'nowrap',
-                    }}
+                    key={idx}
+                    className="p-4 text-left text-xs font-bold text-muted-foreground tracking-wider whitespace-nowrap"
                   >
                     {h}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody>
-              {filteredOrders.map((order, i) => {
+            <tbody className="divide-y divide-border">
+              {filteredOrders.map((order) => {
                 const st = statusStyles[order.status];
                 const StatusIcon = st.icon;
                 return (
                   <tr
                     key={order.id}
-                    style={{
-                      borderTop: '1px solid #f1f5f9',
-                      backgroundColor: 'white',
-                      transition: 'background-color 0.2s',
-                    }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.backgroundColor = '#f8fafc')
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.backgroundColor = 'white')
-                    }
+                    className="hover:bg-muted/30 transition-colors"
                   >
-                    <td
-                      style={{
-                        padding: '1rem 1.25rem',
-                        fontWeight: 700,
-                        color: '#0f2444',
-                        fontSize: '0.85rem',
-                      }}
-                    >
+                    <td className="p-4 font-bold text-foreground text-sm">
                       {order.id}
                     </td>
-                    <td
-                      style={{
-                        padding: '1rem 1.25rem',
-                        fontSize: '0.875rem',
-                        color: '#374151',
-                      }}
-                    >
+                    <td className="p-4 text-foreground text-sm">
                       {order.customerName}
                     </td>
-                    <td
-                      style={{
-                        padding: '1rem 1.25rem',
-                        fontSize: '0.875rem',
-                        color: '#64748b',
-                      }}
-                    >
+                    <td className="p-4 text-muted-foreground text-sm">
                       {order.store}
                     </td>
-                    <td
-                      style={{
-                        padding: '1rem 1.25rem',
-                        fontSize: '0.875rem',
-                        color: '#374151',
-                        fontWeight: 600,
-                      }}
-                    >
+                    <td className="p-4 text-foreground font-semibold text-sm">
                       {order.items} kpl
                     </td>
-                    <td
-                      style={{
-                        padding: '1rem 1.25rem',
-                        fontSize: '0.875rem',
-                        color: '#0f2444',
-                        fontWeight: 700,
-                      }}
-                    >
+                    <td className="p-4 text-foreground font-bold text-sm">
                       {order.total.toFixed(2)} €
                     </td>
-                    <td
-                      style={{
-                        padding: '1rem 1.25rem',
-                        fontSize: '0.85rem',
-                        color: '#64748b',
-                      }}
-                    >
+                    <td className="p-4 text-sm text-muted-foreground">
                       {order.date}
                       <br />
-                      <span style={{fontSize: '0.75rem', color: '#94a3b8'}}>
-                        {order.time}
-                      </span>
+                      <span className="text-xs opacity-70">{order.time}</span>
                     </td>
-                    <td style={{padding: '1rem 1.25rem'}}>
+                    <td className="p-4">
                       <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.375rem',
-                          padding: '0.375rem 0.875rem',
-                          borderRadius: 20,
-                          fontSize: '0.8rem',
-                          fontWeight: 600,
-                          backgroundColor: st.bg,
-                          color: st.color,
-                        }}
+                        className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold ${st.bg} ${st.color}`}
                       >
-                        <StatusIcon size={14} />
-                        {st.label}
+                        <StatusIcon size={14} /> {st.label}
                       </span>
                     </td>
-                    <td style={{padding: '1rem 1.25rem'}}>
-                      <button
-                        style={{
-                          padding: '0.5rem',
-                          borderRadius: 8,
-                          border: '1px solid #e2e8f0',
-                          backgroundColor: 'white',
-                          color: '#64748b',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          transition: 'all 0.2s',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor = '#f97316';
-                          e.currentTarget.style.color = '#f97316';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.borderColor = '#e2e8f0';
-                          e.currentTarget.style.color = '#64748b';
-                        }}
-                      >
+                    <td className="p-4 text-right">
+                      <button className="p-2 rounded-lg border border-border bg-card text-muted-foreground hover:border-primary hover:text-primary transition-colors">
                         <Eye size={16} />
                       </button>
                     </td>
@@ -444,12 +300,9 @@ export function OrdersPage() {
             </tbody>
           </table>
         </div>
-
         {filteredOrders.length === 0 && (
-          <div style={{padding: '3rem', textAlign: 'center'}}>
-            <p style={{color: '#94a3b8', fontSize: '0.9rem'}}>
-              Ei tilauksia löytynyt hakuehdoilla.
-            </p>
+          <div className="p-12 text-center text-muted-foreground text-sm">
+            Ei tilauksia löytynyt hakuehdoilla.
           </div>
         )}
       </motion.div>
