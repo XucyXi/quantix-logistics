@@ -16,6 +16,7 @@ export const updateDeliveryLocation = async (
         latitude: latitude,
         longitude: longitude,
         status: 'in_transit',
+        updated_at: new Date().toISOString(),
       }),
     });
 

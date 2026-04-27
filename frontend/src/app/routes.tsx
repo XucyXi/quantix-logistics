@@ -26,6 +26,7 @@ import {DriverMapPage} from './pages/DriverMapPage';
 import {DriverProfilePage} from './pages/DriverProfilePage';
 import {StoreDashboard} from './pages/StoreDashboard';
 import {DriverMapTestPage} from './pages/DriverMapTestPage';
+import {DeliveryManager} from './components/delivery-tracking/DeliveryManager';
 
 const loadLandingPage = async () => {
   const module = await import('./pages/LandingPage');
@@ -116,7 +117,7 @@ export const router = createBrowserRouter([
     children: [
       {index: true, Component: DriverDashboard},
       {path: 'deliveries', Component: DriverDeliveriesPage},
-      {path: 'map', Component: DriverMapPage},
+      {path: 'map', Component: DeliveryManager},
       {path: 'profile', Component: DriverProfilePage},
     ],
   },

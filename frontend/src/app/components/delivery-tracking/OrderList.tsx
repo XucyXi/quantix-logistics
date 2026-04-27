@@ -38,12 +38,53 @@ export const OrderList = ({
             borderRadius: '8px',
             flexShrink: 0,
             cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            boxShadow:
+              selectedId === order.order_id
+                ? '0 4px 12px rgba(0,0,0,0.1)'
+                : 'none',
           }}
         >
-          <strong>Tilaus #{order.order_id}</strong>
-          <div style={{fontSize: '0.85rem', color: '#64748b'}}>
-            Status: {order.status}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginBottom: '0.25rem',
+            }}
+          >
+            <strong>Tilaus #{order.order_id}</strong>
+            <span
+              style={{
+                fontSize: '0.75rem',
+                padding: '2px 8px',
+                borderRadius: '10px',
+                backgroundColor:
+                  order.status === 'in_transit' ? '#dcfce7' : '#e2e8f0',
+                color: order.status === 'in_transit' ? '#166534' : '#475569',
+              }}
+            >
+              {order.status}
+            </span>
           </div>
+
+          <div
+            style={{fontSize: '0.9rem', color: '#1e293b', marginTop: '0.5rem'}}
+          >
+            {order.delivery_address}
+          </div>
+
+          {order.notes && (
+            <div
+              style={{
+                fontSize: '0.8rem',
+                color: '#64748b',
+                fontStyle: 'italic',
+                marginTop: '0.4rem',
+              }}
+            >
+              {order.notes}
+            </div>
+          )}
         </div>
       ))}
     </div>
