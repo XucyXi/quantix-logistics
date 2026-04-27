@@ -1,14 +1,14 @@
 import React from 'react';
-import {DeliveryTracking} from '../../../types/logistics';
+import {DeliveryTracking, Order} from '../../../types/logistics';
 
 export const OrderList = ({
-  deliveries,
+  orders,
   selectedId,
   onSelect,
 }: {
-  deliveries: DeliveryTracking[];
+  orders: Order[];
   selectedId: number | null;
-  onSelect: (delivery: DeliveryTracking) => void;
+  onSelect: (order: Order) => void;
 }) => {
   return (
     <div
@@ -26,26 +26,65 @@ export const OrderList = ({
     >
       <h3 style={{margin: '0 0 0.5rem 0', fontSize: '1rem'}}>Tilaukset</h3>
 
-      {deliveries.map((delivery) => (
+      {orders.map((order) => (
         <div
-          key={delivery.tracking_id}
-          onClick={() => onSelect(delivery)}
+          key={order.order_id}
+          onClick={() => onSelect(order)}
           style={{
             padding: '1rem',
-            background:
-              selectedId === delivery.tracking_id ? 'white' : '#f1f5f9',
-            border: '1px solid',
+            background: selectedId === order.order_id ? 'white' : '#f1f5f9',
+            border: '2px solid',
             borderColor:
-              selectedId === delivery.tracking_id ? '#3b82f6' : '#e2e8f0',
-            borderRadius: '8px',
-            flexShrink: 0,
+              selectedId === order.order_id ? '#3b82f6' : 'transparent',
+            borderRadius: '12px',
             cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            boxShadow:
+              selectedId === order.order_id
+                ? '0 4px 12px rgba(0,0,0,0.1)'
+                : 'none',
           }}
         >
-          <strong>Tilaus #{delivery.order_id}</strong>
-          <div style={{fontSize: '0.85rem', color: '#64748b'}}>
-            Status: {delivery.status}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginBottom: '0.25rem',
+            }}
+          >
+            <strong>Tilaus #{order.order_id}</strong>
+            <span
+              style={{
+                fontSize: '0.75rem',
+                padding: '2px 8px',
+                borderRadius: '10px',
+                backgroundColor:
+                  order.status === 'in-transit' ? '#dcfce7' : '#e2e8f0',
+                color: order.status === 'in-transit' ? '#166534' : '#475569',
+              }}
+            >
+              {order.status}
+            </span>
           </div>
+
+          <div
+            style={{fontSize: '0.9rem', color: '#1e293b', marginTop: '0.5rem'}}
+          >
+            {order.delivery_address}
+          </div>
+
+          {order.notes && (
+            <div
+              style={{
+                fontSize: '0.8rem',
+                color: '#64748b',
+                fontStyle: 'italic',
+                marginTop: '0.4rem',
+              }}
+            >
+              {order.notes}
+            </div>
+          )}
         </div>
       ))}
     </div>
