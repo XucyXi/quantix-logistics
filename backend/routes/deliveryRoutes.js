@@ -8,5 +8,9 @@ router.post(
   authenticate,
   deliveryController.updateLocation
 );
-
+router.get(
+  '/my-active',
+  authenticate,
+  deliveryController.getMyActiveDeliveries
+);
 module.exports = router;
