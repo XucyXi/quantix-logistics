@@ -1,0 +1,32 @@
+
+# @name login
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+    "email": "kuski@quantix.fi",
+    "password": "salasana123"
+}
+
+@token = {{login.response.body.token}}
+
+### Testaa sijainnin päivitystä
+POST http://localhost:3000/api/deliveries/101/tracking
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "latitude": 60.2699,
+    "longitude": 24.2384,
+    "status": "in_transit"
+}
+
+###
+POST http://localhost:3000/api/auth/register
+Content-Type: application/json
+
+{
+    "email": "kuski@quantix.fi",
+    "password": "salasana123",
+    "role": "admin"
+}
