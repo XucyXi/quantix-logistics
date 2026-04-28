@@ -1,9 +1,13 @@
 import {Outlet, useNavigate, useLocation} from 'react-router';
 import {Package, MapPin, User, Home} from 'lucide-react';
+import {DeliveryTracking, Order} from '../../types/logistics';
+import {useEffect, useState} from 'react';
 
 export function DriverRoot() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [deliveries, setDeliveries] = useState<DeliveryTracking[]>([]);
 
   const navItems = [
     {to: '/driver', icon: Home, label: 'Koti'},
@@ -11,6 +15,29 @@ export function DriverRoot() {
     {to: '/driver/map', icon: MapPin, label: 'Kartta'},
     {to: '/driver/profile', icon: User, label: 'Profiili'},
   ];
+
+  useEffect(() => {
+    const fetchMyDeliveries = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/orders/assigned', {
+          headers: {Authorization: `Bearer ${token}`},
+        });
+        const data = await response.json();
+
+        if (response.ok && Array.isArray(data)) {
+          setOrders(data);
+        } else {
+          console.error('Bäkki palautti virheen:', data);
+          setOrders([]);
+        }
+      } catch (err) {
+        console.error('Datan haku epäonnistui:', err);
+      }
+    };
+
+    fetchMyDeliveries();
+  }, []);
 
   const isActive = (path: string) =>
     path === '/driver'
@@ -30,7 +57,7 @@ export function DriverRoot() {
     >
       {/* Main content */}
       <main style={{flex: 1, overflow: 'auto'}}>
-        <Outlet />
+        <Outlet context={{orders, deliveries}} />
       </main>
 
       {/* Bottom Navigation */}

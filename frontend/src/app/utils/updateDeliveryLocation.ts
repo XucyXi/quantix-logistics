@@ -24,7 +24,6 @@ export const updateDeliveryLocation = async (
       const errorData = await response.json();
       throw new Error(errorData.message || 'Sijainnin päivitys epäonnistui');
     }
-
     console.log(
       `Sijainti päivitetty tilaukselle ${orderId}: ${latitude}, ${longitude}`
     );
