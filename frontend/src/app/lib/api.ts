@@ -1,61 +1,95 @@
-import axios from 'axios';
+/**
+ * @file api.ts
+ * @description Kustomoitu Axios-instanssi Quantix Logistics -sovellukselle.
+ * * 🚨 KÄYTTÖOHJE KEHITTÄJILLE:
+ * Älä käytä enää puhdasta 'axios' -kirjastoa tai 'fetch' -komentoja, kun
+ * teet kutsuja meidän omaan backendiimme. Tuo tämä instanssi käyttöön:
+ * import api from '../lib/api';
+ * * Tämä instanssi hoitaa taustalla automaattisesti:
+ * 1. Oikean backend-osoitteen (lokaali tai tuotanto) + '/api/v1' -etuliitteen.
+ * 2. Access Tokenin lisäämisen jokaisen pyynnön Authorization-headeriin.
+ * 3. Tokenin automaattisen uusimisen (Refresh Token), jos se on vanhentunut.
+ * * @example
+ * // Oikea tapa hakea dataa:
+ * const response = await api.get('/orders');
+ * // -> tekee oikeasti pyynnön: http://localhost:3000/api/v1/orders
+ * * HUOM: Jos haet dataa ulkopuolisista rajapinnoista (esim. Mapbox, sää-API),
+ * käytä tavallista fetch() -komentoa, jotta et vuoda sisäänkirjautumistokenia.
+ *
+ * // Mahdollistaa .env käytön API_URL:lään
+ */
 
-// 1. Luodaan oma Axios-instanssi
+import axios, {
+  AxiosError,
+  AxiosResponse,
+  InternalAxiosRequestConfig,
+} from 'axios';
+
+// Haetaan osoite ympäristömuuttujista (fallbackina localhost)
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+// Laajennetaan Axiosin omaa config-tyyppiä, jotta TS ymmärtää meidän _retry -lipun
+interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
+}
+
+// Luodaan oma Axios-instanssi
 const api = axios.create({
-  baseURL: 'https://teidan-backend.fi',
-  withCredentials: true // TÄRKEÄÄ: Mahdollistaa HttpOnly-evästeiden kulkemisen
+  baseURL: `${API_URL}/api/v1`,
+  withCredentials: true,
 });
 
-// 2. Request Interceptor: Lisätään Access Token aina mukaan jokaiseen pyyntöön
+// Request Interceptor: Lisätään Access Token
 api.interceptors.request.use(
-  (config) => {
-    // Hae Access Token sieltä minne sen tallennat (esim. localStorage tai Zustand/Redux)
-    const accessToken = localStorage.getItem('accessToken'); 
+  (config: InternalAxiosRequestConfig) => {
+    const accessToken = localStorage.getItem('accessToken');
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error: AxiosError) => Promise.reject(error)
 );
 
-// 3. Response Interceptor: Otetaan kiinni 401-virheet ja haetaan uusi token
+// Response Interceptor: Otetaan kiinni 401-virheet
 api.interceptors.response.use(
-  (response) => response, // Kaikki meni hyvin, palautetaan data heti
-  async (error) => {
-    const originalRequest = error.config;
+  (response: AxiosResponse) => response,
+  async (error: AxiosError) => {
+    // Castataan config meidän omaan tyyppiin
+    const originalRequest = error.config as CustomAxiosRequestConfig;
 
-    // Jos virhe on 401 (Unauthorized) ja tätä pyyntöä ei ole vielä yritetty uudelleen
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true; // Merkitään, ettei mennä ikuiseen luuppiin
+    // Varmistetaan, että config on olemassa ja vältetään ikilooppi
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry
+    ) {
+      originalRequest._retry = true;
 
       try {
-        // Pyydetään backendiltä hiljaa taustalla uusi Access Token
-        // Refresh token menee automaattisesti mukana evästeenä (withCredentials ansiosta)
-        const response = await axios.post('https://teidan-backend.fi/api/v1/auth/refresh', {}, {
-          withCredentials: true
-        });
-        
+        const response = await axios.post(
+          `${API_URL}/api/v1/auth/refresh`,
+          {},
+          {
+            withCredentials: true,
+          }
+        );
+
         const newAccessToken = response.data.accessToken;
 
-        // Tallennetaan uusi Access Token käyttöön
         localStorage.setItem('accessToken', newAccessToken);
 
-        // Päivitetään alkuperäiseen, äsken epäonnistuneeseen pyyntöön tämä uusi token
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
 
-        // Yritetään alkuperäistä pyyntöä (esim. sitä tuotteen tallennusta) uudelleen!
         return api(originalRequest);
-        
       } catch (refreshError) {
-        // Jos tämäkin epäonnistuu (Refresh Token on vanhentunut), käyttäjä pitää kirjautua ulos
         console.error('Sessio vanhentunut, heitetään ulos');
         localStorage.removeItem('accessToken');
-        window.location.href = '/login'; // Ohjataan kirjautumissivulle
+        window.location.href = '/login';
         return Promise.reject(refreshError);
       }
     }
-    
+
     return Promise.reject(error);
   }
 );
