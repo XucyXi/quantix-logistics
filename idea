@@ -1,0 +1,25 @@
+Tässä on valmis, jäsennelty ja suoraan Discordiin sopiva viesti, johon on yhdistetty sekä myyntipuhe ideastasi että tekninen toteutussuunnitelma tiimiä varten:
+
+***
+
+🚀 **Mulla olis idea tähän Admin-paneelin data-setuppiin!**
+
+Mitä jos tehtäiskin taustalla pyörivä automaattinen tilausgeneraattori sen sijaan, että aletaan koodata erillistä Customer Dashboardia testitilausten tekemiseen? Tämä olis oikeasti paljon tehokkaampi ja parempi ratkaisu tähän vaiheeseen, ja tässä syyt miksi:
+
+1️⃣ **Ei turhaa "roskakoodia":** Säästetään ihan sikana aikaa, kun kenenkään ei tarvitse koodata jotain väliaikaisia tilauslomakkeita, validointeja ja UI:ta vain sen takia, että saadaan testidataa sisään.
+2️⃣ **Aito stressitestaus (Kone vs. Ihminen):** Kukaan meistä ei jaksa naputella 50 tilausta putkeen adminin testaamiseksi. Generaattori voisi tulittaa tilauksia vaikka sekunnin välein, jolloin nähdään heti, jos frontti alkaa lagata tai UI menee jumiin ruuhkassa. 🤖🔥
+3️⃣ **100 % fokus oikeaan asiaan:** Nyt ei tarvitsisi hajauttaa huomiota kahteen eri käyttöliittymään. Voidaan laittaa kaikki paukut pelkästään tämän Admin-paneelin ja sen logiikan hiomiseen huippuunsa.
+4️⃣ **Demot näyttää heti pro-tason kamalta:** Kun sovellusta pitää esitellä, Admin-paneeli sykkisi ja eläisi omaa elämäänsä. Tilauksia ilmestyisi ruudulle itsestään ilman, että kenenkään tarvitsee viereisellä näytöllä klikkailla demotilauksia sisään.
+
+🛠️ **Tekninen plääni (Mitä tämä vaatisi käytännössä):**
+Yhteensä muutos on aika kevyt, noin 7 tiedostoa ja 100-150 riviä koodia.
+
+**Backend:**
+* **Uusi `orderGenerator.js`:** Logiikka random-tilausten luomiseen, käynnistämiseen ja pysäyttämiseen.
+* **`server.js`:** Pari uutta admin-endpointtia (`/api/admin/generator/start` & `stop`) ja generaattorin autostart (esim. 8 sekunnin välein).
+* **Tilausten haku:** Uusi `getAllOrders()` -funktio `orderController.js` ja `orderService.js` -tiedostoihin (hakee kaikki tilaukset asiakastietoineen), ja tälle reitti `orderRoutes.js`:iin.
+
+**Frontend:**
+* **`OrdersPage.tsx`:** Hardkoodattu data roskiin, tilalle `useEffect` API-haulla ja `setInterval` (esim. 3 sekunnin polling).
+* **`AdminDashboard.tsx`:** Real-time counterit, preview-listat ja toast-notifikaatiot uusista tilauksista.
+
