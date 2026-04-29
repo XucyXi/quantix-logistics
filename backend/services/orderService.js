@@ -248,7 +248,7 @@ async function updateOrderStatus(orderId, driverId, newStatus) {
   }
 }
 
-const ACTIVE_STATUSES = ['assigned', 'in_progress', 'in_transit', 'pending'];
+const ACTIVE_STATUSES = ['assigned', 'done', 'ready_for_pickup', 'in_transit'];
 
 async function getAssignedOrders(driverId) {
   if (!driverId) {
