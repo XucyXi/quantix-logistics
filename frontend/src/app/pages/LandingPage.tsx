@@ -1,7 +1,7 @@
 import {useEffect, useState} from 'react';
 import {Link} from 'react-router-dom';
 import {motion} from 'motion/react';
-import testimonialVideo from '../../../Ravintolaomistajan_suositus_kuljetuspalvelulle.mp4';
+import testimonialVideo from '../../assets/videos/Ravintolaomistajan_suositus_kuljetuspalvelulle.mp4';
 import {
   Truck,
   Package,
