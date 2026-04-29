@@ -21,6 +21,9 @@ export interface Order {
   total_price: number;
   latitude: number;
   longitude: number;
+  boxes?: number;
+  contact?: string;
+  phone?: string;
 }
 
 export interface DeliveryTracking {
@@ -30,6 +33,7 @@ export interface DeliveryTracking {
   latitude: number;
   longitude: number;
   updated_at: string;
+  boxes?: number;
 }
 
 export const WAREHOUSE_COORDS: [number, number] = [60.205, 24.887];
