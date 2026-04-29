@@ -1,5 +1,5 @@
 import React from 'react';
-import {DeliveryTracking, Order} from '../../../types/logistics';
+import {Order} from '../../../types/logistics';
 
 export const OrderList = ({
   orders,
@@ -33,10 +33,10 @@ export const OrderList = ({
           style={{
             padding: '1rem',
             background: selectedId === order.order_id ? 'white' : '#f1f5f9',
-            border: '2px solid',
-            borderColor:
-              selectedId === order.order_id ? '#3b82f6' : 'transparent',
-            borderRadius: '12px',
+            border: '1px solid',
+            borderColor: selectedId === order.order_id ? '#3b82f6' : '#e2e8f0',
+            borderRadius: '8px',
+            flexShrink: 0,
             cursor: 'pointer',
             transition: 'all 0.2s ease',
             boxShadow:
@@ -59,8 +59,8 @@ export const OrderList = ({
                 padding: '2px 8px',
                 borderRadius: '10px',
                 backgroundColor:
-                  order.status === 'in-transit' ? '#dcfce7' : '#e2e8f0',
-                color: order.status === 'in-transit' ? '#166534' : '#475569',
+                  order.status === 'in_transit' ? '#dcfce7' : '#e2e8f0',
+                color: order.status === 'in_transit' ? '#166534' : '#475569',
               }}
             >
               {order.status}

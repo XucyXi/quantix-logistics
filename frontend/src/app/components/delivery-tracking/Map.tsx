@@ -20,12 +20,13 @@ export const Map = ({startCoords, endCoords}: MapProps) => {
   const [route, setRoute] = useState<[number, number][]>([]);
 
   useEffect(() => {
+    if (!startCoords || !endCoords) return;
     const getRoute = async () => {
       try {
         const coords = await fetchRoute(startCoords, endCoords);
         setRoute(coords);
       } catch (error) {
-        console.log('error in Map components getRoute', error);
+        console.error('error in Map components getRoute', error);
       }
     };
     getRoute();

@@ -27,7 +27,7 @@ import {DriverProfilePage} from './pages/DriverProfilePage';
 import {StoreDashboard} from './pages/StoreDashboard';
 import {DriverMapTestPage} from './pages/DriverMapTestPage';
 import {DeliveryManager} from './components/delivery-tracking/DeliveryManager';
-import {mockOrders, mockTracking} from '../data/mockData';
+
 const loadLandingPage = async () => {
   const module = await import('./pages/LandingPage');
   return {Component: module.LandingPage};
@@ -117,12 +117,7 @@ export const router = createBrowserRouter([
     children: [
       {index: true, Component: DriverDashboard},
       {path: 'deliveries', Component: DriverDeliveriesPage},
-      {
-        path: 'map',
-        element: (
-          <DeliveryManager orders={mockOrders} deliveries={mockTracking} />
-        ),
-      },
+      {path: 'map', Component: DeliveryManager},
       {path: 'profile', Component: DriverProfilePage},
     ],
   },

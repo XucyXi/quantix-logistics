@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 import {motion, useMotionValue, useTransform, PanInfo} from 'motion/react';
 import {
   MapPin,
@@ -11,52 +11,11 @@ import {
   User,
 } from 'lucide-react';
 import {useAuth} from '../contexts/AuthContext';
-
-const deliveries = [
-  {
-    id: 'D-001',
-    store: 'K-Market Töölö',
-    address: 'Runeberginkatu 22, Helsinki',
-    boxes: 24,
-    eta: '09:15',
-    status: 'done',
-    contact: 'Kaisa Mäkinen',
-    phone: '+358 40 111 2233',
-  },
-  {
-    id: 'D-002',
-    store: 'S-Market Kallio',
-    address: 'Fleminginkatu 18, Helsinki',
-    boxes: 36,
-    eta: '09:45',
-    status: 'done',
-    contact: 'Mikko Virtanen',
-    phone: '+358 40 222 3344',
-  },
-  {
-    id: 'D-003',
-    store: 'Lidl Hakaniemi',
-    address: 'Hämeentie 12, Helsinki',
-    boxes: 48,
-    eta: '10:20',
-    status: 'active',
-    contact: 'Anna Korhonen',
-    phone: '+358 40 333 4455',
-  },
-  {
-    id: 'D-004',
-    store: 'K-Market Arabianranta',
-    address: 'Arabiankatu 12, Helsinki',
-    boxes: 18,
-    eta: '11:00',
-    status: 'pending',
-    contact: 'Jari Salminen',
-    phone: '+358 40 444 5566',
-  },
-];
+import {DeliveryTracking, Order} from '../../types/logistics';
+import {useOutletContext} from 'react-router';
 
 interface DeliveryCardProps {
-  delivery: (typeof deliveries)[0];
+  delivery: Order;
   index: number;
   status: string;
   onComplete: () => void;
@@ -104,7 +63,6 @@ function DeliveryCard({
         touchAction: 'pan-y',
       }}
     >
-      {/* Swipe background indicator */}
       {!isDone && (
         <motion.div
           style={{
@@ -222,7 +180,7 @@ function DeliveryCard({
                     lineHeight: 1.2,
                   }}
                 >
-                  {delivery.store}
+                  Tilaus #{delivery.order_id}
                 </h3>
                 <p
                   style={{
@@ -232,7 +190,7 @@ function DeliveryCard({
                     marginTop: '0.25rem',
                   }}
                 >
-                  {delivery.boxes} boksia
+                  {delivery?.boxes} boksia
                 </p>
               </div>
             </div>
@@ -267,19 +225,23 @@ function DeliveryCard({
           <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
             <MapPin size={20} color="#94a3b8" style={{flexShrink: 0}} />
             <span style={{fontSize: '1rem', color: '#374151'}}>
-              {delivery.address}
+              {delivery?.delivery_address}
             </span>
           </div>
           <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
             <Clock size={20} color="#94a3b8" style={{flexShrink: 0}} />
             <span style={{fontSize: '1rem', color: '#374151', fontWeight: 600}}>
-              ETA {delivery.eta}
+              <span>
+                {delivery.scheduled_delivery
+                  ? `ETA ${new Date(delivery.scheduled_delivery).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`
+                  : 'Ei aikataulua'}
+              </span>{' '}
             </span>
           </div>
           <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
             <User size={20} color="#94a3b8" style={{flexShrink: 0}} />
             <span style={{fontSize: '1rem', color: '#374151'}}>
-              {delivery.contact}
+              {delivery?.contact}
             </span>
           </div>
         </div>
@@ -287,7 +249,7 @@ function DeliveryCard({
         {/* Actions */}
         <div className="grid grid-cols-2 gap-3">
           <a
-            href={`tel:${delivery.phone}`}
+            href={`tel:${delivery?.phone}`}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -310,7 +272,7 @@ function DeliveryCard({
             Soita
           </a>
           <a
-            href={`https://maps.google.com/?q=${encodeURIComponent(delivery.address)}`}
+            href={`https://maps.google.com/?q=${encodeURIComponent(delivery?.delivery_address)}`}
             target="_blank"
             rel="noreferrer"
             style={{
@@ -375,16 +337,22 @@ function DeliveryCard({
 }
 
 export function DriverDashboard() {
+  const {orders, deliveries} = useOutletContext<{
+    orders: Order[];
+    deliveries: DeliveryTracking[];
+  }>();
+
+  const [loading, setLoading] = useState(true);
   const {user} = useAuth();
   const [statuses, setStatuses] = useState<Record<string, string>>(
-    Object.fromEntries(deliveries.map((d) => [d.id, d.status]))
+    Object.fromEntries(deliveries?.map((d) => [d.order_id, d.status]))
   );
 
   const done = Object.values(statuses).filter((s) => s === 'done').length;
   const total = deliveries.length;
-  const pct = Math.round((done / total) * 100);
+  const pct = Math.round((done / total) * 100) || 0;
 
-  const markDone = (id: string) => {
+  const markDone = (id: number) => {
     setStatuses((prev) => ({...prev, [id]: 'done'}));
   };
 
@@ -488,10 +456,10 @@ export function DriverDashboard() {
             {label: 'Jäljellä', value: total - done},
             {
               label: 'Boksia',
-              value: deliveries.reduce((s, d) => s + d.boxes, 0),
+              value: deliveries?.reduce((s, d) => s + d?.boxes, 0),
             },
             {label: 'ETA', value: '12:30'},
-          ].map((stat) => (
+          ]?.map((stat) => (
             <div
               key={stat.label}
               style={{
@@ -530,13 +498,13 @@ export function DriverDashboard() {
         >
           Toimitukset tänään
         </h2>
-        {deliveries.map((delivery, i) => (
+        {orders?.map((delivery, i) => (
           <DeliveryCard
-            key={delivery.id}
+            key={delivery?.order_id}
             delivery={delivery}
             index={i}
-            status={statuses[delivery.id]}
-            onComplete={() => markDone(delivery.id)}
+            status={statuses[delivery?.order_id]}
+            onComplete={() => markDone(delivery?.order_id)}
           />
         ))}
       </div>

@@ -1,17 +1,11 @@
 const pool = require('../config/db');
-const productModel = require("../services/productsService.js");
-
+const productModel = require('../services/productsService.js');
 
 async function createOrder(customerId, payload) {
-  const {
-    delivery_address,
-    notes,
-    scheduled_delivery,
-    items
-  } = payload;
+  const {delivery_address, notes, scheduled_delivery, items} = payload;
 
   if (!items || items.length === 0) {
-    throw new Error("Items are required");
+    throw new Error('Items are required');
   }
 
   let totalPrice = 0;
@@ -25,7 +19,7 @@ async function createOrder(customerId, payload) {
     }
 
     if (item.quantity <= 0) {
-      throw new Error("Quantity must be greater than 0");
+      throw new Error('Quantity must be greater than 0');
     }
 
     const unitPrice = product.base_price;
@@ -36,7 +30,7 @@ async function createOrder(customerId, payload) {
     enrichedItems.push({
       product_id: item.product_id,
       quantity: item.quantity,
-      unit_price: unitPrice
+      unit_price: unitPrice,
     });
   }
 
@@ -45,86 +39,83 @@ async function createOrder(customerId, payload) {
     delivery_address,
     notes,
     scheduled_delivery,
-    total_price: totalPrice
+    total_price: totalPrice,
   };
 
   const orderId = await createOrderWithItems(orderData, enrichedItems);
 
   return {
     order_id: orderId,
-    total_price: totalPrice
+    total_price: totalPrice,
   };
 }
 
-
 async function createOrderWithItems(orderData, items) {
-    const connection = await pool.getConnection();
-  
-    try {
-      await connection.beginTransaction();
-  
-      // Insert order
-      const [orderResult] = await connection.query(
-        `INSERT INTO ORDERS
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    // Insert order
+    const [orderResult] = await connection.query(
+      `INSERT INTO ORDERS
          (customer_id, delivery_address, notes, scheduled_delivery, total_price)
          VALUES (?, ?, ?, ?, ?)`,
-        [
-          orderData.customer_id,
-          orderData.delivery_address,
-          orderData.notes || null,
-          orderData.scheduled_delivery || null,
-          orderData.total_price
-        ]
-      );
-  
-      const orderId = orderResult.insertId;
-  
-      // Insert items
-      const itemValues = items.map(item => [
-        orderId,
-        item.product_id,
-        item.quantity,
-        item.unit_price
-      ]);
-  
-      await connection.query(
-        `INSERT INTO ORDER_ITEMS
+      [
+        orderData.customer_id,
+        orderData.delivery_address,
+        orderData.notes || null,
+        orderData.scheduled_delivery || null,
+        orderData.total_price,
+      ]
+    );
+
+    const orderId = orderResult.insertId;
+
+    // Insert items
+    const itemValues = items.map((item) => [
+      orderId,
+      item.product_id,
+      item.quantity,
+      item.unit_price,
+    ]);
+
+    await connection.query(
+      `INSERT INTO ORDER_ITEMS
          (order_id, product_id, quantity, unit_price)
          VALUES ?`,
-        [itemValues]
-      );
-  
-      await connection.commit();
-  
-      return orderId;
-  
-    } catch (err) {
-      await connection.rollback();
-      console.error("DB Transaction error:", err);
-      throw err;
-    } finally {
-      connection.release();
-    }
+      [itemValues]
+    );
+
+    await connection.commit();
+
+    return orderId;
+  } catch (err) {
+    await connection.rollback();
+    console.error('DB Transaction error:', err);
+    throw err;
+  } finally {
+    connection.release();
   }
+}
 
 async function getOrderById(orderId) {
-const [orders] = await pool.query(
-    `SELECT * FROM ORDERS WHERE order_id = ?`,
-    [orderId]
-);
+  const [orders] = await pool.query(`SELECT * FROM ORDERS WHERE order_id = ?`, [
+    orderId,
+  ]);
 
-if (!orders.length) return null;
+  if (!orders.length) return null;
 
-const order = orders[0];
+  const order = orders[0];
 
-const [items] = await pool.query(
+  const [items] = await pool.query(
     `SELECT * FROM ORDER_ITEMS WHERE order_id = ?`,
     [orderId]
-);
+  );
 
-order.items = items;
+  order.items = items;
 
-return order;
+  return order;
 }
 
 async function assignDriverToOrder(orderId) {
@@ -178,9 +169,8 @@ async function assignDriverToOrder(orderId) {
 
     return {
       order_id: orderId,
-      driver_id: driverId
+      driver_id: driverId,
     };
-
   } catch (err) {
     await connection.rollback();
     throw err;
@@ -197,22 +187,21 @@ async function updateOrderStatus(orderId, driverId, newStatus) {
     in_progress: ['in_transit', 'stuck'],
     in_transit: ['done'],
     done: [],
-    stuck: []
-  };  
+    stuck: [],
+  };
 
   //  status ENUM('pending','assigned','in_progress','in_transit','done','stuck') DEFAULT 'pending',
-
 
   try {
     await connection.beginTransaction();
 
     const [orders] = await connection.query(
-      `SELECT status, driver_id 
-       FROM ORDERS 
+      `SELECT status, driver_id
+       FROM ORDERS
        WHERE order_id = ? AND driver_id = ?`,
       [orderId, driverId]
     );
-    
+
     if (!orders.length) {
       throw new Error('Order not found or not assigned to this driver');
     }
@@ -231,10 +220,10 @@ async function updateOrderStatus(orderId, driverId, newStatus) {
       );
     }
 
-    await connection.query(
-      `UPDATE ORDERS SET status = ? WHERE order_id = ?`,
-      [newStatus, orderId]
-    );
+    await connection.query(`UPDATE ORDERS SET status = ? WHERE order_id = ?`, [
+      newStatus,
+      orderId,
+    ]);
 
     if (newStatus === 'done') {
       await connection.query(
@@ -249,9 +238,8 @@ async function updateOrderStatus(orderId, driverId, newStatus) {
 
     return {
       order_id: orderId,
-      status: newStatus
+      status: newStatus,
     };
-
   } catch (err) {
     await connection.rollback();
     throw err;
@@ -260,8 +248,7 @@ async function updateOrderStatus(orderId, driverId, newStatus) {
   }
 }
 
-
-const ACTIVE_STATUSES = ['assigned', 'in_progress', 'in_transit'];
+const ACTIVE_STATUSES = ['assigned', 'in_progress', 'in_transit', 'pending'];
 
 async function getAssignedOrders(driverId) {
   if (!driverId) {
@@ -270,7 +257,7 @@ async function getAssignedOrders(driverId) {
 
   const [rows] = await pool.query(
     `
-SELECT 
+SELECT
   o.order_id,
   o.status,
   o.delivery_address,
@@ -297,7 +284,7 @@ SELECT
 
 FROM ORDERS o
 
--- Customer profile 
+-- Customer profile
 JOIN CUSTOMER_PROFILES cp
   ON o.customer_id = cp.user_id
 
@@ -314,7 +301,7 @@ LEFT JOIN PRODUCTS p
   ON oi.product_id = p.product_id
 
 WHERE o.driver_id = ?
-AND o.status IN (?, ?, ?)
+AND o.status IN (?, ?, ?, ?)
 
 ORDER BY o.order_id;
 
@@ -331,42 +318,40 @@ ORDER BY o.order_id;
 }
 
 function shapeOrders(rows) {
-    const ordersMap = {};
-  
-    for (const row of rows) {
-  
-      // Create order if not exists
-      if (!ordersMap[row.order_id]) {
-        ordersMap[row.order_id] = {
-          order_id: row.order_id,
-          status: row.status,
-          delivery_address: row.delivery_address,
-          notes: row.notes,
-          customer: {
-            company_name: row.company_name,
-            tel: row.tel
-          },
-          items: []
-        };
-      }
-  
-      // Skip null items (LEFT JOIN case)
-      if (row.product_id) {
-        ordersMap[row.order_id].items.push({
-          name: row.product_name,
-          quantity: row.quantity
-        });
-      }
+  const ordersMap = {};
+
+  for (const row of rows) {
+    // Create order if not exists
+    if (!ordersMap[row.order_id]) {
+      ordersMap[row.order_id] = {
+        order_id: row.order_id,
+        status: row.status,
+        delivery_address: row.delivery_address,
+        notes: row.notes,
+        customer: {
+          company_name: row.company_name,
+          tel: row.tel,
+        },
+        items: [],
+      };
     }
-  
-    return Object.values(ordersMap);
+
+    // Skip null items (LEFT JOIN case)
+    if (row.product_id) {
+      ordersMap[row.order_id].items.push({
+        name: row.product_name,
+        quantity: row.quantity,
+      });
+    }
   }
 
+  return Object.values(ordersMap);
+}
 
 module.exports = {
-createOrder,
-getOrderById,
-assignDriverToOrder,
-getAssignedOrders,
-updateOrderStatus
+  createOrder,
+  getOrderById,
+  assignDriverToOrder,
+  getAssignedOrders,
+  updateOrderStatus,
 };

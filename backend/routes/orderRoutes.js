@@ -6,11 +6,7 @@ const authMiddleware = require('../middlewares/authMiddleware');
 const roleMiddleware = require('../middlewares/roleMiddleware');
 
 // Create order (customer)
-router.post(
-  '/',
-  authMiddleware.authenticate,
-  orderController.createOrder
-);
+router.post('/', authMiddleware.authenticate, orderController.createOrder);
 
 // Get assigned orders (driver)
 router.get(
@@ -29,17 +25,13 @@ router.put(
 );
 
 // Get single order
-router.get(
-  '/:id',
-  authMiddleware.authenticate,
-  orderController.getOrder
-);
+router.get('/:id', authMiddleware.authenticate, orderController.getOrder);
 
 router.put(
-    '/:id/status',
-    authMiddleware.authenticate,
-    roleMiddleware.requireRole('driver'),
-    orderController.updateOrderStatus
-  );  
+  '/:id/status',
+  authMiddleware.authenticate,
+  roleMiddleware.requireRole('driver'),
+  orderController.updateOrderStatus
+);
 
 module.exports = router;
