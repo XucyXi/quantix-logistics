@@ -48,8 +48,8 @@ export const mockTracking: DeliveryTracking[] = [
     tracking_id: 9003,
     order_id: 103,
     status: 'pending',
-    latitude: 60.176, // Tapiola
-    longitude: 24.805,
+    latitude: 60.199, // Pasila
+    longitude: 24.933,
     updated_at: new Date().toISOString(),
   },
 ];
