@@ -104,10 +104,25 @@ async function updateOrderStatus(req, res) {
   }
 }
 
+async function getOrderStats(req, res) {
+  try {
+    const customerId = req.user.user_id;
+    const stats = await orderService.getOrderStats(customerId);
+
+    res.json(stats);
+  } catch (err) {
+    console.error('Controller error:', err.message);
+    res.status(500).json({
+      error: err.message || 'Failed to fetch order stats',
+    });
+  }
+}
+
 module.exports = {
   createOrder,
   getOrder,
   getAssignedOrders,
   assignDriverToOrder,
   updateOrderStatus,
+  getOrderStats,
 };
