@@ -19,6 +19,7 @@ export function isBusinessCustomer(user: User | null): boolean {
 
 interface AuthContextType {
   user: User | null;
+  token: string | null;
   login: (email: string, password: string, role?: UserRole) => boolean;
   logout: () => void;
   isAuthenticated: boolean;
@@ -73,6 +74,11 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
     }
   });
 
+  // Lisään Jwt tokenin
+  const [token, setToken] = useState<string | null>(() => {
+    return localStorage.getItem('quantix_token') || null;
+  });
+
   const login = (email: string, password: string, role?: UserRole): boolean => {
     // Role on valinnainen: jos roolia ei anneta, hyväksytään mikä tahansa rooli.
     // Paluuarvo boolean pitää kirjautumisformin yksinkertaisena:
@@ -89,6 +95,12 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
       const {password: _, ...userWithoutPassword} = found;
       setUser(userWithoutPassword);
       localStorage.setItem('quantix_user', JSON.stringify(userWithoutPassword));
+
+      // JWT token - mock token for demo (real token comes from backend)
+      const mockToken = 'demo_jwt_token_' + found.id + '_' + Date.now();
+      setToken(mockToken);
+      localStorage.setItem('quantix_token', mockToken);
+
       return true;
     }
     return false;
@@ -97,12 +109,14 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
   const logout = () => {
     // Tyhjennetään sekä React-tila että localStorage, jotta uloskirjautuminen on varma.
     setUser(null);
+    setToken(null);
     localStorage.removeItem('quantix_user');
+    localStorage.removeItem('quantix_token');
   };
 
   return (
     <AuthContext.Provider
-      value={{user, login, logout, isAuthenticated: !!user}}
+      value={{user, token, login, logout, isAuthenticated: !!user}}
     >
       {children}
     </AuthContext.Provider>
