@@ -17,7 +17,8 @@ export function Navbar() {
   // Mobiilimenu, desktop-käyttäjämenu ja mobiilin portaali-alaosio hallitaan erikseen.
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [mobilePortalsOpen, setMobilePortalsOpen] = useState(false); // UUSI: Portaalit-valikon tila
+  const [mobilePortalsOpen, setMobilePortalsOpen] = useState(false);
+  const [desktopPortalsOpen, setDesktopPortalsOpen] = useState(false);
 
   const {totalItems} = useCart();
   const {user, logout} = useAuth();
@@ -175,6 +176,121 @@ export function Navbar() {
                 {link.label}
               </Link>
             ))}
+
+            {/* Portaalit Dropdown - Desktop */}
+            <div style={{position: 'relative'}}>
+              <button
+                onMouseEnter={() => setDesktopPortalsOpen(true)}
+                onMouseLeave={() => setDesktopPortalsOpen(false)}
+                style={{
+                  padding: '0.4rem 0.9rem',
+                  borderRadius: 6,
+                  color: desktopPortalsOpen
+                    ? '#f97316'
+                    : 'rgba(255,255,255,0.8)',
+                  backgroundColor: desktopPortalsOpen
+                    ? 'rgba(249,115,22,0.1)'
+                    : 'transparent',
+                  textDecoration: 'none',
+                  fontSize: '0.9rem',
+                  fontWeight: 500,
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  transition: 'all 0.2s',
+                }}
+              >
+                Portaalit
+                <ChevronDown
+                  size={16}
+                  style={{
+                    transform: desktopPortalsOpen
+                      ? 'rotate(180deg)'
+                      : 'rotate(0)',
+                    transition: 'transform 0.2s ease-in-out',
+                  }}
+                />
+              </button>
+
+              {/* Portaalit Dropdown Content */}
+              {desktopPortalsOpen && (
+                <div
+                  onMouseEnter={() => setDesktopPortalsOpen(true)}
+                  onMouseLeave={() => setDesktopPortalsOpen(false)}
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 8px)',
+                    left: 0,
+                    minWidth: 180,
+                    backgroundColor: '#ffffff',
+                    borderRadius: 10,
+                    boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+                    border: '1px solid #e2e8f0',
+                    overflow: 'hidden',
+                    zIndex: 100,
+                  }}
+                >
+                  <button
+                    onClick={() => navigate('/admin')}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      padding: '0.75rem 1rem',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#374151',
+                      fontSize: '0.875rem',
+                      textAlign: 'left',
+                    }}
+                  >
+                    🏢 Ajokeskus
+                  </button>
+                  <button
+                    onClick={() => navigate('/driver')}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      padding: '0.75rem 1rem',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      borderTop: '1px solid #f1f5f9',
+                      cursor: 'pointer',
+                      color: '#374151',
+                      fontSize: '0.875rem',
+                      textAlign: 'left',
+                    }}
+                  >
+                    🚚 Kuljettaja
+                  </button>
+                  <button
+                    onClick={() => navigate('/customer')}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      padding: '0.75rem 1rem',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      borderTop: '1px solid #f1f5f9',
+                      cursor: 'pointer',
+                      color: '#374151',
+                      fontSize: '0.875rem',
+                      textAlign: 'left',
+                    }}
+                  >
+                    👤 Asiakas
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Right side */}
@@ -358,11 +474,12 @@ export function Navbar() {
                     style={{
                       padding: '0.4rem 1rem',
                       borderRadius: 8,
+                      color: '#0f2444',
                       backgroundColor: '#f97316',
-                      color: 'white',
+                      border: 'none',
                       textDecoration: 'none',
                       fontSize: '0.875rem',
-                      fontWeight: 600,
+                      fontWeight: 500,
                       transition: 'all 0.2s',
                     }}
                   >
@@ -532,6 +649,19 @@ export function Navbar() {
                   >
                     🚚 Kuljettaja
                   </Link>
+                  <Link
+                    to="/customer"
+                    onClick={() => setMobileOpen(false)}
+                    style={{
+                      color: 'rgba(255,255,255,0.7)',
+                      textDecoration: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    👤 Asiakas
+                  </Link>
                 </div>
               )}
             </div>
@@ -641,11 +771,11 @@ export function Navbar() {
                     style={{
                       padding: '0.75rem',
                       borderRadius: 8,
+                      color: '#0f2444',
                       backgroundColor: '#f97316',
-                      color: 'white',
                       textDecoration: 'none',
                       textAlign: 'center',
-                      fontWeight: 600,
+                      fontWeight: 500,
                     }}
                   >
                     Rekisteröidy
