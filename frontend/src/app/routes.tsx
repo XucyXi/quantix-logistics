@@ -27,6 +27,7 @@ import {DriverProfilePage} from './pages/DriverProfilePage';
 import {StoreDashboard} from './pages/StoreDashboard';
 import {DriverMapTestPage} from './pages/DriverMapTestPage';
 import {DeliveryManager} from './components/delivery-tracking/DeliveryManager';
+import {AdminProductsPage} from './pages/AdminProductsPage';
 import {CustomerDashboard} from './pages/CustomerDashboard';
 
 const loadLandingPage = async () => {
@@ -104,6 +105,7 @@ export const router = createBrowserRouter([
       {path: 'orders', Component: OrdersPage},
       {path: 'stores', Component: StoresPage},
       {path: 'users', Component: UsersPage},
+      {path: 'products', Component: AdminProductsPage},
       {path: 'reports', Component: ReportsPage},
       {path: 'settings', Component: SettingsPage},
     ],
