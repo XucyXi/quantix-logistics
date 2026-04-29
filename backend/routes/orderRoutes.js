@@ -16,6 +16,13 @@ router.get(
   orderController.getAssignedOrders
 );
 
+// Get order stats (customer) - TULE ENNEN /:id REITTIÄ!
+router.get(
+  '/stats',
+  authMiddleware.authenticate,
+  orderController.getOrderStats
+);
+
 // Assign driver (admin)
 router.put(
   '/:id/assign',
