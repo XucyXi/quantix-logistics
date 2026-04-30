@@ -118,6 +118,17 @@ async function getOrderStats(req, res) {
   }
 }
 
+async function getCustomerOrders(req, res) {
+  const customerId = req.user.user_id;
+
+  try {
+    const orders = await orderService.getOrdersByCustomerId(customerId);
+    res.json(orders);
+  } catch (error) {
+    console.error('Controller error:', err.message);
+  }
+}
+
 module.exports = {
   createOrder,
   getOrder,
@@ -125,4 +136,5 @@ module.exports = {
   assignDriverToOrder,
   updateOrderStatus,
   getOrderStats,
+  getCustomerOrders,
 };
