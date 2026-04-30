@@ -3,14 +3,16 @@ const router = express.Router();
 const deliveryController = require('../controllers/deliveryController');
 const {authenticate} = require('../middlewares/authMiddleware');
 
+// 1. KUSKI PÄIVITTÄÄ (POST)
 router.post(
-  '/:orderId/tracking',
+  '/:orderId/location',
   authenticate,
   deliveryController.updateLocation
 );
+// 2. ASIAKAS LUKEE (GET)
 router.get(
-  '/my-active',
+  '/:orderId/status',
   authenticate,
-  deliveryController.getMyActiveDeliveries
+  deliveryController.getTrackingData
 );
 module.exports = router;
