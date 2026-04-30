@@ -6,7 +6,7 @@ export const updateDeliveryLocation = async (
   try {
     const token = localStorage.getItem('token');
 
-    const response = await fetch(`/api/deliveries/${orderId}/tracking`, {
+    const response = await fetch(`/api/deliveries/${orderId}/location`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
