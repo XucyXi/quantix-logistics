@@ -379,7 +379,6 @@ const getOrdersByCustomerId = async (customerId) => {
   try {
     const connection = await pool.getConnection();
 
-    // Haetaan tilaukset, jotka kuuluvat tietylle asiakkaalle.
     const [orders] = await connection.query(
       `SELECT
         order_id,

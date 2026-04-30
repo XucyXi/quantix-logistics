@@ -1,5 +1,5 @@
 const deliveryService = require('../services/deliveryService');
-
+const orderService = require('../services/orderService.js');
 exports.updateLocation = async (req, res) => {
   console.log('Body:', req.body);
   try {
@@ -20,19 +20,17 @@ exports.updateLocation = async (req, res) => {
 
 exports.getMyActiveDeliveries = async (req, res) => {
   try {
-    const driverId = req.user.user_id; // Saadaan authMiddlewaresta (tokenista)
+    const driverId = req.user.user_id;
 
-    // Haetaan tilaukset, jotka on osoitettu tälle kuskille eikä ole vielä valmiita
-    // (tai voit hakea myös valmiit, jos haluat näyttää ne listassa)
     const orders = await db.query(
       `SELECT
     order_id AS id,
     'Asiakas #' || customer_id AS store,
     delivery_address AS address,
     status,
-    notes AS contact, -- Hyödynnetään notes-kenttää testimielessä
+    notes AS contact,
     DATE_FORMAT(scheduled_delivery, '%H:%i') AS eta,
-    10 AS boxes -- Tälle ei ollut kenttää, laitetaan placeholder
+    10 AS boxes
    FROM orders
    WHERE driver_id = ? AND status != 'done'`,
       [driverId]
@@ -41,5 +39,33 @@ exports.getMyActiveDeliveries = async (req, res) => {
     res.json(orders);
   } catch (error) {
     res.status(500).json({message: 'Virhe tilausten haussa'});
+  }
+};
+exports.getTrackingData = async (req, res) => {
+  const {order_id} = req.params;
+  const customerId = req.user.user_id;
+
+  try {
+    const orders = await orderService.getOrdersByCustomerId(customerId);
+    const currentOrder = orders.find((o) => o.order_id == orderId);
+    if (!currentOrder) {
+      return res.status(404).json({error: 'Order not found'});
+    }
+
+    const driverLocation = await deliveryService.getLatestLocation(orderId);
+    console.log('Sending to front:', {
+      lat: currentOrder.dest_lat,
+      lng: currentOrder.dest_lng,
+    });
+    res.json({
+      status: currentOrder.status,
+      destination: {
+        lat: currentOrder.dest_lat || 0,
+        lng: currentOrder.dest_lng || 0,
+      },
+      driver: driverLocation || null,
+    });
+  } catch (error) {
+    res.status(500).json({error: error.message});
   }
 };
