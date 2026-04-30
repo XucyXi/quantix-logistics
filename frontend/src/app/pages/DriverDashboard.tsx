@@ -456,7 +456,7 @@ export function DriverDashboard() {
             {label: 'Jäljellä', value: total - done},
             {
               label: 'Boksia',
-              value: deliveries?.reduce((s, d) => s + d?.boxes, 0),
+              value: deliveries?.reduce((s, d) => s + (d?.boxes ?? 0), 0),
             },
             {label: 'ETA', value: '12:30'},
           ]?.map((stat) => (

@@ -10,7 +10,6 @@ async function createOrder(req, res) {
     res.status(201).json(result);
   } catch (err) {
     console.error('Controller error:', err.message);
-
     res.status(500).json({
       error: err.message || 'Failed to create order',
     });
@@ -103,7 +102,6 @@ async function updateOrderStatus(req, res) {
     });
   }
 }
-
 const getCustomerOrders = async (req, res) => {
   const customerId = req.user.user_id;
   console.log('customer_id', customerId);
@@ -116,12 +114,10 @@ const getCustomerOrders = async (req, res) => {
     res.status(500).json({error: 'Virhe haettaessa tilauksia'});
   }
 };
-
 module.exports = {
   createOrder,
   getOrder,
   getAssignedOrders,
   assignDriverToOrder,
   updateOrderStatus,
-  getCustomerOrders,
 };

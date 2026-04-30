@@ -395,6 +395,48 @@ const getOrdersByCustomerId = async (customerId) => {
   }
 };
 
+async function getOrderStats(customerId) {
+  if (!customerId) {
+    throw new Error('Customer ID is required');
+  }
+
+  const [stats] = await pool.query(
+    `
+    SELECT
+      COUNT(*) as total_orders,
+      SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) as delivered_count,
+      SUM(CASE WHEN status IN ('pending', 'assigned') THEN 1 ELSE 0 END) as pending_count,
+      SUM(CASE WHEN status IN ('in_progress', 'in_transit') THEN 1 ELSE 0 END) as in_transit_count,
+      COALESCE(SUM(total_price), 0) as total_spent,
+      COALESCE(AVG(total_price), 0) as average_order_value,
+      COALESCE(ROUND(AVG(DATEDIFF(CURDATE(), ordered_at)), 1), 0) as delivery_speed_days,
+      COALESCE(
+        ROUND(
+          SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0),
+          1
+        ),
+        0
+      ) as success_rate
+    FROM ORDERS
+    WHERE customer_id = ?
+    `,
+    [customerId]
+  );
+
+  return (
+    stats[0] || {
+      total_orders: 0,
+      delivered_count: 0,
+      pending_count: 0,
+      in_transit_count: 0,
+      total_spent: 0,
+      average_order_value: 0,
+      delivery_speed_days: 0,
+      success_rate: 0,
+    }
+  );
+}
+
 module.exports = {
   createOrder,
   getOrderById,
@@ -402,4 +444,5 @@ module.exports = {
   getAssignedOrders,
   updateOrderStatus,
   getOrdersByCustomerId,
+  getOrderStats,
 };

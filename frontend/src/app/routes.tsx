@@ -28,6 +28,8 @@ import {StoreDashboard} from './pages/StoreDashboard';
 import {DriverMapTestPage} from './pages/DriverMapTestPage';
 import {DeliveryManager} from './components/delivery-tracking/DeliveryManager';
 import {CustomerTrackingView} from './components/delivery-tracking/CustomerTrackingView';
+import {AdminProductsPage} from './pages/AdminProductsPage';
+import {CustomerDashboard} from './pages/CustomerDashboard';
 
 const loadLandingPage = async () => {
   const module = await import('./pages/LandingPage');
@@ -104,6 +106,7 @@ export const router = createBrowserRouter([
       {path: 'orders', Component: OrdersPage},
       {path: 'stores', Component: StoresPage},
       {path: 'users', Component: UsersPage},
+      {path: 'products', Component: AdminProductsPage},
       {path: 'reports', Component: ReportsPage},
       {path: 'settings', Component: SettingsPage},
     ],
@@ -123,9 +126,9 @@ export const router = createBrowserRouter([
     ],
   },
   {
-    path: '/store',
+    path: '/customer',
     Component: StoreRoot,
-    children: [{index: true, Component: StoreDashboard}],
+    children: [{index: true, Component: CustomerDashboard}],
   },
   {
     path: '/kuljettaja',
