@@ -23,4 +23,4 @@ const getCoords = async (address) => {
   }
 };
 
-module.exports = {getCoords};
+module.exports = getCoords;

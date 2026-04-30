@@ -21,6 +21,21 @@ export interface Order {
   total_price: number;
   latitude: number;
   longitude: number;
+  dest_lat?: string | number;
+  dest_lng?: string | number;
+}
+
+export interface TrackingResponse {
+  status: string;
+  destination: {
+    lat: number;
+    lng: number;
+  };
+  driver: {
+    lat: number;
+    lng: number;
+    updated_at?: string;
+  } | null;
   boxes?: number;
   contact?: string;
   phone?: string;
