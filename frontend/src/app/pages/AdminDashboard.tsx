@@ -1,5 +1,5 @@
-import {useState} from 'react';
-import {useNavigate} from 'react-router';
+import {useState, useEffect} from 'react';
+import {useNavigate} from 'react-router-dom';
 import {
   Truck,
   Package,
@@ -11,82 +11,26 @@ import {
   Clock,
   X,
 } from 'lucide-react';
-// import api from '../lib/api';
-// import { useToast } from '../contexts/ToastContext';
-
-const statCards = [
-  {
-    label: 'Aktiiviset kuskit',
-    value: '12',
-    icon: Truck,
-    color: 'text-blue-500',
-  },
-  {
-    label: 'Toimitettu tänään',
-    value: '284',
-    icon: Package,
-    color: 'text-green-500',
-  },
-  {
-    label: 'Ongelmatilanteet',
-    value: '4',
-    icon: AlertTriangle,
-    color: 'text-red-500',
-  },
-];
+import {useAuth} from '../contexts/AuthContext';
+import {adminService} from '../services/adminService';
 
 interface RouteOverview {
   driverId: number;
   driverName: string;
   vehicleInfo: string;
-  totalOrders: number;
-  completedOrders: number;
+  totalStops: number;
+  completedStops: number;
   status: 'pending' | 'in_progress' | 'stuck';
-  currentArea: string;
+  area: string;
 }
 
-const initialRoutes: RouteOverview[] = [
-  {
-    driverId: 1,
-    driverName: 'Jari Laakso',
-    vehicleInfo: 'Pakettiauto (ABC-123)',
-    totalOrders: 8,
-    completedOrders: 6,
-    status: 'in_progress',
-    currentArea: 'Helsinki P',
-  },
-  {
-    driverId: 2,
-    driverName: 'Sara Virtanen',
-    vehicleInfo: 'Kylmäauto (XYZ-987)',
-    totalOrders: 9,
-    completedOrders: 0,
-    status: 'pending',
-    currentArea: 'Espoo / Järvenpää',
-  },
-  {
-    driverId: 3,
-    driverName: 'Laura Heikkilä',
-    vehicleInfo: 'Pakettiauto (DEF-456)',
-    totalOrders: 6,
-    completedOrders: 4,
-    status: 'in_progress',
-    currentArea: 'Vantaa',
-  },
-];
-
-const alerts = [
-  {
-    type: 'warning',
-    msg: 'Kuski Jari Laakso ilmoitti viiveestä (Ruuhka) – Helsinki P',
-    time: '09:45',
-  },
-  {
-    type: 'info',
-    msg: 'Uusi tilaus (ID: 1045): Suuri Kauppa Ab – 48 tuotetta',
-    time: '09:32',
-  },
-];
+interface Alert {
+  notification_id: number;
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'error';
+  created_at: string;
+}
 
 function UserIcon({routeStatus}: {routeStatus: string}) {
   if (routeStatus === 'in_progress')
@@ -97,14 +41,57 @@ function UserIcon({routeStatus}: {routeStatus: string}) {
 }
 
 export function AdminDashboard() {
-  const [routes, setRoutes] = useState<RouteOverview[]>(initialRoutes);
+  const {token} = useAuth();
+  const [routes, setRoutes] = useState<RouteOverview[]>([]);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [stats, setStats] = useState({
+    activeDrivers: 0,
+    deliveredToday: 0,
+    issues: 0,
+  });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const navigate = useNavigate();
   // const { showToast } = useToast();
 
+  useEffect(() => {
+    if (!token) return;
+
+    const fetchData = async () => {
+      try {
+        // Haetaan kaikki data rinnakkain
+        const [routesData, notificationsData, analyticsData] =
+          await Promise.all([
+            adminService.getActiveRoutes(token),
+            adminService.getNotifications(token),
+            adminService.getAnalytics(token),
+          ]);
+
+        setRoutes(routesData.routes || []);
+        setAlerts(notificationsData.notifications || []);
+
+        // Päivitetään statistiikkakortit haetulla datalla
+        setStats({
+          activeDrivers: routesData.routes?.length || 0,
+          deliveredToday: analyticsData.stats?.delivered || 0,
+          issues:
+            routesData.routes?.filter(
+              (r: RouteOverview) => r.status === 'stuck'
+            ).length || 0,
+        });
+      } catch (error) {
+        console.error('Failed to fetch admin data:', error);
+        // showToast('Datan haku epäonnistui', 'error');
+      } finally {
+        setIsRefreshing(false);
+      }
+    };
+
+    setIsRefreshing(true);
+    fetchData();
+  }, [token, isRefreshing]); // Ajetaan uudelleen kun token muuttuu tai refresh-nappia painetaan
+
   const handleRefresh = () => {
     setIsRefreshing(true);
-    setTimeout(() => setIsRefreshing(false), 1000);
   };
 
   const handleApprove = async (driverId: number) => {
@@ -140,6 +127,27 @@ export function AdminDashboard() {
           </button>
         </div>
 
+        {/* Korvataan staattiset kortit dynaamisilla */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-white/10 rounded-2xl p-5 text-center backdrop-blur-sm">
+            <div className="text-3xl font-extrabold mb-1">
+              {stats.activeDrivers}
+            </div>
+            <div className="text-sm opacity-80">Aktiiviset kuskit</div>
+          </div>
+          <div className="bg-white/10 rounded-2xl p-5 text-center backdrop-blur-sm">
+            <div className="text-3xl font-extrabold mb-1">
+              {stats.deliveredToday}
+            </div>
+            <div className="text-sm opacity-80">Toimitettu tänään</div>
+          </div>
+          <div className="bg-white/10 rounded-2xl p-5 text-center backdrop-blur-sm">
+            <div className="text-3xl font-extrabold mb-1">{stats.issues}</div>
+            <div className="text-sm opacity-80">Ongelmatilanteet</div>
+          </div>
+        </div>
+        {/* Vanha staattinen data poistettu */}
+        {/*
         <div className="grid grid-cols-3 gap-3">
           {statCards.map((stat) => (
             <div
@@ -151,6 +159,7 @@ export function AdminDashboard() {
             </div>
           ))}
         </div>
+        */}
       </div>
 
       <div className="p-6">
@@ -165,10 +174,10 @@ export function AdminDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           {alerts.map((alert, i) => (
             <div
-              key={i}
+              key={alert.notification_id}
               className={`flex items-center gap-5 p-6 rounded-2xl border-2 ${
                 alert.type === 'warning'
-                  ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/50'
+                  ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/50' // Warning
                   : 'bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-900/50'
               }`}
             >
@@ -182,10 +191,13 @@ export function AdminDashboard() {
               />
               <div className="flex-1">
                 <div className="text-foreground font-extrabold text-lg mb-1">
-                  {alert.msg}
+                  {alert.title}
                 </div>
                 <div className="text-muted-foreground text-sm font-semibold">
-                  Tänään klo {alert.time}
+                  {new Date(alert.created_at).toLocaleTimeString('fi-FI', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
                 </div>
               </div>
             </div>
@@ -223,11 +235,11 @@ export function AdminDashboard() {
                 <div className="flex items-center gap-6 w-1/3">
                   <div className="flex items-center gap-1.5 text-sm text-foreground font-medium">
                     <MapPin size={16} className="text-muted-foreground" />
-                    {route.currentArea}
+                    {route.area}
                   </div>
                   <div className="flex items-center gap-1.5 text-sm text-foreground font-medium">
                     <Package size={16} className="text-muted-foreground" />
-                    {route.completedOrders} / {route.totalOrders} toimitettu
+                    {route.completedStops} / {route.totalStops} toimitettu
                   </div>
                 </div>
 
