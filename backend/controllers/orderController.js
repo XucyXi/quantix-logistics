@@ -1,11 +1,26 @@
 const orderService = require('../services/orderService.js');
 const {getCoords} = require('../utils/geocoder.js');
 const db = require('../config/db.js');
+const notificationService = require('../services/notificationService.js');
 
 async function createOrder(req, res) {
   try {
     const customerId = req.user.user_id;
     const result = await orderService.createOrder(customerId, req.body);
+
+    // Notifications
+    const orderForNtf = {
+      order_id: result.order_id,
+      customer_id: customerId,
+      total_price: result.total_price,
+      delivery_address: req.body.delivery_address,
+    };
+    const userDetails = {email: req.user.email, name: req.user.name}; // Assuming req.user has these
+    await notificationService.notifyOrderCreated(orderForNtf, userDetails);
+    await notificationService.notifyAdminNewOrder(
+      orderForNtf,
+      req.body.items.length
+    );
 
     res.status(201).json(result);
   } catch (err) {
@@ -71,6 +86,23 @@ async function assignDriverToOrder(req, res) {
 
     const result = await orderService.assignDriverToOrder(orderId);
 
+    // Notification
+    if (result.driver_id) {
+      const order = await orderService.getOrderById(orderId);
+      const [users] = await db.query(
+        'SELECT email, name, phone FROM USERS WHERE user_id = ?',
+        [result.driver_id]
+      );
+      if (users.length > 0) {
+        const driverDetails = users[0];
+        await notificationService.notifyDriverAssignment(
+          result.driver_id,
+          order,
+          driverDetails
+        );
+      }
+    }
+
     res.json(result);
   } catch (err) {
     console.error(err);
@@ -93,6 +125,24 @@ async function updateOrderStatus(req, res) {
       newStatus
     );
 
+    // Notification
+    if (result.status) {
+      const order = await orderService.getOrderById(orderId);
+      if (order && order.customer_id) {
+        const [users] = await db.query(
+          'SELECT email, name, phone FROM USERS WHERE user_id = ?',
+          [order.customer_id]
+        );
+        if (users.length > 0) {
+          await notificationService.notifyOrderStatusChange(
+            order,
+            newStatus,
+            users[0]
+          );
+        }
+      }
+    }
+
     res.json(result);
   } catch (err) {
     console.error(err);
@@ -103,11 +153,34 @@ async function updateOrderStatus(req, res) {
   }
 }
 
+const getOrderStats = async (req, res) => {
+  const customerId = req.user.user_id;
+  try {
+    const stats = await orderService.getOrderStats(customerId);
+    res.json(stats);
+  } catch (error) {
+    console.error('Controller error getting stats:', error.message);
+    res.status(500).json({
+      error: error.message || 'Failed to fetch order stats',
+    });
+  }
+};
+
 const getCustomerOrders = async (req, res) => {
   const customerId = req.user.user_id;
 
+  // Luetaan sivutus- ja filtteriparametrit query stringistä
+  const limit = parseInt(req.query.limit) || 20;
+  const offset = parseInt(req.query.offset) || 0;
+  const status = req.query.status || null;
+
   try {
-    const orders = await orderService.getOrdersByCustomerId(customerId);
+    const orders = await orderService.getOrdersByCustomerId(
+      customerId,
+      limit,
+      offset,
+      status
+    );
     res.json({success: true, orders});
   } catch (error) {
     console.error('Controller error:', error.message);

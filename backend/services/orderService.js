@@ -375,25 +375,37 @@ function shapeOrders(rows) {
   return Object.values(ordersMap);
 }
 
-const getOrdersByCustomerId = async (customerId) => {
+const getOrdersByCustomerId = async (
+  customerId,
+  limit = 20,
+  offset = 0,
+  status = null
+) => {
+  let query = `
+    SELECT
+      o.order_id,
+      o.status,
+      o.delivery_address,
+      o.total_price,
+      o.ordered_at,
+      COUNT(oi.order_item_id) as item_count,
+      u.email as driver_email
+    FROM ORDERS o
+    LEFT JOIN ORDER_ITEMS oi ON o.order_id = oi.order_id
+    LEFT JOIN USERS u ON o.driver_id = u.user_id
+    WHERE o.customer_id = ?`;
+  const params = [customerId];
+
+  if (status) {
+    query += ` AND o.status = ?`;
+    params.push(status);
+  }
+
+  query += ` GROUP BY o.order_id ORDER BY o.ordered_at DESC LIMIT ? OFFSET ?`;
+  params.push(limit, offset);
+
   try {
-    const connection = await pool.getConnection();
-
-    const [orders] = await connection.query(
-      `SELECT
-        order_id,
-        delivery_address,
-        status,
-        ordered_at,
-        total_price,
-        latitude as dest_lat,
-        longitude as dest_lng
-       FROM ORDERS
-       WHERE customer_id = ?
-       ORDER BY ordered_at DESC`,
-      [customerId]
-    );
-
+    const [orders] = await pool.query(query, params);
     return orders;
   } catch (error) {
     console.error('Error in getOrdersByCustomerId service:', error);
