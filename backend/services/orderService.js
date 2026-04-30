@@ -385,7 +385,7 @@ const getOrdersByCustomerId = async (customerId) => {
         status,
         ordered_at,
         total_price,
-        latitude
+        latitude,
         longitude
        FROM ORDERS
        WHERE customer_id = ?
