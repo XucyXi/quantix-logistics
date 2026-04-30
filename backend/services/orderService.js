@@ -22,13 +22,24 @@ async function createOrder(customerId, payload) {
     console.error('Geocoding failed during order creation:', err);
   }
 
+  let lat = null;
+  let lng = null;
+  try {
+    const coords = await getCoords(delivery_address);
+    if (coords) {
+      lat = coords.lat;
+      lng = coords.lng;
+    }
+    console.log('coords', coords);
+  } catch (err) {
+    console.error('Geocoding failed during order creation:', err);
+  }
+
   let totalPrice = 0;
   const enrichedItems = [];
 
   for (const item of items) {
     const product = await productModel.getProductById(item.product_id);
-    console.log('product', product);
-    console.log('product', product);
 
     if (!product) {
       throw new Error(`Product ${item.product_id} not found`);
@@ -55,8 +66,6 @@ async function createOrder(customerId, payload) {
     delivery_address,
     latitude: lat,
     longitude: lng,
-    latitude: lat,
-    longitude: lng,
     notes,
     scheduled_delivery,
     total_price: totalPrice,
@@ -67,7 +76,6 @@ async function createOrder(customerId, payload) {
   return {
     order_id: orderId,
     total_price: totalPrice,
-    coords: {lat, lng},
     coords: {lat, lng},
   };
 }
@@ -83,12 +91,9 @@ async function createOrderWithItems(orderData, items) {
       `INSERT INTO ORDERS
          (customer_id, delivery_address, latitude, longitude, notes, scheduled_delivery, total_price)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
-
       [
         orderData.customer_id,
         orderData.delivery_address,
-        orderData.latitude,
-        orderData.longitude,
         orderData.latitude,
         orderData.longitude,
         orderData.notes || null,
