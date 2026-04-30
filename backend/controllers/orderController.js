@@ -1,6 +1,6 @@
 const orderService = require('../services/orderService.js');
-const {getCoords} = require('../utils/geocoder');
-const db = require('../config/db');
+const {getCoords} = require('../utils/geocoder.js');
+const db = require('../config/db.js');
 
 async function createOrder(req, res) {
   try {
@@ -10,7 +10,6 @@ async function createOrder(req, res) {
     res.status(201).json(result);
   } catch (err) {
     console.error('Controller error:', err.message);
-
     res.status(500).json({
       error: err.message || 'Failed to create order',
     });
@@ -104,19 +103,18 @@ async function updateOrderStatus(req, res) {
   }
 }
 
-async function getOrderStats(req, res) {
-  try {
-    const customerId = req.user.user_id;
-    const stats = await orderService.getOrderStats(customerId);
+const getCustomerOrders = async (req, res) => {
+  const customerId = req.user.user_id;
+  console.log('customer_id', customerId);
 
-    res.json(stats);
-  } catch (err) {
-    console.error('Controller error:', err.message);
-    res.status(500).json({
-      error: err.message || 'Failed to fetch order stats',
-    });
+  try {
+    const orders = await orderService.getOrdersByCustomerId(customerId);
+
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({error: 'Virhe haettaessa tilauksia'});
   }
-}
+};
 
 module.exports = {
   createOrder,
@@ -124,5 +122,4 @@ module.exports = {
   getAssignedOrders,
   assignDriverToOrder,
   updateOrderStatus,
-  getOrderStats,
 };
