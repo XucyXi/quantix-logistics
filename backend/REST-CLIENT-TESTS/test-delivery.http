@@ -1,10 +1,11 @@
+@baseUrl = http://localhost:3000/api
 
 # @name login
 POST http://localhost:3000/api/auth/login
 Content-Type: application/json
 
 {
-    "email": "kuljettaja@quantix.fi",
+    "email": "asiakas1@quantix.fi",
     "password": "driver123"
 }
 
@@ -12,7 +13,7 @@ Content-Type: application/json
 @token = {{login.response.body.token}}
 
 ### Testaa sijainnin päivitystä
-POST http://localhost:3000/api/deliveries/101/tracking
+POST http://localhost:3000/api/deliveries/101/location
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
@@ -27,14 +28,19 @@ POST http://localhost:3000/api/auth/register
 Content-Type: application/json
 
 {
-    "email": "kuljettaja@quantix.fi",
-    "password": "driver123",
-    "role": "driver"
+    "email": "admin@quantix.fi",
+    "password": "admin",
+    "role": "admin"
 }
 
 
-# HAE KULJETTAJALLE MÄÄRÄTYT TOIMI
+# HAE KULJETTAJALLE MÄÄRÄTYT TOIMITUKSET
 ###
 GET http://localhost:3000/api/orders/assigned
+Authorization: Bearer {{token}}
+
+### 1. Hae asiakkaan kaikki omat tilaukset
+
+GET {{baseUrl}}/orders/my-orders
 Authorization: Bearer {{token}}
 

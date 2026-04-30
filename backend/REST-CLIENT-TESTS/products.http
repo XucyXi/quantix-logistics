@@ -1,0 +1,48 @@
+### Muuttujat
+@baseUrl = http://localhost:3000/api
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxOSwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzc3NDY0MTM5LCJleHAiOjE3Nzc0Njc3Mzl9.mKlGvc-bEE231MIxKxL8SEz_TcvY8XZdImmGIvvModw
+
+### 1. Lisää uusi tuote (Admin)
+POST {{baseUrl}}/products
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+    "name": "Esimerkki Tuote",
+    "description": "Tämä on laadukas testituote.",
+    "base_price": 12.50,
+    "category": "Elektroniikka",
+    "stock_quantity": 50,
+    "image_url": "https://example.com/kuva.jpg"
+}
+
+###
+
+### 2. Testaa virhetilanne: Lisäys ilman admin-oikeuksia
+# Käytä tähän tavallisen asiakkaan tokenia. Pitäisi palauttaa 403 Forbidden.
+POST {{baseUrl}}/products
+Authorization: Bearer {{tavallinenAsiakasToken}}
+Content-Type: application/json
+
+{
+    "name": "Luvaton Tuote",
+    "base_price": 100.00
+}
+
+###
+
+### 3. Testaa virhetilanne: Puutteelliset tiedot
+# Pitäisi palauttaa 400 Bad Request (riippuen validointilogiikastasi)
+POST {{baseUrl}}/products
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+    "name": "Viallinen Tuote",
+    "base_price": "ei-ole-numero"
+}
+
+###
+
+### 4. Varmista lisäys hakemalla kaikki tuotteet
+GET {{baseUrl}}/products
