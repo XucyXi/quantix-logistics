@@ -24,11 +24,12 @@ exports.createTrackingPoint = async (orderId, data) => {
 
 exports.getLatestLocation = async (orderId) => {
   const query = `
-        SELECT * FROM DELIVERY_TRACKING
+        SELECT latitude as lat, longitude as lng, updated_at
+        FROM DELIVERY_TRACKING
         WHERE ORDER_ID = ?
         ORDER BY UPDATED_AT DESC
         LIMIT 1
     `;
   const [rows] = await db.execute(query, [orderId]);
-  return rows[0];
+  return rows[0] || null;
 };

@@ -24,6 +24,13 @@ router.put(
   orderController.assignDriverToOrder
 );
 
+router.get(
+  '/my-orders',
+  authMiddleware.authenticate,
+  //roleMiddleware.requireRole('customer'),
+  orderController.getCustomerOrders
+);
+
 // Get single order
 router.get('/:id', authMiddleware.authenticate, orderController.getOrder);
 

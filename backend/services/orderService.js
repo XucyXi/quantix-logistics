@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const productModel = require('../services/productsService.js');
+const getCoords = require('../utils/geocoder.js');
 
 async function createOrder(customerId, payload) {
   const {delivery_address, notes, scheduled_delivery, items} = payload;
@@ -8,11 +9,24 @@ async function createOrder(customerId, payload) {
     throw new Error('Items are required');
   }
 
+  let lat = null;
+  let lng = null;
+  try {
+    const coords = await getCoords(delivery_address);
+    if (coords) {
+      lat = coords.lat;
+      lng = coords.lng;
+    }
+    console.log('coords', coords);
+  } catch (err) {
+    console.error('Geocoding failed during order creation:', err);
+  }
   let totalPrice = 0;
   const enrichedItems = [];
 
   for (const item of items) {
     const product = await productModel.getProductById(item.product_id);
+    console.log('product', product);
 
     if (!product) {
       throw new Error(`Product ${item.product_id} not found`);
@@ -37,6 +51,8 @@ async function createOrder(customerId, payload) {
   const orderData = {
     customer_id: customerId,
     delivery_address,
+    latitude: lat,
+    longitude: lng,
     notes,
     scheduled_delivery,
     total_price: totalPrice,
@@ -47,6 +63,7 @@ async function createOrder(customerId, payload) {
   return {
     order_id: orderId,
     total_price: totalPrice,
+    coords: {lat, lng},
   };
 }
 
@@ -59,11 +76,13 @@ async function createOrderWithItems(orderData, items) {
     // Insert order
     const [orderResult] = await connection.query(
       `INSERT INTO ORDERS
-         (customer_id, delivery_address, notes, scheduled_delivery, total_price)
-         VALUES (?, ?, ?, ?, ?)`,
+         (customer_id, delivery_address, latitude, longitude, notes, scheduled_delivery, total_price)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         orderData.customer_id,
         orderData.delivery_address,
+        orderData.latitude,
+        orderData.longitude,
         orderData.notes || null,
         orderData.scheduled_delivery || null,
         orderData.total_price,
@@ -347,6 +366,34 @@ function shapeOrders(rows) {
 
   return Object.values(ordersMap);
 }
+// services/orderService.ts
+
+const getOrdersByCustomerId = async (customerId) => {
+  try {
+    const connection = await pool.getConnection();
+
+    // Haetaan tilaukset, jotka kuuluvat tietylle asiakkaalle.
+    const [orders] = await connection.query(
+      `SELECT
+        order_id,
+        delivery_address,
+        status,
+        ordered_at,
+        total_price,
+        latitude as dest_lat,
+        longitude as dest_lng
+       FROM ORDERS
+       WHERE customer_id = ?
+       ORDER BY ordered_at DESC`,
+      [customerId]
+    );
+
+    return orders;
+  } catch (error) {
+    console.error('Error in getOrdersByCustomerId service:', error);
+    throw new Error('Could not fetch orders from database');
+  }
+};
 
 module.exports = {
   createOrder,
@@ -354,4 +401,5 @@ module.exports = {
   assignDriverToOrder,
   getAssignedOrders,
   updateOrderStatus,
+  getOrdersByCustomerId,
 };
