@@ -24,7 +24,6 @@ const navItems = [
   {to: '/admin/routes', icon: Truck, label: 'Reitit'},
   {to: '/admin/live-map', icon: Map, label: 'Live-kartta'},
   {to: '/admin/orders', icon: Package, label: 'Tilaukset'},
-  {to: '/admin/stores', icon: Store, label: 'Kaupat'},
   {to: '/admin/users', icon: Users, label: 'Käyttäjät'},
   {to: '/admin/products', icon: Apple, label: 'Tuotteet'},
   {to: '/admin/reports', icon: BarChart2, label: 'Raportit'},
