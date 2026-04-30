@@ -20,6 +20,8 @@ import {
   Phone,
 } from 'lucide-react';
 import {useAuth} from '../contexts/AuthContext';
+import {orderService} from '../services/orderService';
+import {useToast} from '../contexts/ToastContext';
 
 interface Order {
   order_id: number;
@@ -41,29 +43,21 @@ const statCards = [
   {
     label: 'Yhteensä Tilaukset',
     value: '24',
-    icon: ShoppingBag,
-    color: 'text-blue-500',
     trend: '+3 tämän kuukauden aikana',
   },
   {
     label: 'Toimitettu',
     value: '22',
-    icon: CheckCircle,
-    color: 'text-green-500',
     trend: '91.7% onnistumisaste',
   },
   {
     label: 'Odottaa',
     value: '2',
-    icon: Clock,
-    color: 'text-yellow-500',
     trend: 'Keskimäärin 2.3 päivää',
   },
   {
     label: 'Kokonaiskulut',
     value: '€2,450',
-    icon: DollarSign,
-    color: 'text-purple-500',
     trend: '-5% edelliseen kuukauteen',
   },
 ];
@@ -263,16 +257,85 @@ function OrderCard({order, index}: {order: Order; index: number}) {
 }
 
 export function CustomerDashboard() {
-  const {user} = useAuth();
-  const [orders, setOrders] = useState<Order[]>(recentOrders);
-  const [loading, setLoading] = useState(false);
+  const {user, token} = useAuth();
+  const {showToast} = useToast();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [stats, setStats] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<'orders' | 'settings'>('orders');
+
+  const getStatCards = () => [
+    {
+      label: 'Yhteensä Tilaukset',
+      value: stats?.total_orders?.toString() || '0',
+      icon: ShoppingBag,
+      color: 'text-blue-500',
+      trend: `+${stats?.delivered_count || 0} toimitettu`,
+    },
+    {
+      label: 'Toimitettu',
+      value: stats?.delivered_count?.toString() || '0',
+      icon: CheckCircle,
+      color: 'text-green-500',
+      trend: `${stats?.success_rate || 0}% onnistumisaste`,
+    },
+    {
+      label: 'Odottaa',
+      value: stats?.pending_count?.toString() || '0',
+      icon: Clock,
+      color: 'text-yellow-500',
+      trend: `${stats?.in_transit_count || 0} kuljetuksessa`,
+    },
+    {
+      label: 'Kokonaiskulut',
+      value: `€${stats?.total_spent?.toFixed(2) || '0.00'}`,
+      icon: DollarSign,
+      color: 'text-purple-500',
+      trend: `Avg €${stats?.average_order_value?.toFixed(2) || '0.00'}`,
+    },
+  ];
+
   // Suodata tilaukset
   const filteredOrders =
     filterStatus === 'all'
       ? orders
       : orders.filter((order) => order.status === filterStatus);
+
+  useEffect(() => {
+    if (!user || !token) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const [ordersRes, statsRes] = await Promise.all([
+          orderService.getCustomerOrders(token),
+          orderService.getOrderStats(token),
+        ]);
+
+        setOrders(ordersRes.orders || []);
+        setStats(statsRes);
+        showToast('Tilaukset ladattu!', 'success');
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Virhe datanhaussa';
+        setError(message);
+        showToast(message, 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+    const interval = setInterval(fetchData, 5000);
+    return () => clearInterval(interval);
+  }, [user, token]);
 
   return (
     <section className="min-h-screen bg-background">
@@ -334,13 +397,17 @@ export function CustomerDashboard() {
                   <p className="text-sm text-muted-foreground mb-2">
                     Keskimääräinen tilauksen arvo
                   </p>
-                  <p className="text-2xl font-bold">€451.25</p>
+                  <p className="text-2xl font-bold">
+                    €{stats?.average_order_value?.toFixed(2) || '0.00'}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-2">
                     Tilausten nopeus
                   </p>
-                  <p className="text-2xl font-bold">8.4 vrk</p>
+                  <p className="text-2xl font-bold">
+                    {stats?.delivery_speed_days || '0'} vrk
+                  </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Keskimäärin kulutuksesta toimittamiseen
                   </p>
@@ -349,9 +416,12 @@ export function CustomerDashboard() {
                   <p className="text-sm text-muted-foreground mb-2">
                     Kuukauden menot
                   </p>
-                  <p className="text-2xl font-bold">€2,450</p>
+                  <p className="text-2xl font-bold">
+                    €{stats?.total_spent?.toFixed(2) || '0.00'}
+                  </p>
                   <p className="text-xs text-green-600 mt-1">
-                    ↓ 5% edelliseen kuukauteen
+                    {stats?.total_spent > 0 ? '↓' : '→'}{' '}
+                    {stats?.total_spent || '0'}€
                   </p>
                 </div>
               </div>
@@ -359,7 +429,7 @@ export function CustomerDashboard() {
 
             {/* Stat Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              {statCards.map((stat, index) => (
+              {getStatCards().map((stat, index) => (
                 <StatCard key={index} {...stat} />
               ))}
             </div>
@@ -444,150 +514,12 @@ export function CustomerDashboard() {
           </>
         ) : (
           /* Settings Tab */
-          <div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Main Settings */}
-              <div className="lg:col-span-2">
-                {/* Account Information */}
-                <motion.div
-                  initial={{opacity: 0, y: 20}}
-                  animate={{opacity: 1, y: 0}}
-                  className="bg-card rounded-xl p-6 border border-border mb-6"
-                >
-                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                    <UserIcon className="w-5 h-5" />
-                    Tilin Tiedot
-                  </h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-muted-foreground mb-2">
-                        Koko Nimi
-                      </label>
-                      <input
-                        type="text"
-                        value={user?.name || ''}
-                        disabled
-                        className="w-full px-3 py-2 rounded-lg bg-background border border-border disabled:opacity-50"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-muted-foreground mb-2">
-                        Sähköposti
-                      </label>
-                      <input
-                        type="email"
-                        value={user?.email || ''}
-                        disabled
-                        className="w-full px-3 py-2 rounded-lg bg-background border border-border disabled:opacity-50"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-muted-foreground mb-2">
-                        Puhelinnumero
-                      </label>
-                      <input
-                        type="tel"
-                        placeholder="+358 50 123 4567"
-                        className="w-full px-3 py-2 rounded-lg bg-background border border-border hover:border-primary/50"
-                      />
-                    </div>
-                    <motion.button
-                      whileHover={{scale: 1.02}}
-                      whileTap={{scale: 0.98}}
-                      className="w-full px-4 py-2 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90"
-                    >
-                      Tallenna Muutokset
-                    </motion.button>
-                  </div>
-                </motion.div>
-
-                {/* Notification Settings */}
-                <motion.div
-                  initial={{opacity: 0, y: 20}}
-                  animate={{opacity: 1, y: 0}}
-                  transition={{delay: 0.1}}
-                  className="bg-card rounded-xl p-6 border border-border mb-6"
-                >
-                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                    <Bell className="w-5 h-5" />
-                    Ilmoitukset
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Tilauksen Päivitykset</p>
-                        <p className="text-sm text-muted-foreground">
-                          Saa ilmoitus tilauksen statuksen muuttuessa
-                        </p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        defaultChecked
-                        className="w-5 h-5 rounded"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between pt-4 border-t border-border">
-                      <div>
-                        <p className="font-medium">Toimitus Ilmoitukset</p>
-                        <p className="text-sm text-muted-foreground">
-                          Saa ilmoitus kun kuljettaja on lähellä
-                        </p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        defaultChecked
-                        className="w-5 h-5 rounded"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between pt-4 border-t border-border">
-                      <div>
-                        <p className="font-medium">Sähköposti Päivitykset</p>
-                        <p className="text-sm text-muted-foreground">
-                          Saa sähköpostitse tärkeät ilmoitukset
-                        </p>
-                      </div>
-                      <input type="checkbox" className="w-5 h-5 rounded" />
-                    </div>
-                  </div>
-                </motion.div>
-
-                {/* Privacy & Security */}
-                <motion.div
-                  initial={{opacity: 0, y: 20}}
-                  animate={{opacity: 1, y: 0}}
-                  transition={{delay: 0.2}}
-                  className="bg-card rounded-xl p-6 border border-border"
-                >
-                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                    <Lock className="w-5 h-5" />
-                    Turvallisuus
-                  </h3>
-                  <div className="space-y-4">
-                    <motion.button
-                      whileHover={{scale: 1.02}}
-                      whileTap={{scale: 0.98}}
-                      className="w-full px-4 py-2 rounded-lg bg-card border border-border text-foreground hover:border-primary/50 font-medium"
-                    >
-                      Vaihda Salasana
-                    </motion.button>
-                    <motion.button
-                      whileHover={{scale: 1.02}}
-                      whileTap={{scale: 0.98}}
-                      className="w-full px-4 py-2 rounded-lg bg-card border border-border text-foreground hover:border-primary/50 font-medium"
-                    >
-                      Näytä Aktiiviset Istunnot
-                    </motion.button>
-                    <motion.button
-                      whileHover={{scale: 1.02}}
-                      whileTap={{scale: 0.98}}
-                      className="w-full px-4 py-2 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 font-medium"
-                    >
-                      Poista Tili
-                    </motion.button>
-                  </div>
-                </motion.div>
-              </div>
-            </div>
+          <div className="text-center py-12 bg-card rounded-xl border border-border">
+            <Settings className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground mb-4">Asetukset</p>
+            <motion.button onClick={() => window.location.reload()}>
+              Yritä uudelleen
+            </motion.button>
           </div>
         )}
       </div>
