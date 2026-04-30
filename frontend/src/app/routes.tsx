@@ -27,6 +27,7 @@ import {DriverProfilePage} from './pages/DriverProfilePage';
 import {StoreDashboard} from './pages/StoreDashboard';
 import {DriverMapTestPage} from './pages/DriverMapTestPage';
 import {DeliveryManager} from './components/delivery-tracking/DeliveryManager';
+import {CustomerTrackingView} from './components/delivery-tracking/CustomerTrackingView';
 
 const loadLandingPage = async () => {
   const module = await import('./pages/LandingPage');
@@ -130,5 +131,10 @@ export const router = createBrowserRouter([
     path: '/kuljettaja',
     Component: DriverRoot,
     children: [{index: true, lazy: loadDriverDashboard}],
+  },
+
+  {
+    path: '/user/maptest',
+    Component: CustomerTrackingView,
   },
 ]);
