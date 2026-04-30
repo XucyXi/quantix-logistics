@@ -1,107 +1,91 @@
-import {useState} from 'react';
+import {useState, useEffect} from 'react';
 import {motion, AnimatePresence} from 'motion/react';
-import {Search, MapPin, Package} from 'lucide-react';
+import {Search, MapPin, Package, RefreshCw} from 'lucide-react';
+// import api from '../lib/api'; // Otetaan käyttöön backend-vaiheessa
+import {useToast} from '../contexts/ToastContext';
 
-interface Route {
-  id: string;
-  time: string;
-  driver: string;
-  initials: string;
+// Mukailee dynaamista koostetta (SQL: SELECT driver, COUNT(orders) jne.)
+interface RouteOverview {
+  routeId: number; // Esim. päiväkohtainen reitti-ID tai kuskin shift-ID
+  shiftTime: string;
+  driverName: string;
   area: string;
-  truck: string;
-  stops: string;
-  progress: number;
+  vehicleInfo: string;
+  completedStops: number; // Paljonko tilauksia on statuksella 'done'
+  totalStops: number; // Kaikki kuskille määrätyt tilaukset tänään
   status: 'active' | 'done' | 'pending';
 }
 
-const routesData: Route[] = [
+const mockRoutesData: RouteOverview[] = [
   {
-    id: 'R-2401',
-    time: '04:40 - 13:40',
-    driver: 'Jukka Leinonen',
-    initials: 'JL',
+    routeId: 101,
+    shiftTime: '04:40 - 13:40',
+    driverName: 'Jari Laakso',
     area: 'Helsinki Pohjois',
-    truck: 'FGH-234',
-    stops: '5 / 8',
-    progress: 62,
+    vehicleInfo: 'FGH-234',
+    completedStops: 5,
+    totalStops: 8,
     status: 'active',
   },
   {
-    id: 'R-2402',
-    time: '06:01 - 16:30',
-    driver: 'Minna Korhonen',
-    initials: 'MK',
+    routeId: 102,
+    shiftTime: '06:01 - 16:30',
+    driverName: 'Minna Korhonen',
     area: 'Espoo',
-    truck: 'BCD-891',
-    stops: '10 / 10',
-    progress: 100,
+    vehicleInfo: 'BCD-891',
+    completedStops: 10,
+    totalStops: 10,
     status: 'done',
   },
   {
-    id: 'R-2403',
-    time: '07:15 - 18:01',
-    driver: 'Petri Mäkinen',
-    initials: 'PM',
+    routeId: 103,
+    shiftTime: '07:15 - 18:01',
+    driverName: 'Petri Mäkinen',
     area: 'Vantaa',
-    truck: 'LMN-556',
-    stops: '3 / 7',
-    progress: 43,
+    vehicleInfo: 'LMN-556',
+    completedStops: 3,
+    totalStops: 7,
     status: 'active',
   },
   {
-    id: 'R-2404',
-    time: '06:42 - 18:30',
-    driver: 'Sara Virtanen',
-    initials: 'SV',
+    routeId: 104,
+    shiftTime: '06:42 - 18:30',
+    driverName: 'Sara Virtanen',
     area: 'Järvenpää',
-    truck: 'QRS-112',
-    stops: '0 / 9',
-    progress: 0,
+    vehicleInfo: 'QRS-112',
+    completedStops: 0,
+    totalStops: 9,
     status: 'pending',
   },
   {
-    id: 'R-2405',
-    time: '05:16 - 15:30',
-    driver: 'Antti Salo',
-    initials: 'AS',
+    routeId: 105,
+    shiftTime: '05:16 - 15:30',
+    driverName: 'Antti Salo',
     area: 'Tampere',
-    truck: 'TUV-778',
-    stops: '11 / 11',
-    progress: 100,
+    vehicleInfo: 'TUV-778',
+    completedStops: 11,
+    totalStops: 11,
     status: 'done',
   },
   {
-    id: 'R-2406',
-    time: '07:18 - 16:01',
-    driver: 'Laura Heikkilä',
-    initials: 'LH',
+    routeId: 106,
+    shiftTime: '07:18 - 16:01',
+    driverName: 'Laura Heikkilä',
     area: 'Turku',
-    truck: 'WXY-334',
-    stops: '4 / 6',
-    progress: 67,
+    vehicleInfo: 'WXY-334',
+    completedStops: 4,
+    totalStops: 6,
     status: 'active',
   },
   {
-    id: 'R-2407',
-    time: '07:19 - 16:00',
-    driver: 'Mikko Hämäläinen',
-    initials: 'MH',
+    routeId: 107,
+    shiftTime: '07:19 - 16:00',
+    driverName: 'Mikko Hämäläinen',
     area: 'Lahti',
-    truck: 'ABC-223',
-    stops: '0 / 8',
-    progress: 0,
+    vehicleInfo: 'ABC-223',
+    completedStops: 0,
+    totalStops: 8,
     status: 'pending',
-  },
-  {
-    id: 'R-2408',
-    time: '06:15 - 16:18',
-    driver: 'Tiina Lehtonen',
-    initials: 'TL',
-    area: 'Helsinki Etelämeri',
-    truck: 'BEF-445',
-    stops: '6 / 6',
-    progress: 100,
-    status: 'done',
   },
 ];
 
@@ -109,7 +93,7 @@ const statusStyles = {
   active: {
     bg: 'bg-green-100 dark:bg-green-900/30',
     color: 'text-green-600 dark:text-green-400',
-    label: 'Aktiivinen',
+    label: 'Ajossa',
     badge: 'bg-green-500',
   },
   done: {
@@ -126,32 +110,72 @@ const statusStyles = {
   },
 };
 
+// Apufunktio nimikirjaimille (esim. "Jari Laakso" -> "JL")
+const getInitials = (name: string) => {
+  return name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .substring(0, 2);
+};
+
 export function RoutesPage() {
+  const {showToast} = useToast();
+  const [routes, setRoutes] = useState<RouteOverview[]>(mockRoutesData);
+  const [isLoading, setIsLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState<
     'all' | 'active' | 'done' | 'pending'
   >('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredRoutes = routesData.filter((route) => {
+  /* BACKEND INTEGRAATIO TÄHÄN:
+  useEffect(() => {
+    fetchRoutes();
+  }, []);
+
+  const fetchRoutes = async () => {
+    setIsLoading(true);
+    try {
+      const res = await api.get('/routes/daily-overview');
+      setRoutes(res.data);
+    } catch (error) {
+      showToast('Virhe reittien latauksessa', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  */
+
+  const handleRefresh = async () => {
+    setIsLoading(true);
+    // Simuloi API kutsua
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    // fetchRoutes(); // Oikea funktio käyttöön myöhemmin
+    setIsLoading(false);
+    showToast('Reitit päivitetty', 'success');
+  };
+
+  const filteredRoutes = routes.filter((route) => {
     const matchesFilter =
       activeFilter === 'all' || route.status === activeFilter;
     const matchesSearch =
-      route.driver.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      route.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      route.driverName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      route.routeId.toString().includes(searchQuery) ||
       route.area.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      route.truck.toLowerCase().includes(searchQuery.toLowerCase());
+      route.vehicleInfo.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesFilter && matchesSearch;
   });
 
   const counts = {
-    all: routesData.length,
-    active: routesData.filter((r) => r.status === 'active').length,
-    done: routesData.filter((r) => r.status === 'done').length,
-    pending: routesData.filter((r) => r.status === 'pending').length,
+    all: routes.length,
+    active: routes.filter((r) => r.status === 'active').length,
+    done: routes.filter((r) => r.status === 'done').length,
+    pending: routes.filter((r) => r.status === 'pending').length,
   };
 
   return (
-    <div className="font-sans">
+    <div className="font-sans pb-10">
       <motion.div
         initial={{opacity: 0, y: -10}}
         animate={{opacity: 1, y: 0}}
@@ -159,9 +183,14 @@ export function RoutesPage() {
       >
         <div className="flex justify-between items-center mb-2">
           <h1 className="text-foreground font-extrabold text-2xl m-0">
-            Reittien hallinta
+            Päivän reitit
           </h1>
-          <button className="px-4 py-2 rounded-lg border-none bg-primary text-primary-foreground cursor-pointer text-sm font-semibold transition-colors hover:bg-primary/90">
+          <button
+            onClick={handleRefresh}
+            disabled={isLoading}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border-none bg-primary text-primary-foreground cursor-pointer text-sm font-semibold transition-colors hover:bg-primary/90 disabled:opacity-50"
+          >
+            <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
             Päivitä
           </button>
         </div>
@@ -170,13 +199,18 @@ export function RoutesPage() {
         </p>
       </motion.div>
 
+      {/* Tilastokortit */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
         {(
           [
             {key: 'all', label: 'Kaikki reitit', colorClass: 'text-foreground'},
-            {key: 'active', label: 'Aktiivisia', colorClass: 'text-green-500'},
-            {key: 'done', label: 'Valmiita', colorClass: 'text-blue-500'},
-            {key: 'pending', label: 'Odottaa', colorClass: 'text-amber-500'},
+            {key: 'active', label: 'Ajossa', colorClass: 'text-green-500'},
+            {key: 'done', label: 'Valmiina', colorClass: 'text-blue-500'},
+            {
+              key: 'pending',
+              label: 'Odottaa lähtöä',
+              colorClass: 'text-amber-500',
+            },
           ] as const
         ).map((item, idx) => (
           <motion.div
@@ -197,11 +231,14 @@ export function RoutesPage() {
             >
               {counts[item.key]}
             </div>
-            <div className="text-muted-foreground text-sm">{item.label}</div>
+            <div className="text-muted-foreground text-sm font-medium">
+              {item.label}
+            </div>
           </motion.div>
         ))}
       </div>
 
+      {/* Hakupalkki */}
       <motion.div
         initial={{opacity: 0}}
         animate={{opacity: 1}}
@@ -215,52 +252,27 @@ export function RoutesPage() {
           />
           <input
             type="text"
-            placeholder="Hae reittinumero, kuljettajaa, alue..."
+            placeholder="Hae kuskia, aluetta tai ajoneuvoa..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full py-3.5 pl-11 pr-4 rounded-xl border-2 border-border bg-input-background text-foreground text-sm outline-none transition-colors focus:border-primary"
+            className="w-full py-3.5 pl-11 pr-4 rounded-xl border border-border bg-input-background text-foreground text-sm outline-none transition-colors focus:ring-2 focus:ring-ring"
           />
         </div>
       </motion.div>
 
-      <motion.div
-        initial={{opacity: 0}}
-        animate={{opacity: 1}}
-        transition={{delay: 0.4}}
-        className="bg-card rounded-2xl p-4 mb-4 flex gap-3 shadow-sm border border-border"
-      >
-        {[
-          {key: 'all', label: 'Kaikki'},
-          {key: 'active', label: 'Aktiiviset'},
-          {key: 'done', label: 'Valmis'},
-          {key: 'pending', label: 'Odottaa'},
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveFilter(tab.key as typeof activeFilter)}
-            className={`px-5 py-2 rounded-lg border-none cursor-pointer text-sm font-semibold transition-all ${
-              activeFilter === tab.key
-                ? 'bg-foreground text-background'
-                : 'bg-transparent text-muted-foreground hover:bg-muted/50'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </motion.div>
-
+      {/* Päätaulukko */}
       <motion.div
         initial={{opacity: 0, y: 20}}
         animate={{opacity: 1, y: 0}}
-        transition={{delay: 0.5}}
-        className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden"
+        transition={{delay: 0.4}}
+        className={`bg-card rounded-2xl shadow-sm border border-border overflow-hidden transition-opacity ${isLoading ? 'opacity-50' : 'opacity-100'}`}
       >
         <div className="overflow-x-auto overflow-y-hidden">
           <table className="w-full border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-muted/50 border-b border-border">
                 {[
-                  'REITTI',
+                  'REITTI ID',
                   'KULJETTAJA',
                   'ALUE',
                   'AJONEUVO',
@@ -281,9 +293,17 @@ export function RoutesPage() {
               <AnimatePresence>
                 {filteredRoutes.map((route, i) => {
                   const st = statusStyles[route.status];
+                  // LASKETAAN PROSENTTI FRONTENDISSÄ:
+                  const progressPercentage =
+                    route.totalStops > 0
+                      ? Math.round(
+                          (route.completedStops / route.totalStops) * 100
+                        )
+                      : 0;
+
                   return (
                     <motion.tr
-                      key={route.id}
+                      key={route.routeId}
                       initial={{opacity: 0}}
                       animate={{opacity: 1}}
                       exit={{opacity: 0}}
@@ -291,57 +311,57 @@ export function RoutesPage() {
                       className="hover:bg-muted/30 transition-colors"
                     >
                       <td className="p-4">
-                        <div>
-                          <div className="font-bold text-foreground text-sm">
-                            {route.id}
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-0.5">
-                            {route.time}
-                          </div>
+                        <div className="font-bold text-foreground text-sm">
+                          #{route.routeId}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          {route.shiftTime}
                         </div>
                       </td>
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-bold">
-                            {route.initials}
+                          {/* LASKETAAN NIMIKIRJAIMET LENNKOSTA */}
+                          <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
+                            {getInitials(route.driverName)}
                           </div>
-                          <span className="text-sm text-foreground font-medium">
-                            {route.driver}
+                          <span className="text-sm text-foreground font-semibold">
+                            {route.driverName}
                           </span>
                         </div>
                       </td>
                       <td className="p-4">
-                        <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1.5 text-sm text-muted-foreground font-medium">
                           <MapPin size={14} /> {route.area}
                         </span>
                       </td>
                       <td className="p-4">
-                        <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                          <Package size={14} /> {route.truck}
+                        <span className="flex items-center gap-1.5 text-sm text-muted-foreground font-medium">
+                          <Package size={14} /> {route.vehicleInfo}
                         </span>
                       </td>
-                      <td className="p-4 text-sm text-foreground font-semibold">
-                        {route.stops}{' '}
-                        <span className="text-muted-foreground font-normal">
-                          paikkoja
-                        </span>
+                      <td className="p-4 text-sm text-foreground font-bold">
+                        {route.completedStops}{' '}
+                        <span className="text-muted-foreground font-medium mx-1">
+                          /
+                        </span>{' '}
+                        {route.totalStops}
                       </td>
                       <td className="p-4 min-w-[140px]">
                         <div>
-                          <div className="bg-muted rounded-lg h-2 overflow-hidden mb-1.5">
+                          <div className="bg-muted rounded-full h-2.5 overflow-hidden mb-1.5">
                             <div
-                              className={`h-full rounded-lg transition-all duration-300 ${st.badge}`}
-                              style={{width: `${route.progress}%`}}
+                              className={`h-full rounded-full transition-all duration-500 ${st.badge}`}
+                              style={{width: `${progressPercentage}%`}}
                             />
                           </div>
-                          <span className="text-xs text-muted-foreground">
-                            {route.progress}%
+                          <span className="text-xs font-semibold text-muted-foreground">
+                            {progressPercentage}% valmiina
                           </span>
                         </div>
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 text-right">
                         <span
-                          className={`inline-flex items-center px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap ${st.bg} ${st.color}`}
+                          className={`inline-flex items-center px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap ${st.bg} ${st.color}`}
                         >
                           {st.label}
                         </span>
@@ -353,9 +373,14 @@ export function RoutesPage() {
             </tbody>
           </table>
         </div>
-        {filteredRoutes.length === 0 && (
-          <div className="p-12 text-center text-muted-foreground text-sm">
-            Ei reittejä löytynyt hakuehdoilla.
+
+        {/* Tyhjä tila */}
+        {filteredRoutes.length === 0 && !isLoading && (
+          <div className="p-12 text-center text-muted-foreground">
+            <Package size={40} className="mx-auto mb-3 opacity-20" />
+            <p className="text-sm font-medium m-0">
+              Ei reittejä löytynyt hakuehdoilla.
+            </p>
           </div>
         )}
       </motion.div>

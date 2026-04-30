@@ -14,6 +14,7 @@ import {
   Bell,
   ChevronRight,
   Map,
+  Apple,
 } from 'lucide-react';
 import {useAuth} from '../contexts/AuthContext';
 import {ModeToggle} from '../components/layout/ModeToggle.tsx';
@@ -25,6 +26,7 @@ const navItems = [
   {to: '/admin/orders', icon: Package, label: 'Tilaukset'},
   {to: '/admin/stores', icon: Store, label: 'Kaupat'},
   {to: '/admin/users', icon: Users, label: 'Käyttäjät'},
+  {to: '/admin/products', icon: Apple, label: 'Tuotteet'},
   {to: '/admin/reports', icon: BarChart2, label: 'Raportit'},
   {to: '/admin/settings', icon: Settings, label: 'Asetukset'},
 ];
