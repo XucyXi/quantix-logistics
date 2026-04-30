@@ -17,7 +17,9 @@ export const CustomerTrackingView = () => {
         const res = await fetch('/api/orders/my-orders', {
           headers: {Authorization: `Bearer ${localStorage.getItem('token')}`},
         });
+
         const data = await res.json();
+        console.log('data', data);
         setOrders(Array.isArray(data) ? data : []);
 
         if (data && data.length > 0 && !selectedOrder) {
@@ -29,10 +31,9 @@ export const CustomerTrackingView = () => {
     };
 
     fetchOrders();
-  }, [selectedOrder]);
+  }, []);
 
   const renderMap = () => {
-    // 1. Jos dataa ei ole vielä ladattu
     if (!trackingData) return <p>Ladataan seurantaa...</p>;
     if (!selectedOrder)
       return (
@@ -56,12 +57,11 @@ export const CustomerTrackingView = () => {
       );
     }
 
-    // 3. Kaikki OK -> Näytetään kartta
     return (
       <Map
         startCoords={[
-          Number(trackingData.driver?.lat ?? destLat),
-          Number(trackingData.driver?.lng ?? destLat),
+          Number(trackingData.driver?.lat),
+          Number(trackingData.driver?.lng),
         ]}
         endCoords={[
           Number((selectedOrder as any).dest_lat) || 0,
@@ -80,7 +80,6 @@ export const CustomerTrackingView = () => {
 
     if (selectedOrder?.status === 'done') {
       fetchTracking();
-      return;
       return;
     }
 
