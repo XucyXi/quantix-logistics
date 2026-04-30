@@ -5,10 +5,12 @@ export const OrderList = ({
   orders,
   selectedId,
   onSelect,
+  variant = 'driver',
 }: {
   orders: Order[];
-  selectedId: number | null;
+  selectedId: number | null | undefined;
   onSelect: (order: Order) => void;
+  variant?: 'driver' | 'customer';
 }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
