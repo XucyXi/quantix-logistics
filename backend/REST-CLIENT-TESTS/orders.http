@@ -18,9 +18,9 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-    "delivery_address": "Keimolankaarre 1",
+    "delivery_address": "Keimolankaarre 10",
     "notes": "Soita ovikelloa, summeri on rikki.",
-    "scheduled_delivery": "2026-04-29 15:00:00",
+    "scheduled_delivery": "2026-04-29 18:00:00",
     "items": [
         {
             "product_id": 1,
@@ -44,6 +44,5 @@ Content-Type: application/json
 ###
 
 ###
-# Täältä pitäisi nyt löytyä uusi tilaus, jossa on dest_lat ja dest_lng täytettynä!
 GET {{baseUrl}}/orders/my-orders
 Authorization: Bearer {{token}}
