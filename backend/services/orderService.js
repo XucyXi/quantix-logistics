@@ -11,11 +11,12 @@ async function createOrder(customerId, payload) {
 
   let lat = null;
   let lng = null;
+
   try {
     const coords = await getCoords(delivery_address);
     if (coords) {
       lat = coords.lat;
-      lng = coords.lng;
+      lng = coords.lon;
     }
     console.log('coords', coords);
   } catch (err) {
@@ -52,10 +53,8 @@ async function createOrder(customerId, payload) {
   const orderData = {
     customer_id: customerId,
     delivery_address,
-    latitude: lat,
-    longitude: lng,
-    latitude: lat,
-    longitude: lng,
+    latitude: lat !== null ? Number(lat) : null,
+    longitude: lng !== null ? Number(lng) : null,
     notes,
     scheduled_delivery,
     total_price: totalPrice,
@@ -65,9 +64,11 @@ async function createOrder(customerId, payload) {
 
   return {
     order_id: orderId,
-    total_price: totalPrice,
-    coords: {lat, lng},
-    coords: {lat, lng},
+    total_price: Number(totalPrice),
+    coords: {
+      lat: lat !== null ? Number(lat) : null,
+      lng: lng !== null ? Number(lng) : null,
+    },
   };
 }
 
@@ -86,8 +87,6 @@ async function createOrderWithItems(orderData, items) {
       [
         orderData.customer_id,
         orderData.delivery_address,
-        orderData.latitude,
-        orderData.longitude,
         orderData.latitude,
         orderData.longitude,
         orderData.notes || null,
@@ -386,8 +385,8 @@ const getOrdersByCustomerId = async (customerId) => {
         status,
         ordered_at,
         total_price,
-        latitude as dest_lat,
-        longitude as dest_lng
+        latitude
+        longitude
        FROM ORDERS
        WHERE customer_id = ?
        ORDER BY ordered_at DESC`,
