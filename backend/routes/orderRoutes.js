@@ -16,7 +16,10 @@ router.get(
   orderController.getAssignedOrders
 );
 
-// Get order stats (customer) - TULE ENNEN /:id REITTIÄ!
+// Get customer orders (customer) - TÄYTYY OLLA ENNEN /stats!
+router.get('/', authMiddleware.authenticate, orderController.getCustomerOrders);
+
+// Get order stats (customer)
 router.get(
   '/stats',
   authMiddleware.authenticate,
@@ -29,13 +32,6 @@ router.put(
   authMiddleware.authenticate,
   roleMiddleware.requireRole('admin'),
   orderController.assignDriverToOrder
-);
-
-router.get(
-  '/my-orders',
-  authMiddleware.authenticate,
-  //roleMiddleware.requireRole('customer'),
-  orderController.getCustomerOrders
 );
 
 // Get single order

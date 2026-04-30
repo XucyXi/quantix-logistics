@@ -105,14 +105,15 @@ async function updateOrderStatus(req, res) {
 
 const getCustomerOrders = async (req, res) => {
   const customerId = req.user.user_id;
-  console.log('customer_id', customerId);
 
   try {
     const orders = await orderService.getOrdersByCustomerId(customerId);
-
-    res.json(orders);
+    res.json({success: true, orders});
   } catch (error) {
-    res.status(500).json({error: 'Virhe haettaessa tilauksia'});
+    console.error('Controller error:', error.message);
+    res.status(500).json({
+      error: error.message || 'Failed to fetch customer orders',
+    });
   }
 };
 
@@ -122,4 +123,6 @@ module.exports = {
   getAssignedOrders,
   assignDriverToOrder,
   updateOrderStatus,
+  getOrderStats,
+  getCustomerOrders,
 };
