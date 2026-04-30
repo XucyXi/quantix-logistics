@@ -5,8 +5,8 @@ POST http://localhost:3000/api/auth/login
 Content-Type: application/json
 
 {
-    "email": "asiakas1@quantix.fi",
-    "password": "driver123"
+    "email": "admin@quantix.fi",
+    "password": "admin"
 }
 
 ###

@@ -43,7 +43,7 @@ Content-Type: application/json
 
 ###
 
-### 4. Varmista luonti hakemalla omat tilaukset
+###
 # Täältä pitäisi nyt löytyä uusi tilaus, jossa on dest_lat ja dest_lng täytettynä!
 GET {{baseUrl}}/orders/my-orders
 Authorization: Bearer {{token}}

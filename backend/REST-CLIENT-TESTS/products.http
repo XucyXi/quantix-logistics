@@ -1,6 +1,6 @@
 ### Muuttujat
 @baseUrl = http://localhost:3000/api
-@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxOSwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzc3NDY0MTM5LCJleHAiOjE3Nzc0Njc3Mzl9.mKlGvc-bEE231MIxKxL8SEz_TcvY8XZdImmGIvvModw
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxOSwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzc3NTQ4OTEzLCJleHAiOjE3Nzc1NTI1MTN9.yUg5sXSq86NHExkZwQ2JO47tGA8VPo3YRC0FJJDIUYQ
 
 ### 1. Lisää uusi tuote (Admin)
 POST {{baseUrl}}/products
