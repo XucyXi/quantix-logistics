@@ -22,19 +22,6 @@ async function createOrder(customerId, payload) {
     console.error('Geocoding failed during order creation:', err);
   }
 
-  let lat = null;
-  let lng = null;
-  try {
-    const coords = await getCoords(delivery_address);
-    if (coords) {
-      lat = coords.lat;
-      lng = coords.lng;
-    }
-    console.log('coords', coords);
-  } catch (err) {
-    console.error('Geocoding failed during order creation:', err);
-  }
-
   let totalPrice = 0;
   const enrichedItems = [];
 
