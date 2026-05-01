@@ -33,3 +33,6 @@ async function login(req, res) {
 }
 
 module.exports = { register, login };
+
+
+// Make sure all error handling returns same form of error (error: err.message)

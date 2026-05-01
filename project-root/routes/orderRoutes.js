@@ -12,6 +12,8 @@ router.post(
   orderController.createOrder
 );
 
+// REMEMBER TO ADD ENDPOINT TO FETCH ALL DRIVERS (ACTIVE OR NOT)
+
 // Get assigned orders (driver)
 router.get(
   '/assigned',
@@ -19,6 +21,15 @@ router.get(
   roleMiddleware.requireRole('driver'),
   orderController.getAssignedOrders
 );
+
+// backend/routes/orderRoutes.js
+router.get(
+  '/my-orders',
+  authMiddleware.authenticate,
+  roleMiddleware.requireRole('customer'),
+  orderController.getCustomerOrders
+);
+
 
 // Assign driver (admin)
 router.put(
@@ -41,5 +52,24 @@ router.put(
     roleMiddleware.requireRole('driver'),
     orderController.updateOrderStatus
   );  
+
+router.put(
+  '/driver/availability',
+  authMiddleware.authenticate,
+  roleMiddleware.requireRole('driver'),
+  orderController.updateAvailability
+);
+
+router.put(
+  '/:id/cancel',
+  authMiddleware.authenticate,
+  roleMiddleware.requireRole('admin'),
+  orderController.cancelOrder
+);
+
+router.get('/admin/drivers', authMiddleware.authenticate, roleMiddleware.requireRole('admin'), orderController.getAllDrivers);
+
+router.get('/cursor', authMiddleware.authenticate, roleMiddleware.requireRole('admin'), orderController.getOrdersCursor);
+
 
 module.exports = router;

@@ -4,34 +4,31 @@ const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'devsecret'; // put strong secret in .env
 
-/*
-async function register({ email, password, role}) {
-
-    // 1. Check if user already exists
-    const [existing] = await pool.query(
-      'SELECT * FROM users WHERE email = ?',
-      [email]
-    );
-    if (existing.length) {
-      throw new Error('User already exists');
-    }
-  
-    // 2. Hash the password
-    const password_hash = await bcrypt.hash(password, 10); // 10 is considered our salt value, the salt that adds to the hashing, to differentiate each password (same passwords can have same hashing pattern without salt)
-  
-    // 3. Insert user into DB
-    const [result] = await pool.query(
-      'INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)',
-      [email, password_hash, role]
-    );
-  
-    // 4. Return basic info
-    return { user_id: result.insertId, email, role };
-  }
-*/
 
 async function register({ email, password, role, extraData = {} }) {
+
   const connection = await pool.getConnection();
+
+  const allowedRoles = ['customer', 'driver', 'admin'];
+
+  if (!allowedRoles.includes(role)) {
+    throw new Error('Invalid role');
+  }
+
+  const full_name = extraData.full_name;
+
+  if (!full_name) {
+    throw new Error("full_name is required");
+  }
+
+  if (!email || !password || !role) {
+    throw new Error("Missing required fields");
+  }
+
+  if (password.length < 6) {
+    throw new Error("Password must be at least 6 characters");
+  } 
+  
 
   try {
     await connection.beginTransaction();
@@ -49,11 +46,10 @@ async function register({ email, password, role, extraData = {} }) {
     // 2. Hash password
     const password_hash = await bcrypt.hash(password, 10);
 
-    // 3. Insert into USERS
     const [userResult] = await connection.query(
-      `INSERT INTO USERS (email, password_hash, role)
-       VALUES (?, ?, ?)`,
-      [email, password_hash, role]
+      `INSERT INTO USERS (full_name, email, password_hash, role)
+       VALUES (?, ?, ?, ?)`,
+      [full_name, email, password_hash, role]
     );
 
     const userId = userResult.insertId;
@@ -66,18 +62,21 @@ async function register({ email, password, role, extraData = {} }) {
         extraData.company_name,
         extraData.address,
         extraData.tel,
-        extraData.vat_number
+        extraData.vat_number,
+        extraData.tier
       );
+      console.log("Customer Tier", extraData.tier)
       await connection.query(
         `INSERT INTO CUSTOMER_PROFILES 
-         (user_id, company_name, address, tel, vat_number)
-         VALUES (?, ?, ?, ?, ?)`,
+         (user_id, company_name, address, tel, vat_number, tier)
+         VALUES (?, ?, ?, ?, ?, ?)`,
         [
           userId,
           extraData.company_name || null,
           extraData.address || null,
           extraData.tel || null,
-          extraData.vat_number || null
+          extraData.vat_number || null,
+          extraData.tier || 'starter'
         ]
       );
     }
@@ -117,7 +116,7 @@ async function register({ email, password, role, extraData = {} }) {
   async function login({ email, password }) {
     // 1. Fetch user by email
     const [rows] = await pool.query(
-      'SELECT * FROM users WHERE email = ?',
+      'SELECT * FROM USERS WHERE email = ?',
       [email]
     );
     if (!rows.length) throw new Error('User not found');
@@ -134,8 +133,13 @@ async function register({ email, password, role, extraData = {} }) {
       JWT_SECRET,
       { expiresIn: '1h' }
     );
+
+    await pool.query(
+      `UPDATE USERS SET last_login = CURRENT_TIMESTAMP WHERE user_id = ?`,
+      [user.user_id]
+    );
   
-    return { token, user_id: user.user_id, role: user.role };
+    return { token, user_id: user.user_id, role: user.role, full_name: user.full_name };
   }
   
 module.exports = { register, login };

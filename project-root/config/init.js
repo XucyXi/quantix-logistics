@@ -1,14 +1,27 @@
 const mysql = require('mysql2/promise');
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config();
+require('dotenv').config({
+  path: path.resolve(__dirname, '../.env')
+});
 
 const isReset = process.argv.includes('--reset');
+
+async function runSQL(connection, filePath) {
+  const sql = fs.readFileSync(filePath, 'utf-8');
+  await connection.query(sql);
+}
 
 async function initDB() {
   let connection;
 
+  console.log("ENV DEBUG:", {
+    DB_ADMIN_USER: process.env.DB_ADMIN_USER,
+    DB_ADMIN_PASS: process.env.DB_ADMIN_PASS
+  });
+
   try {
+    // 1. Connect as admin
     connection = await mysql.createConnection({
       host: process.env.DB_HOST,
       user: process.env.DB_ADMIN_USER,
@@ -16,59 +29,55 @@ async function initDB() {
       multipleStatements: true
     });
 
-    console.log('Connected to MySQL server as admin');
+    console.log('Connected as admin');
 
-    await connection.query(
-      `CREATE DATABASE IF NOT EXISTS \`${process.env.DB_NAME}\`;`
-    );
-    console.log(`Database "${process.env.DB_NAME}" ensured`);
+    const dbName = process.env.DB_NAME;
 
-    await connection.query(
-      `CREATE USER IF NOT EXISTS '${process.env.DB_USER}'@'localhost' IDENTIFIED BY '${process.env.DB_PASS}';`
-    );
-    await connection.query(
-      `GRANT ALL PRIVILEGES ON \`${process.env.DB_NAME}\`.* TO '${process.env.DB_USER}'@'localhost';`
-    );
-    await connection.query(`FLUSH PRIVILEGES;`);
-    console.log('App user ensured and permissions granted');
-
-    await connection.query(`USE \`${process.env.DB_NAME}\`;`);
-
-    const resetPath = path.join(__dirname, 'config/reset_tables.sql');
-    const createPath = path.join(__dirname, 'config/create_tables.sql');
-    const seedPath = path.join(__dirname, 'config/seed.sql');
-
+    // 2. RESET MODE = DROP DATABASE (cleanest solution)
     if (isReset) {
-      console.log(' RESET MODE ');
+      console.log("RESET MODE: Dropping database...");
 
-      const resetSQL = fs.readFileSync(resetPath, 'utf-8');
-      await connection.query(resetSQL);
-      console.log('Tables dropped');
-
-      const createSQL = fs.readFileSync(createPath, 'utf-8');
-      await connection.query(createSQL);
-      console.log('Tables recreated');
-
-      const seedSQL = fs.readFileSync(seedPath, 'utf-8');
-      await connection.query(seedSQL);
-      console.log('Database seeded');
-
-    } else {
-      console.log(' NORMAL MODE ');
-
-      const createSQL = fs.readFileSync(createPath, 'utf-8');
-      await connection.query(createSQL);
-      console.log('Tables ensured (IF NOT EXISTS)');
+      await connection.query(`DROP DATABASE IF EXISTS \`${dbName}\``);
+      console.log("Database dropped");
     }
 
-    console.log('DB initialization complete');
+    // 3. Recreate DB
+    await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``);
+    console.log(`Database ${dbName} ensured`);
+
+    await connection.query(`USE \`${dbName}\``);
+
+    // 4. Create app user
+    await connection.query(
+      `CREATE USER IF NOT EXISTS '${process.env.DB_USER}'@'localhost' IDENTIFIED BY '${process.env.DB_PASS}'`
+    );
+
+    await connection.query(
+      `GRANT ALL PRIVILEGES ON \`${dbName}\`.* TO '${process.env.DB_USER}'@'localhost'`
+    );
+
+    await connection.query(`FLUSH PRIVILEGES`);
+    console.log("App user ready");
+
+    // 5. Run schema
+    const createPath = path.join(__dirname, 'create_tables.sql');
+    await runSQL(connection, createPath);
+    console.log("Schema created");
+
+    // 6. Seed only in reset mode
+    if (isReset) {
+      const seedPath = path.join(__dirname, 'seed.sql');
+      await runSQL(connection, seedPath);
+      console.log("Database seeded");
+    }
+
+    console.log("DB initialization complete");
 
   } catch (err) {
-    console.error('DB INIT ERROR:', err);
+    console.error("DB INIT ERROR:", err);
   } finally {
     if (connection) {
       await connection.end();
-      console.log('Connection closed');
     }
   }
 }
