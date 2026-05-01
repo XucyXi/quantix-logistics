@@ -1,4 +1,5 @@
 import React, {createContext, useContext, useState} from 'react';
+import api from '../lib/api';
 
 export type UserRole = 'customer' | 'admin' | 'driver';
 export type UserTier = 'standard' | 'business';
@@ -20,47 +21,12 @@ export function isBusinessCustomer(user: User | null): boolean {
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (email: string, password: string, role?: UserRole) => boolean;
+  login: (email: string, password: string, role?: UserRole) => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Demokäyttäjät kirjautumisen testaamiseen ilman backendiä.
-const MOCK_USERS: (User & {password: string})[] = [
-  {
-    id: '1',
-    name: 'Matti Virtanen',
-    email: 'asiakas@demo.fi',
-    password: 'demo123',
-    role: 'customer',
-    tier: 'standard',
-  },
-  {
-    id: '2',
-    name: 'Yritysasiakas Oy',
-    email: 'yritys@demo.fi',
-    password: 'business123',
-    role: 'customer',
-    tier: 'business',
-    company: 'Yritysasiakas Oy',
-  },
-  {
-    id: '3',
-    name: 'Päivi Mäkinen',
-    email: 'admin@quantix.fi',
-    password: 'admin123',
-    role: 'admin',
-  },
-  {
-    id: '4',
-    name: 'Jukka Leinonen',
-    email: 'kuljettaja@quantix.fi',
-    password: 'driver123',
-    role: 'driver',
-  },
-];
 
 export function AuthProvider({children}: {children: React.ReactNode}) {
   // Luetaan käyttäjä localStoragesta heti alussa, jotta kirjautuminen säilyy sivun päivityksessä.
@@ -76,34 +42,47 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
 
   // Lisään Jwt tokenin
   const [token, setToken] = useState<string | null>(() => {
-    return localStorage.getItem('quantix_token') || null;
+    return (
+      localStorage.getItem('accessToken') ||
+      localStorage.getItem('token') ||
+      localStorage.getItem('quantix_token') ||
+      null
+    );
   });
 
-  const login = (email: string, password: string, role?: UserRole): boolean => {
-    // Role on valinnainen: jos roolia ei anneta, hyväksytään mikä tahansa rooli.
-    // Paluuarvo boolean pitää kirjautumisformin yksinkertaisena:
-    // UI voi näyttää virheen ilman try/catch-rakennetta.
-    const found = MOCK_USERS.find(
-      (u) =>
-        u.email === email &&
-        u.password === password &&
-        (!role || u.role === role)
-    );
-    if (found) {
-      // Salasanaa ei tallenneta sovelluksen tilaan eikä localStorageen.
-      // Nimen vaihto _-muuttujaan dokumentoi, että arvo poistetaan tarkoituksella.
-      const {password: _, ...userWithoutPassword} = found;
-      setUser(userWithoutPassword);
-      localStorage.setItem('quantix_user', JSON.stringify(userWithoutPassword));
+  const login = async (
+    email: string,
+    password: string,
+    role?: UserRole
+  ): Promise<boolean> => {
+    try {
+      const {data} = await api.post('/auth/login', {email, password});
+      const resolvedRole = data.role as UserRole;
 
-      // JWT token - mock token for demo (real token comes from backend)
-      const mockToken = 'demo_jwt_token_' + found.id + '_' + Date.now();
-      setToken(mockToken);
-      localStorage.setItem('quantix_token', mockToken);
+      if (role && resolvedRole !== role) {
+        return false;
+      }
 
+      const tokenValue = data.token as string;
+      const userData: User = {
+        id: String(data.user_id),
+        name: data.name || email.split('@')[0],
+        email,
+        role: resolvedRole,
+      };
+
+      setUser(userData);
+      setToken(tokenValue);
+
+      localStorage.setItem('quantix_user', JSON.stringify(userData));
+      localStorage.setItem('accessToken', tokenValue);
+      localStorage.setItem('token', tokenValue);
+      localStorage.setItem('quantix_token', tokenValue);
       return true;
+    } catch (error) {
+      console.error('Login failed:', error);
+      return false;
     }
-    return false;
   };
 
   const logout = () => {
@@ -112,6 +91,8 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
     setToken(null);
     localStorage.removeItem('quantix_user');
     localStorage.removeItem('quantix_token');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('token');
   };
 
   return (
