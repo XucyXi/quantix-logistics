@@ -4,6 +4,7 @@ try {
     const authRoutes = require('./routes/authRoutes.js');
     const productRoutes = require('./routes/productRoutes.js');
     const orderRoutes = require('./routes/orderRoutes.js');
+    const adminRoutes = require('./routes/adminRoutes');
 
     const app = express();
 
@@ -17,6 +18,7 @@ try {
     app.use('/api/auth', authRoutes);
     app.use('/api/products', productRoutes);
     app.use('/api/orders', orderRoutes);
+    app.use('/api/admin', adminRoutes);
 
     app.listen(3000, () => console.log('Server running on port 3000'));
 } catch (err) {
