@@ -19,7 +19,7 @@ export function LoginPage() {
     await new Promise((r) => setTimeout(r, 800));
 
     // Yksittäinen kirjautuminen, tarkistetaan tunnukset roolista riippumatta
-    const ok = login(email, password);
+    const ok = await login(email, password);
     setLoading(false);
 
     if (ok) {
