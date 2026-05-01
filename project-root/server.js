@@ -4,7 +4,7 @@ try {
     const authRoutes = require('./routes/authRoutes.js');
     const productRoutes = require('./routes/productRoutes.js');
     const orderRoutes = require('./routes/orderRoutes.js');
-    const adminRoutes = require('./routes/adminRoutes');
+    const adminRoutes = require('./routes/adminRoutes.js');
 
     const app = express();
 

@@ -1,4 +1,3 @@
-// backend/controllers/analyticsController.js
 const pool = require('../config/db');
 
 async function getRevenueStats(req, res) {
@@ -13,7 +12,7 @@ async function getRevenueStats(req, res) {
       WHERE ordered_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
     `);
 
-    return res.json({ success: true, stats: rows[0] });
+    return res.json({success: true, stats: rows[0]});
   } catch (error) {
     return res.status(500).json({
       success: false,
@@ -31,7 +30,7 @@ async function getOrderStats(req, res) {
       GROUP BY status
     `);
 
-    return res.json({ success: true, stats: rows });
+    return res.json({success: true, stats: rows});
   } catch (error) {
     return res.status(500).json({
       success: false,
