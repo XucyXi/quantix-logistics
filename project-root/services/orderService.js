@@ -408,7 +408,7 @@ async function updateOrderStatus(orderId, driverId, newStatus) {
     ready_for_pickup: ['in_transit', 'stuck'],
     in_transit: ['done', 'stuck'],
     done: [],
-    stuck: []
+    stuck: ['in_transit']
   };
 
   try {

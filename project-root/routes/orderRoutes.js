@@ -12,8 +12,6 @@ router.post(
   orderController.createOrder
 );
 
-// REMEMBER TO ADD ENDPOINT TO FETCH ALL DRIVERS (ACTIVE OR NOT)
-
 // Get assigned orders (driver)
 router.get(
   '/assigned',
