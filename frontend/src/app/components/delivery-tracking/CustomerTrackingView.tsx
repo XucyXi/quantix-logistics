@@ -10,18 +10,35 @@ export const CustomerTrackingView = () => {
   const [trackingData, setTrackingData] = useState<TrackingResponse | null>(
     null
   );
+
+  const getAuthToken = () =>
+    localStorage.getItem('accessToken') ||
+    localStorage.getItem('token') ||
+    localStorage.getItem('quantix_token') ||
+    '';
+
   useEffect(() => {
-    // Polling: Haetaan kuskin sijainti bäkistä 10 sekunnin välein
     const fetchOrders = async () => {
       try {
         const res = await fetch('/api/orders/my-orders', {
-          headers: {Authorization: `Bearer ${localStorage.getItem('token')}`},
+          headers: {Authorization: `Bearer ${getAuthToken()}`},
         });
         const data = await res.json();
-        setOrders(Array.isArray(data) ? data : []);
+        const nextOrders = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.orders)
+            ? data.orders
+            : [];
+        setOrders(nextOrders);
 
-        if (data && data.length > 0 && !selectedOrder) {
-          setSelectedOrder(data[0]);
+        if (nextOrders.length > 0) {
+          setSelectedOrder((prevSelected) => {
+            if (!prevSelected) return nextOrders[0];
+            return (
+              nextOrders.find((o: Order) => o.order_id === prevSelected.order_id) ||
+              nextOrders[0]
+            );
+          });
         }
       } catch (err) {
         console.error('orders fetch failed', err);
@@ -29,17 +46,18 @@ export const CustomerTrackingView = () => {
     };
 
     fetchOrders();
-  }, [selectedOrder]);
+    const interval = setInterval(fetchOrders, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const renderMap = () => {
-    // 1. Jos dataa ei ole vielä ladattu
-    if (!trackingData) return <p>Ladataan seurantaa...</p>;
     if (!selectedOrder)
       return (
         <p style={{textAlign: 'center', marginTop: '100px'}}>
           Valitse tilaus seurantaa varten
         </p>
       );
+    if (!trackingData) return <p>Ladataan seurantaa...</p>;
 
     const destLat = Number(
       trackingData.destination?.lat || (selectedOrder as any).dest_lat
@@ -61,7 +79,7 @@ export const CustomerTrackingView = () => {
       <Map
         startCoords={[
           Number(trackingData.driver?.lat ?? destLat),
-          Number(trackingData.driver?.lng ?? destLat),
+          Number(trackingData.driver?.lng ?? destLng),
         ]}
         endCoords={[
           Number((selectedOrder as any).dest_lat) || 0,
@@ -70,26 +88,26 @@ export const CustomerTrackingView = () => {
       />
     );
   };
-  console.log('selected', selectedOrder);
 
   useEffect(() => {
-    if (!selectedOrder?.dest_lat || !selectedOrder?.dest_lng) {
-      console.log('Tilauksella ei koordinaatteja, skipataan seuranta');
+    if (!selectedOrder) {
+      setTrackingData(null);
       return;
     }
+    const currentOrder = selectedOrder;
 
-    if (selectedOrder?.status === 'done') {
-      fetchTracking();
-      return;
+    if (!currentOrder.dest_lat || !currentOrder.dest_lng) {
+      console.log('Tilauksella ei koordinaatteja, skipataan seuranta');
+      setTrackingData(null);
       return;
     }
 
     async function fetchTracking() {
       try {
         const res = await fetch(
-          `/api/deliveries/${selectedOrder?.order_id}/status`,
+          `/api/deliveries/${currentOrder.order_id}/status`,
           {
-            headers: {Authorization: `Bearer ${localStorage.getItem('token')}`},
+            headers: {Authorization: `Bearer ${getAuthToken()}`},
           }
         );
         if (res.ok) {
@@ -102,9 +120,18 @@ export const CustomerTrackingView = () => {
     }
 
     fetchTracking();
+    if (currentOrder.status === 'done') {
+      return;
+    }
+
     const interval = setInterval(fetchTracking, 10000);
     return () => clearInterval(interval);
-  }, [selectedOrder]);
+  }, [
+    selectedOrder?.order_id,
+    selectedOrder?.status,
+    selectedOrder?.dest_lat,
+    selectedOrder?.dest_lng,
+  ]);
 
   return (
     <div
