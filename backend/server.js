@@ -5,6 +5,7 @@ try {
   const productRoutes = require('./routes/productRoutes.js');
   const orderRoutes = require('./routes/orderRoutes.js');
   const deliveryRoutes = require('./routes/deliveryRoutes.js');
+  const adminRoutes = require('./routes/adminRoutes.js');
   const app = express();
 
   app.use((req, res, next) => {
@@ -18,6 +19,7 @@ try {
   app.use('/api/products', productRoutes);
   app.use('/api/orders', orderRoutes);
   app.use('/api/deliveries', deliveryRoutes);
+  app.use('/api/admin', adminRoutes);
 
   app.listen(3000, () => console.log('Server running on port 3000'));
 } catch (err) {

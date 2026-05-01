@@ -18,6 +18,12 @@ router.get(
 
 // Get customer orders (customer) - TÄYTYY OLLA ENNEN /stats!
 router.get('/', authMiddleware.authenticate, orderController.getCustomerOrders);
+router.get(
+  '/my-orders',
+  authMiddleware.authenticate,
+  roleMiddleware.requireRole('customer'),
+  orderController.getCustomerOrders
+);
 
 // Get order stats (customer)
 router.get(

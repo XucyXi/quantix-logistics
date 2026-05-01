@@ -11,7 +11,7 @@ import {
   Key,
   X,
 } from 'lucide-react';
-// import api from '../lib/api'; // Ota käyttöön, kun backend on valmis
+import api from '../lib/api';
 import {useToast} from '../contexts/ToastContext';
 
 export function SettingsPage() {
@@ -57,10 +57,13 @@ export function SettingsPage() {
   const handleSaveAccount = async () => {
     setIsSavingAccount(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      showToast('Tilitiedot tallennettu onnistuneesti!', 'success');
+      await api.put('/auth/profile', accountData);
+      showToast('Tilitiedot tallennettu onnistuneesti.', 'success');
     } catch (e) {
-      showToast('Virhe tilitietojen tallennuksessa', 'error');
+      showToast(
+        'Backend ei vahvistanut tilitietojen tallennusta. Tarkista endpoint.',
+        'error'
+      );
     } finally {
       setIsSavingAccount(false);
     }
@@ -69,10 +72,13 @@ export function SettingsPage() {
   const handleSaveSystem = async () => {
     setIsSavingSystem(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      showToast('Järjestelmäasetukset tallennettu!', 'success');
+      await api.put('/admin/settings/system', systemSettings);
+      showToast('Järjestelmäasetukset tallennettu.', 'success');
     } catch (e) {
-      showToast('Virhe järjestelmäasetusten tallennuksessa', 'error');
+      showToast(
+        'Backend ei vahvistanut järjestelmäasetuksia. Tarkista endpoint.',
+        'error'
+      );
     } finally {
       setIsSavingSystem(false);
     }
@@ -81,10 +87,10 @@ export function SettingsPage() {
   const handleTestSmtp = async () => {
     setIsTestingSmtp(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      showToast('Yhteys SMTP-palvelimeen onnistui!', 'success');
+      await api.post('/admin/settings/smtp/test', emailSettings);
+      showToast('Yhteys SMTP-palvelimeen onnistui.', 'success');
     } catch (e) {
-      showToast('SMTP-yhteys epäonnistui. Tarkista asetukset.', 'error');
+      showToast('SMTP-endpoint puuttuu tai yhteys epäonnistui.', 'error');
     } finally {
       setIsTestingSmtp(false);
     }
@@ -108,10 +114,10 @@ export function SettingsPage() {
 
     setIsChangingPassword(true);
     try {
-      // TÄHÄN TULEE BACKEND-KUTSU: (Tää on paljon helpompi rakentaa backendiin!)
-      // await api.put('/auth/change-password', { currentPassword: passwordForm.current, newPassword: passwordForm.new });
-
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await api.put('/auth/change-password', {
+        currentPassword: passwordForm.current,
+        newPassword: passwordForm.new,
+      });
 
       showToast('Salasana vaihdettu onnistuneesti!', 'success');
       setIsPasswordModalOpen(false);
