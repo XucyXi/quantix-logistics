@@ -15,7 +15,7 @@ import {AdminLogin} from './pages/AdminLogin';
 import {AdminDashboard} from './pages/AdminDashboard';
 import {RoutesPage} from './pages/RoutesPage';
 import {OrdersPage} from './pages/OrdersPage';
-import {StoresPage} from './pages/StoresPage';
+//import {StoresPage} from './pages/StoresPage';
 import {UsersPage} from './pages/UsersPage';
 import {ReportsPage} from './pages/ReportsPage';
 import {SettingsPage} from './pages/SettingsPage';
@@ -104,7 +104,7 @@ export const router = createBrowserRouter([
       {path: 'routes', Component: RoutesPage},
       {path: 'live-map', Component: LiveMapPage},
       {path: 'orders', Component: OrdersPage},
-      {path: 'stores', Component: StoresPage},
+      //{path: 'stores', Component: StoresPage},
       {path: 'users', Component: UsersPage},
       {path: 'products', Component: AdminProductsPage},
       {path: 'reports', Component: ReportsPage},
