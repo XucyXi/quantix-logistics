@@ -1,8 +1,9 @@
 import {useState, useEffect} from 'react';
 import {motion, AnimatePresence} from 'motion/react';
 import {Search, MapPin, Package, RefreshCw} from 'lucide-react';
-// import api from '../lib/api'; // Otetaan käyttöön backend-vaiheessa
+import api from '../lib/api';
 import {useToast} from '../contexts/ToastContext';
+import {useAuth} from '../contexts/AuthContext';
 
 // Mukailee dynaamista koostetta (SQL: SELECT driver, COUNT(orders) jne.)
 interface RouteOverview {
@@ -122,6 +123,7 @@ const getInitials = (name: string) => {
 
 export function RoutesPage() {
   const {showToast} = useToast();
+  const {token} = useAuth();
   const [routes, setRoutes] = useState<RouteOverview[]>(mockRoutesData);
   const [isLoading, setIsLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState<
@@ -129,29 +131,55 @@ export function RoutesPage() {
   >('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  /* BACKEND INTEGRAATIO TÄHÄN:
   useEffect(() => {
-    fetchRoutes();
-  }, []);
+    void fetchRoutes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
   const fetchRoutes = async () => {
     setIsLoading(true);
     try {
-      const res = await api.get('/routes/daily-overview');
-      setRoutes(res.data);
+      const res = await api.get('/admin/analytics/orders');
+      const stats: Array<{status: string; count: number}> =
+        res.data?.stats || res.data || [];
+
+      if (!Array.isArray(stats) || stats.length === 0) {
+        setRoutes(mockRoutesData);
+        return;
+      }
+
+      const mapped = stats.map((item, idx) => {
+        const status =
+          item.status === 'done'
+            ? 'done'
+            : item.status === 'assigned' || item.status === 'in_transit'
+              ? 'active'
+              : 'pending';
+        const totalStops = Number(item.count || 0);
+        const completedStops = status === 'done' ? totalStops : 0;
+        return {
+          routeId: 700 + idx,
+          shiftTime: 'N/A',
+          driverName: `Status: ${item.status}`,
+          area: 'System aggregate',
+          vehicleInfo: 'N/A',
+          completedStops,
+          totalStops,
+          status,
+        } as RouteOverview;
+      });
+
+      setRoutes(mapped);
     } catch (error) {
-      showToast('Virhe reittien latauksessa', 'error');
+      setRoutes(mockRoutesData);
+      showToast('Virhe reittien latauksessa, näytetään varadata.', 'error');
     } finally {
       setIsLoading(false);
     }
   };
-  */
 
   const handleRefresh = async () => {
-    setIsLoading(true);
-    // Simuloi API kutsua
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    // fetchRoutes(); // Oikea funktio käyttöön myöhemmin
+    await fetchRoutes();
     setIsLoading(false);
     showToast('Reitit päivitetty', 'success');
   };

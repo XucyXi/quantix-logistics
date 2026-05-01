@@ -2,7 +2,11 @@ const pool = require('../config/db');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'devsecret'; // put strong secret in .env
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET is required');
+}
 
 /*
 async function register({ email, password, role}) {
@@ -61,13 +65,6 @@ async function register({email, password, role, extraData = {}}) {
     // 4. Role-based profile creation
 
     if (role === 'customer') {
-      console.log('Creating Customer');
-      console.log(
-        extraData.company_name,
-        extraData.address,
-        extraData.tel,
-        extraData.vat_number
-      );
       await connection.query(
         `INSERT INTO CUSTOMER_PROFILES
          (user_id, company_name, address, tel, vat_number)
@@ -83,8 +80,6 @@ async function register({email, password, role, extraData = {}}) {
     }
 
     if (role === 'driver') {
-      console.log('Creating Driver');
-      console.log(extraData.vehicle_info);
       await connection.query(
         `INSERT INTO DRIVER_PROFILES
          (user_id, vehicle_info, active)
@@ -129,4 +124,93 @@ async function login({email, password}) {
   return {token, user_id: user.user_id, role: user.role};
 }
 
-module.exports = {register, login};
+async function getProfile(userId) {
+  const [rows] = await pool.query(
+    `
+    SELECT
+      u.user_id,
+      u.full_name,
+      u.email,
+      u.role,
+      cp.company_name,
+      cp.vat_number
+    FROM USERS u
+    LEFT JOIN CUSTOMER_PROFILES cp ON cp.user_id = u.user_id
+    WHERE u.user_id = ?
+    LIMIT 1
+    `,
+    [userId]
+  );
+
+  if (!rows.length) {
+    throw new Error('User not found');
+  }
+
+  return rows[0];
+}
+
+async function updateProfile(userId, profile) {
+  const {companyName, vatNumber, fullName} = profile;
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    if (fullName) {
+      await connection.query(`UPDATE USERS SET full_name = ? WHERE user_id = ?`, [
+        fullName,
+        userId,
+      ]);
+    }
+
+    await connection.query(
+      `
+      INSERT INTO CUSTOMER_PROFILES (user_id, company_name, vat_number)
+      VALUES (?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        company_name = VALUES(company_name),
+        vat_number = VALUES(vat_number)
+      `,
+      [userId, companyName || null, vatNumber || null]
+    );
+
+    await connection.commit();
+    return getProfile(userId);
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
+}
+
+async function changePassword(userId, currentPassword, newPassword) {
+  if (!newPassword || newPassword.length < 8) {
+    throw new Error('New password must be at least 8 characters');
+  }
+
+  const [rows] = await pool.query(
+    `SELECT password_hash FROM USERS WHERE user_id = ? LIMIT 1`,
+    [userId]
+  );
+  if (!rows.length) throw new Error('User not found');
+
+  const isCurrentValid = await bcrypt.compare(currentPassword, rows[0].password_hash);
+  if (!isCurrentValid) throw new Error('Current password is incorrect');
+
+  const password_hash = await bcrypt.hash(newPassword, 10);
+  await pool.query(`UPDATE USERS SET password_hash = ? WHERE user_id = ?`, [
+    password_hash,
+    userId,
+  ]);
+
+  return {success: true};
+}
+
+module.exports = {
+  register,
+  login,
+  getProfile,
+  updateProfile,
+  changePassword,
+};

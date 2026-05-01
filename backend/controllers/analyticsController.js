@@ -20,6 +20,25 @@ async function getRevenueStats(req, res) {
   }
 }
 
+async function getOrderStats(req, res) {
+  try {
+    const [rows] = await pool.query(`
+      SELECT status, COUNT(*) as count
+      FROM ORDERS
+      GROUP BY status
+    `);
+
+    return res.json({success: true, stats: rows});
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch order stats',
+      error: error.message,
+    });
+  }
+}
+
 module.exports = {
   getRevenueStats,
+  getOrderStats,
 };

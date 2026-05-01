@@ -10,6 +10,8 @@
   },
   "scripts": {
     "start": "node server.js",
-    "db:init": "node config/init.js"
+    "db:init": "node config/init.js",
+    "lint": "node --check server.js && node --check config/db.js && node --check controllers/authController.js && node --check controllers/orderController.js && node --check controllers/deliveryController.js && node --check controllers/analyticsController.js && node --check routes/authRoutes.js && node --check routes/productRoutes.js && node --check routes/orderRoutes.js && node --check routes/deliveryRoutes.js && node --check routes/adminRoutes.js && node --check services/authService.js && node --check services/orderService.js && node --check services/deliveryService.js && node --check services/productsService.js && node --check middlewares/authMiddleware.js && node --check middlewares/roleMiddleware.js",
+    "test": "node -e \"console.log('No backend tests yet')\""
   }
 }
