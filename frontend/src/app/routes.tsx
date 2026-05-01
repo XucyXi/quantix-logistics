@@ -128,16 +128,14 @@ export const router = createBrowserRouter([
   {
     path: '/customer',
     Component: StoreRoot,
-    children: [{index: true, Component: CustomerDashboard}],
+    children: [
+      {index: true, Component: CustomerDashboard},
+      {path: 'maptest', Component: CustomerTrackingView},
+    ],
   },
   {
     path: '/kuljettaja',
     Component: DriverRoot,
     children: [{index: true, lazy: loadDriverDashboard}],
-  },
-
-  {
-    path: '/user/maptest',
-    Component: CustomerTrackingView,
   },
 ]);
