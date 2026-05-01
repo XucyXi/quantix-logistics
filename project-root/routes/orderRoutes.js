@@ -30,6 +30,8 @@ router.get(
   orderController.getCustomerOrders
 );
 
+router.get('/cursor', authMiddleware.authenticate, roleMiddleware.requireRole('admin'), orderController.getOrdersCursor);
+
 
 // Assign driver (admin)
 router.put(
@@ -68,8 +70,6 @@ router.put(
 );
 
 router.get('/admin/drivers', authMiddleware.authenticate, roleMiddleware.requireRole('admin'), orderController.getAllDrivers);
-
-router.get('/cursor', authMiddleware.authenticate, roleMiddleware.requireRole('admin'), orderController.getOrdersCursor);
 
 
 module.exports = router;

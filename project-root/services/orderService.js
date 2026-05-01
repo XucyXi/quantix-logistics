@@ -68,6 +68,7 @@ async function createOrder(customerId, payload) {
     total_price: totalPrice
   }, enrichedItems);
 
+  productModel.invalidateProductCache();
   invalidateOrderCache();
 
   return {
@@ -748,7 +749,7 @@ function normalizeCursor(cursor) {
   return Math.floor(parsed);
 }
 
-const DEFAULT_LIMIT = 1;
+const DEFAULT_LIMIT = 5;
 
 async function getOrdersCursor(rawCursor = 0) {
   const cursor = normalizeCursor(rawCursor);
