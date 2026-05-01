@@ -1,5 +1,5 @@
 const orderService = require('../services/orderService.js');
-const {getCoords} = require('../utils/geocoder.js');
+const getCoords = require('../utils/geocoder.js');
 const db = require('../config/db.js');
 const notificationService = require('../services/notificationService.js');
 
