@@ -7,6 +7,7 @@ import {
   getCustomerDiscountRate,
   getDiscountedPrice,
 } from '../lib/pricing';
+import api from '../lib/api';
 
 interface CheckoutForm {
   deliveryAddress: string;
@@ -16,7 +17,7 @@ interface CheckoutForm {
 
 export function CheckoutPage() {
   const navigate = useNavigate();
-  const {user} = useAuth();
+  const {user, token} = useAuth();
   const {items, clearCart} = useCart();
   const discountRate = getCustomerDiscountRate(user);
 
@@ -28,6 +29,7 @@ export function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
+  const [submitError, setSubmitError] = useState('');
 
   const totalBase = items.reduce(
     (sum, item) => sum + item.price * item.quantity,
@@ -41,40 +43,45 @@ export function CheckoutPage() {
 
   const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
+    setSubmitError('');
     setIsSubmitting(true);
 
-    // Mock API call - simulates sending order to backend
-    const orderPayload = {
-      customerId: user?.id,
-      customerName: user?.name,
-      customerEmail: user?.email,
-      items: items.map((item) => ({
-        productId: item.id,
-        productName: item.name,
-        quantity: item.quantity,
-        basePrice: item.price,
-      })),
-      totalAmount: totalDiscounted,
-      discountRate,
-      deliveryAddress: form.deliveryAddress,
-      reference: form.reference,
-      notes: form.notes,
-      orderDate: new Date().toISOString(),
-    };
+    try {
+      if (!token) {
+        throw new Error('Kirjaudu sisään ennen tilauksen tekemistä.');
+      }
 
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+      const payloadItems = items
+        .map((item) => ({
+          product_id: Number(item.id),
+          quantity: item.quantity,
+        }))
+        .filter((item) => Number.isFinite(item.product_id));
 
-    // Mock response - in real app this would come from backend
-    const mockOrderNumber = `ORD-${Date.now().toString(36).toUpperCase()}`;
+      if (payloadItems.length === 0) {
+        throw new Error('Korissa ei ole kelvollisia tuotteita tilausta varten.');
+      }
 
-    console.log('Order submitted:', orderPayload);
+      const {data} = await api.post('/orders', {
+        delivery_address: form.deliveryAddress,
+        notes: [form.reference ? `Ref: ${form.reference}` : '', form.notes]
+          .filter(Boolean)
+          .join(' | '),
+        items: payloadItems,
+      });
 
-    // Clear cart and show confirmation
-    clearCart();
-    setOrderNumber(mockOrderNumber);
-    setOrderPlaced(true);
-    setIsSubmitting(false);
+      clearCart();
+      setOrderNumber(String(data?.order_id ?? 'N/A'));
+      setOrderPlaced(true);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Tilauksen lähetys epäonnistui. Yritä uudelleen.';
+      setSubmitError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (items.length === 0 && !orderPlaced) {
@@ -165,9 +172,7 @@ export function CheckoutPage() {
             marginBottom: '1.5rem',
           }}
         >
-          <span style={{color: '#64748b', fontSize: '0.9rem'}}>
-            Tilausnumero:{' '}
-          </span>
+          <span style={{color: '#64748b', fontSize: '0.9rem'}}>Tilausnumero: </span>
           <span style={{fontWeight: 700, color: '#0f2444'}}>{orderNumber}</span>
         </div>
         <button
@@ -201,6 +206,21 @@ export function CheckoutPage() {
         style={{display: 'grid', gridTemplateColumns: '1fr 380px', gap: '2rem'}}
       >
         <form onSubmit={handleSubmit}>
+          {submitError && (
+            <div
+              style={{
+                marginBottom: '1rem',
+                padding: '0.75rem 1rem',
+                borderRadius: 10,
+                backgroundColor: '#fef2f2',
+                color: '#b91c1c',
+                border: '1px solid #fecaca',
+                fontSize: '0.9rem',
+              }}
+            >
+              {submitError}
+            </div>
+          )}
           <div
             style={{
               backgroundColor: 'white',
