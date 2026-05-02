@@ -286,7 +286,17 @@ const tagColors: Record<string, {bg: string; color: string}> = {
   Suomalainen: {bg: '#ede9fe', color: '#7c3aed'},
 };
 
-/** Live-updating “X sitten” for the catalog header (fi, relative time). */
+/**
+ * Produce a Finnish localized relative-time label describing how long ago `since` occurred.
+ *
+ * Chooses an appropriate unit (seconds, minutes, hours, days, weeks, months, years) and returns
+ * a human-readable Finnish phrase (e.g. "2 tuntia sitten") expressing the interval from `since`
+ * to `now`.
+ *
+ * @param since - The earlier point in time to describe (e.g., catalog updated timestamp)
+ * @param now - The reference time to compare against (typically the current time)
+ * @returns A Finnish relative-time phrase that expresses how long ago `since` is relative to `now`
+ */
 function formatCatalogAge(since: Date, now: Date): string {
   const diffMs = Math.max(0, now.getTime() - since.getTime());
   const rtf = new Intl.RelativeTimeFormat('fi', {numeric: 'auto'});
@@ -306,6 +316,11 @@ function formatCatalogAge(since: Date, now: Date): string {
   return rtf.format(-years, 'year');
 }
 
+/**
+ * Renders the wholesale products catalog page with live-updating header, filtering controls, per-product quantity selectors, and add-to-cart behaviour.
+ *
+ * @returns The page's JSX element containing: a header that shows the catalog's updated timestamp and a live clock; category, search and stock filters; a product grid that applies business-customer pricing when applicable; quantity increment/decrement controls; and add-to-cart buttons with temporary success feedback.
+ */
 export function ProductsPage() {
   const {addItem} = useCart();
   const {user} = useAuth();

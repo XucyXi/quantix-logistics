@@ -15,6 +15,12 @@ import {useAuth, type UserRole} from '../../contexts/AuthContext';
 
 type PortalEntry = {label: string; path: string; emoji: string};
 
+/**
+ * Selects portal link entries based on the current authentication state and role.
+ *
+ * @param user - The authenticated user object (contains `role`), or `null` for unauthenticated visitors.
+ * @returns An array of portal entries. If `user` is `null`, returns entries for Admin, Driver, and Customer portals; otherwise returns a single entry corresponding to `user.role` (`'admin'` → Admin, `'driver'` → Driver, `'customer'` or any other value → Customer).
+ */
 function portalEntriesFor(user: {role: UserRole} | null): PortalEntry[] {
   if (!user) {
     return [
@@ -34,6 +40,13 @@ function portalEntriesFor(user: {role: UserRole} | null): PortalEntry[] {
   }
 }
 
+/**
+ * Renders the top navigation bar with responsive desktop and mobile layouts, cart status, portal access, and authentication controls.
+ *
+ * The component shows main site links, a cart badge, portal links (a dropdown when unauthenticated or a single portal link when authenticated), and user authentication controls including a user menu with settings and logout. It manages mobile drawer state, separate portal submenus for mobile/desktop, and active-link styling based on the current location.
+ *
+ * @returns The navigation bar as a JSX element
+ */
 export function Navbar() {
   // Mobiilimenu, desktop-käyttäjämenu ja mobiilin portaali-alaosio hallitaan erikseen.
   const [mobileOpen, setMobileOpen] = useState(false);

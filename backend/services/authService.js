@@ -8,31 +8,22 @@ if (!JWT_SECRET) {
   throw new Error('JWT_SECRET is required');
 }
 
-/*
-async function register({ email, password, role}) {
-
-    // 1. Check if user already exists
-    const [existing] = await pool.query(
-      'SELECT * FROM USERS WHERE email = ?',
-      [email]
-    );
-    if (existing.length) {
-      throw new Error('User already exists');
-    }
-
-    // 2. Hash the password
-    const password_hash = await bcrypt.hash(password, 10); // 10 is considered our salt value, the salt that adds to the hashing, to differentiate each password (same passwords can have same hashing pattern without salt)
-
-    // 3. Insert user into DB
-    const [result] = await pool.query(
-      'INSERT INTO USERS (email, password_hash, role) VALUES (?, ?, ?)',
-      [email, password_hash, role]
-    );
-
-    // 4. Return basic info
-    return { user_id: result.insertId, email, role };
-  }
-*/
+/**
+ * Create a new user record, create a role-specific profile, and return the created user's identifier and basic info.
+ *
+ * If provided, `extraData.full_name` is used for the user's full name; otherwise `extraData.first_name` and
+ * `extraData.last_name` are joined, falling back to the email local-part. For `role === 'customer'` the function
+ * inserts a CUSTOMER_PROFILES row using `company_name`, `address`, `tel`, and `vat_number` from `extraData`.
+ * For `role === 'driver'` the function inserts a DRIVER_PROFILES row using `vehicle_info` from `extraData`.
+ *
+ * @param {Object} params - Parameters for user registration.
+ * @param {string} params.email - The user's email address.
+ * @param {string} params.password - The user's plain-text password (will be hashed).
+ * @param {string} params.role - The user's role; determines which profile row is created.
+ * @param {Object} [params.extraData={}] - Optional additional profile fields. Recognized keys: `full_name`, `first_name`, `last_name`, `company_name`, `address`, `tel`, `vat_number`, `vehicle_info`.
+ * @returns {{user_id: number, email: string, role: string}} The created user's id, email, and role.
+ * @throws {Error} Throws `Error('User already exists')` if an account with the given email already exists.
+ */
 
 async function register({email, password, role, extraData = {}}) {
   const connection = await pool.getConnection();
@@ -108,6 +99,15 @@ async function register({email, password, role, extraData = {}}) {
   }
 }
 
+/**
+ * Authenticate a user by email and password and produce a JWT with basic user info.
+ *
+ * @returns {{token: string, user_id: number, role: string, name: string}} An object containing:
+ *  - `token`: JWT signed with the user's id and role (expires in 1 hour).
+ *  - `user_id`: The authenticated user's database id.
+ *  - `role`: The authenticated user's role.
+ *  - `name`: The user's full name if available, otherwise the email local-part.
+ */
 async function login({email, password}) {
   // 1. Fetch user by email
   const [rows] = await pool.query('SELECT * FROM USERS WHERE email = ?', [
@@ -134,6 +134,12 @@ async function login({email, password}) {
   };
 }
 
+/**
+ * Retrieves the profile for the specified user.
+ * @param {number|string} userId - The ID of the user to fetch.
+ * @returns {{user_id: number|string, full_name: string|null, email: string, role: string, company_name: string|null, vat_number: string|null}} The user's profile row containing user_id, full_name, email, role, and any associated company_name and vat_number.
+ * @throws {Error} If no user with the given ID exists.
+ */
 async function getProfile(userId) {
   const [rows] = await pool.query(
     `

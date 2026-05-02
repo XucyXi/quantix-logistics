@@ -3,6 +3,13 @@ import {Link, useNavigate} from 'react-router';
 import {Eye, EyeOff, Truck, CheckCircle} from 'lucide-react';
 import api from '../lib/api';
 
+/**
+ * Render a two-step registration page that collects personal information, creates a password with terms acceptance, validates inputs, submits registration to the backend, and displays a success confirmation on completion.
+ *
+ * The first step collects first name, last name and email (required) plus optional phone, company and business ID. The second step collects and validates password, confirms password match and requires acceptance of terms before submitting a trimmed payload to `/auth/register`. Displays backend error messages when submission fails and a success panel when registration succeeds.
+ *
+ * @returns The React element for the registration page.
+ */
 export function RegisterPage() {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({

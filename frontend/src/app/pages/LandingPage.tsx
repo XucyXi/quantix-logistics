@@ -58,6 +58,15 @@ const stats = [
 
 type StatItem = (typeof stats)[number];
 
+/**
+ * Format a numeric KPI value for display according to a stat configuration.
+ *
+ * The output respects the stat's formatting options: if `decimals` is provided the value is rendered with that many decimal places; if `group` is true the value is rounded and localized using Finnish grouping; otherwise the value is rounded. If a `suffix` is present it is appended to the formatted number.
+ *
+ * @param value - The numeric value to format
+ * @param s - The stat configuration that controls decimals, grouping, and optional suffix
+ * @returns The formatted numeric string ready for display
+ */
 function formatStatDisplay(value: number, s: StatItem): string {
   if ('decimals' in s && s.decimals !== undefined) {
     return `${value.toFixed(s.decimals)}${s.suffix ?? ''}`;
@@ -68,6 +77,14 @@ function formatStatDisplay(value: number, s: StatItem): string {
   return `${Math.round(value)}${s.suffix ?? ''}`;
 }
 
+/**
+ * Produces a one-time activation flag that becomes true when the referenced element enters the viewport.
+ *
+ * Observes the provided element and sets the returned value to `true` the first time the element becomes visible; the flag remains `true` thereafter.
+ *
+ * @param ref - React ref pointing to the element to observe
+ * @returns `true` once the element becomes visible in the viewport, `false` otherwise
+ */
 function useIntersectionActivate(ref: RefObject<HTMLElement | null>) {
   const [active, setActive] = useState(false);
   useEffect(() => {
@@ -85,6 +102,16 @@ function useIntersectionActivate(ref: RefObject<HTMLElement | null>) {
   return active;
 }
 
+/**
+ * Animates a numeric value from zero up to a specified target when activation occurs.
+ *
+ * Starts the count-up the first time `active` becomes true and does not restart on subsequent activations.
+ *
+ * @param end - The target numeric value to reach.
+ * @param active - When true, triggers the count-up (only the initial activation starts the animation).
+ * @param decimals - Optional number of decimal places to preserve during the animation.
+ * @returns The current animated numeric value, progressing from `0` to `end`; the final value equals `end`.
+ */
 function useCountUpStat(end: number, active: boolean, decimals?: number) {
   const [value, setValue] = useState(0);
   const startedRef = useRef(false);
@@ -119,6 +146,15 @@ function useCountUpStat(end: number, active: boolean, decimals?: number) {
   return value;
 }
 
+/**
+ * Render a formatted, potentially animated statistic figure based on the provided stat configuration.
+ *
+ * @param stat - Stat configuration (end value, label and optional formatting: `suffix`, `decimals`, `group`)
+ * @param color - CSS color value applied to the stat text
+ * @param active - When `true`, animate the displayed number from 0 to `stat.end`
+ * @param fontSize - CSS font-size value applied to the stat text
+ * @returns A React element containing the formatted statistic text (with numeric animation when active)
+ */
 function AnimatedStatFigure({
   stat,
   color,
@@ -254,6 +290,11 @@ const inputStyle = {
   transition: 'border-color 0.2s',
 };
 
+/**
+ * Render the marketing landing page with hero, live clock badge, animated KPI stats (desktop and mobile), feature cards, a three-step "how it works" section, role-based portal cards, a testimonial video, a contact form, and a final call-to-action.
+ *
+ * @returns A React element representing the complete landing page layout.
+ */
 export function LandingPage() {
   // now-tila päivittyy sekunnin välein, jotta hero-badgen kello käy reaaliajassa.
   const [now, setNow] = useState(() => new Date());
