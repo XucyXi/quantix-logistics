@@ -1,13 +1,9 @@
 import {useState, useEffect, useMemo} from 'react';
 import {motion, AnimatePresence} from 'motion/react';
 import {
-  Package,
   Search,
   SlidersHorizontal,
-  Thermometer,
   AlertCircle,
-  Tag,
-  Box,
   Plus,
   Minus,
   ShoppingCart,
@@ -270,22 +266,6 @@ const PRODUCTS_DATA = {
   ],
 };
 
-const storageLabels: Record<
-  string,
-  {label: string; color: string; bg: string}
-> = {
-  kylmä: {label: 'Kylmäsäilytys', color: '#2563eb', bg: '#dbeafe'},
-  pakaste: {label: 'Pakaste', color: '#0891b2', bg: '#cffafe'},
-  kuiva: {label: 'Kuivasäilytys', color: '#92400e', bg: '#fef3c7'},
-  huoneenlämpö: {label: 'Huoneenlämpö', color: '#065f46', bg: '#d1fae5'},
-};
-
-const tagColors: Record<string, {bg: string; color: string}> = {
-  Luomu: {bg: '#dcfce7', color: '#16a34a'},
-  Kotimainen: {bg: '#dbeafe', color: '#2563eb'},
-  Suomalainen: {bg: '#ede9fe', color: '#7c3aed'},
-};
-
 /**
  * Produce a Finnish localized relative-time label describing how long ago `since` occurred.
  *
@@ -317,24 +297,14 @@ function formatCatalogAge(since: Date, now: Date): string {
 }
 
 /**
- * Renders the wholesale products catalog page with live-updating header, filtering controls, per-product quantity selectors, and add-to-cart behaviour.
+ * Isolated component managing per-second clock updates without affecting parent re-renders.
+ * Displays the live current time and catalog age relative to the catalog update timestamp.
  *
- * @returns The page's JSX element containing: a header that shows the catalog's updated timestamp and a live clock; category, search and stock filters; a product grid that applies business-customer pricing when applicable; quantity increment/decrement controls; and add-to-cart buttons with temporary success feedback.
+ * @param catalogUpdatedAt - The timestamp when the catalog was last updated
+ * @returns A JSX fragment containing the age label and live clock display
  */
-export function ProductsPage() {
-  const {addItem} = useCart();
-  const {user} = useAuth();
-  const isBusinessCustomer = user?.tier === 'business';
-  const catalogUpdatedAt = useMemo(
-    () => new Date(PRODUCTS_DATA.updated),
-    []
-  );
+function LiveClock({catalogUpdatedAt}: {catalogUpdatedAt: Date}) {
   const [liveNow, setLiveNow] = useState(() => new Date());
-  const [activeCategory, setActiveCategory] = useState<string>('all');
-  const [search, setSearch] = useState('');
-  const [onlyInStock, setOnlyInStock] = useState(false);
-  const [quantities, setQuantities] = useState<Record<string, number>>({});
-  const [addedIds, setAddedIds] = useState<string[]>([]);
 
   useEffect(() => {
     const id = window.setInterval(() => setLiveNow(new Date()), 1000);
@@ -356,6 +326,39 @@ export function ProductsPage() {
       }),
     [liveNow]
   );
+
+  return (
+    <>
+      <span style={{color: 'rgba(255,255,255,0.82)'}}>({catalogAgeLabel})</span>
+      {' · '}
+      <span
+        style={{
+          fontVariantNumeric: 'tabular-nums',
+          color: 'rgba(255,255,255,0.88)',
+        }}
+        title="Paikallinen aika (päivittyy sekunnissa)"
+      >
+        Nyt {liveClock}
+      </span>
+    </>
+  );
+}
+
+/**
+ * Renders the wholesale products catalog page with live-updating header, filtering controls, per-product quantity selectors, and add-to-cart behaviour.
+ *
+ * @returns The page's JSX element containing: a header that shows the catalog's updated timestamp and a live clock; category, search and stock filters; a product grid that applies business-customer pricing when applicable; quantity increment/decrement controls; and add-to-cart buttons with temporary success feedback.
+ */
+export function ProductsPage() {
+  const {addItem} = useCart();
+  const {user} = useAuth();
+  const isBusinessCustomer = user?.tier === 'business';
+  const catalogUpdatedAt = useMemo(() => new Date(PRODUCTS_DATA.updated), []);
+  const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [search, setSearch] = useState('');
+  const [onlyInStock, setOnlyInStock] = useState(false);
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [addedIds, setAddedIds] = useState<string[]>([]);
 
   const filtered = PRODUCTS_DATA.products.filter((p) => {
     const matchesCat =
@@ -411,20 +414,6 @@ export function ProductsPage() {
     }
   };
 
-  const getCategoryColor = (categoryId: string) => {
-    return (
-      PRODUCTS_DATA.categories.find((c) => c.id === categoryId)?.color ??
-      '#64748b'
-    );
-  };
-
-  const getCategoryName = (categoryId: string) => {
-    return (
-      PRODUCTS_DATA.categories.find((c) => c.id === categoryId)?.name ??
-      categoryId
-    );
-  };
-
   return (
     <div
       style={{
@@ -478,19 +467,7 @@ export function ProductsPage() {
               dateStyle: 'short',
               timeStyle: 'medium',
             })}{' '}
-            <span style={{color: 'rgba(255,255,255,0.82)'}}>
-              ({catalogAgeLabel})
-            </span>
-            {' · '}
-            <span
-              style={{
-                fontVariantNumeric: 'tabular-nums',
-                color: 'rgba(255,255,255,0.88)',
-              }}
-              title="Paikallinen aika (päivittyy sekunnissa)"
-            >
-              Nyt {liveClock}
-            </span>
+            <LiveClock catalogUpdatedAt={catalogUpdatedAt} />
             {' · '}
             {PRODUCTS_DATA.products.length} tuotetta · Data haetaan omasta
             API-rajapinnasta
