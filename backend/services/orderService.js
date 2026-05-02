@@ -380,12 +380,15 @@ const getOrdersByCustomerId = async (
       o.delivery_address,
       o.total_price,
       o.ordered_at,
+      o.latitude,
+      o.longitude,
       COUNT(oi.order_item_id) as item_count,
       u.email as driver_email
     FROM ORDERS o
     LEFT JOIN ORDER_ITEMS oi ON o.order_id = oi.order_id
     LEFT JOIN USERS u ON o.driver_id = u.user_id
     WHERE o.customer_id = ?`;
+
   const params = [customerId];
 
   if (status) {
@@ -393,8 +396,22 @@ const getOrdersByCustomerId = async (
     params.push(status);
   }
 
-  query += ` GROUP BY o.order_id ORDER BY o.ordered_at DESC LIMIT ? OFFSET ?`;
-  params.push(limit, offset);
+  // Lisätään kaikki SELECT-kentät GROUP BY -osaan, jotta SQL on standardien mukainen
+  query += `
+    GROUP BY
+      o.order_id,
+      o.status,
+      o.delivery_address,
+      o.total_price,
+      o.ordered_at,
+      o.latitude,
+      o.longitude,
+      u.email
+    ORDER BY o.ordered_at DESC
+    LIMIT ? OFFSET ?`;
+
+  // Varmistetaan, että limit ja offset ovat numeroita
+  params.push(Number(limit), Number(offset));
 
   try {
     const [orders] = await pool.query(query, params);

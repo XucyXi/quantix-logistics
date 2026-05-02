@@ -27,19 +27,20 @@ export interface Order {
 
 export interface TrackingResponse {
   status: string;
+  latitude: string;
+  longitude: string;
   destination: {
     lat: number;
     lng: number;
   };
   driver: {
-    lat: number;
-    lng: number;
+    latitude: number | string;
+    longitude: number | string;
     updated_at?: string;
   } | null;
   boxes?: number;
   contact?: string;
   phone?: string;
-  dest_lat?: string | number;
   dest_lng?: string | number;
 }
 

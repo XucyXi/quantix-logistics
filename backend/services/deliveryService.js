@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const {route} = require('../routes/deliveryRoutes');
 
 exports.createTrackingPoint = async (orderId, data) => {
   const {latitude, longitude, status} = data;
@@ -24,12 +25,13 @@ exports.createTrackingPoint = async (orderId, data) => {
 
 exports.getLatestLocation = async (orderId) => {
   const query = `
-        SELECT latitude as lat, longitude as lng, updated_at
+        SELECT latitude, longitude, updated_at
         FROM DELIVERY_TRACKING
         WHERE ORDER_ID = ?
-        ORDER BY UPDATED_AT DESC
+        ORDER BY updated_at DESC
         LIMIT 1
     `;
   const [rows] = await db.execute(query, [orderId]);
+  console.log('rows', rows);
   return rows[0] || null;
 };

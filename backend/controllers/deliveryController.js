@@ -43,29 +43,21 @@ exports.getMyActiveDeliveries = async (req, res) => {
 };
 
 exports.getTrackingData = async (req, res) => {
-  const {order_id} = req.params;
+  const {orderId} = req.params;
   const customerId = req.user.user_id;
+  console.log('orderID', orderId);
 
   try {
     const orders = await orderService.getOrdersByCustomerId(customerId);
+    console.log('orders', orders);
     const currentOrder = orders.find((o) => o.order_id == orderId);
     if (!currentOrder) {
       return res.status(404).json({error: 'Order not found'});
     }
 
     const driverLocation = await deliveryService.getLatestLocation(orderId);
-    console.log('Sending to front:', {
-      lat: currentOrder.dest_lat,
-      lng: currentOrder.dest_lng,
-    });
-    res.json({
-      status: currentOrder.status,
-      destination: {
-        lat: currentOrder.dest_lat || 0,
-        lng: currentOrder.dest_lng || 0,
-      },
-      driver: driverLocation || null,
-    });
+    console.log('Sending to front:', driverLocation);
+    res.json(driverLocation);
   } catch (error) {
     res.status(500).json({error: error.message});
   }
