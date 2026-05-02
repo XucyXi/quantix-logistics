@@ -11,7 +11,6 @@ import {
   CheckCircle,
   BarChart2,
   Shield,
-  Clock,
   Star,
   ChevronRight,
   Zap,
@@ -25,8 +24,6 @@ import {
 
 const heroImg =
   'https://images.unsplash.com/photo-1641290451977-a427586acf49?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmb29kJTIwbG9naXN0aWNzJTIwdHJ1Y2slMjBkZWxpdmVyeSUyMHdhcmVob3VzZXxlbnwxfHx8fDE3NzQzNDA3Nzd8MA&ixlib=rb-4.1.0&q=80&w=1080';
-const distImg =
-  'https://images.unsplash.com/photo-1766793110924-98e05b48eadc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBkaXN0cmlidXRpb24lMjBjZW50ZXIlMjBsb2dpc3RpY3N8ZW58MXx8fHwxNzc0MzQwNzc4fDA&ixlib=rb-4.1.0&q=80&w=1080';
 
 // Hero-osan KPI-luvut: desktopissa kortteina, mobiilissa omana rivinään.
 const stats = [
@@ -69,12 +66,12 @@ type StatItem = (typeof stats)[number];
  */
 function formatStatDisplay(value: number, s: StatItem): string {
   if ('decimals' in s && s.decimals !== undefined) {
-    return `${value.toFixed(s.decimals)}${s.suffix ?? ''}`;
+    return `${value.toFixed(s.decimals)}${'suffix' in s ? (s.suffix ?? '') : ''}`;
   }
   if ('group' in s && s.group) {
     return `${Math.round(value).toLocaleString('fi-FI')}`;
   }
-  return `${Math.round(value)}${s.suffix ?? ''}`;
+  return `${Math.round(value)}${'suffix' in s ? (s.suffix ?? '') : ''}`;
 }
 
 /**
@@ -86,10 +83,19 @@ function formatStatDisplay(value: number, s: StatItem): string {
  * @returns `true` once the element becomes visible in the viewport, `false` otherwise
  */
 function useIntersectionActivate(ref: RefObject<HTMLElement | null>) {
-  const [active, setActive] = useState(false);
+  const [active, setActive] = useState(() => {
+    // If IntersectionObserver is not supported, default to active
+    return typeof IntersectionObserver === 'undefined';
+  });
   useEffect(() => {
     const el = ref.current;
     if (!el || active) return;
+
+    // Guard: check if IntersectionObserver is supported
+    if (typeof IntersectionObserver === 'undefined') {
+      return;
+    }
+
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) setActive(true);
