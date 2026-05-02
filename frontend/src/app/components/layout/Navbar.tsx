@@ -11,8 +11,42 @@ import {
   Settings,
 } from 'lucide-react';
 import {useCart} from '../../contexts/CartContext';
-import {useAuth} from '../../contexts/AuthContext';
+import {useAuth, type UserRole} from '../../contexts/AuthContext';
 
+type PortalEntry = {label: string; path: string; emoji: string};
+
+/**
+ * Selects portal link entries based on the current authentication state and role.
+ *
+ * @param user - The authenticated user object (contains `role`), or `null` for unauthenticated visitors.
+ * @returns An array of portal entries. If `user` is `null`, returns entries for Admin, Driver, and Customer portals; otherwise returns a single entry corresponding to `user.role` (`'admin'` → Admin, `'driver'` → Driver, `'customer'` or any other value → Customer).
+ */
+function portalEntriesFor(user: {role: UserRole} | null): PortalEntry[] {
+  if (!user) {
+    return [
+      {label: 'Hallintaportaali', path: '/admin', emoji: '🏢'},
+      {label: 'Kuljettajaportaali', path: '/driver', emoji: '🚚'},
+      {label: 'Asiakasportaali', path: '/customer', emoji: '👤'},
+    ];
+  }
+  switch (user.role) {
+    case 'admin':
+      return [{label: 'Hallintaportaali', path: '/admin', emoji: '🏢'}];
+    case 'driver':
+      return [{label: 'Kuljettajaportaali', path: '/driver', emoji: '🚚'}];
+    case 'customer':
+    default:
+      return [{label: 'Asiakasportaali', path: '/customer', emoji: '👤'}];
+  }
+}
+
+/**
+ * Renders the top navigation bar with responsive desktop and mobile layouts, cart status, portal access, and authentication controls.
+ *
+ * The component shows main site links, a cart badge, portal links (a dropdown when unauthenticated or a single portal link when authenticated), and user authentication controls including a user menu with settings and logout. It manages mobile drawer state, separate portal submenus for mobile/desktop, and active-link styling based on the current location.
+ *
+ * @returns The navigation bar as a JSX element
+ */
 export function Navbar() {
   // Mobiilimenu, desktop-käyttäjämenu ja mobiilin portaali-alaosio hallitaan erikseen.
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -50,11 +84,8 @@ export function Navbar() {
     driver: 'Kuljettaja',
   };
 
-  const roleDashboard: Record<string, string> = {
-    admin: '/admin',
-    driver: '/driver',
-    customer: '/products',
-  };
+  const portalNav = portalEntriesFor(user);
+  const showPortalDropdown = !user;
 
   return (
     <nav
@@ -177,120 +208,137 @@ export function Navbar() {
               </Link>
             ))}
 
-            {/* Portaalit Dropdown - Desktop */}
-            <div style={{position: 'relative'}}>
-              <button
+            {showPortalDropdown ? (
+              <div
+                style={{position: 'relative'}}
                 onMouseEnter={() => setDesktopPortalsOpen(true)}
                 onMouseLeave={() => setDesktopPortalsOpen(false)}
+              >
+                <button
+                  type="button"
+                  style={{
+                    padding: '0.4rem 0.9rem',
+                    borderRadius: 6,
+                    color: desktopPortalsOpen
+                      ? '#ffffff'
+                      : 'rgba(255,255,255,0.8)',
+                    backgroundColor: desktopPortalsOpen
+                      ? '#f97316'
+                      : 'transparent',
+                    textDecoration: 'none',
+                    fontSize: '0.9rem',
+                    fontWeight: 500,
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  Portaalit
+                  <ChevronDown
+                    size={16}
+                    color={desktopPortalsOpen ? '#ffffff' : 'currentColor'}
+                    style={{
+                      transform: desktopPortalsOpen
+                        ? 'rotate(180deg)'
+                        : 'rotate(0)',
+                      transition: 'transform 0.2s ease-in-out',
+                    }}
+                  />
+                </button>
+
+                {desktopPortalsOpen && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      /* Näkymätön silti: kursori pysyy hover-vyöhykkeessä vaikka valikon ja napin välissä olisi rako */
+                      paddingTop: 8,
+                      minWidth: 200,
+                      zIndex: 100,
+                    }}
+                  >
+                    <div
+                      style={{
+                        backgroundColor: '#ffffff',
+                        borderRadius: 10,
+                        boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+                        border: '1px solid #e2e8f0',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {portalNav.map((p, i) => (
+                        <button
+                          key={p.path}
+                          type="button"
+                          onClick={() => {
+                            navigate(p.path);
+                            setDesktopPortalsOpen(false);
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#f97316';
+                            e.currentTarget.style.color = '#ffffff';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                            e.currentTarget.style.color = '#374151';
+                          }}
+                          style={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            padding: '0.75rem 1rem',
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            borderTop: i > 0 ? '1px solid #f1f5f9' : undefined,
+                            cursor: 'pointer',
+                            color: '#374151',
+                            fontSize: '0.875rem',
+                            textAlign: 'left',
+                            transition: 'background-color 0.15s, color 0.15s',
+                          }}
+                        >
+                          {p.emoji} {p.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                to={portalNav[0].path}
                 style={{
                   padding: '0.4rem 0.9rem',
                   borderRadius: 6,
-                  color: desktopPortalsOpen
-                    ? '#f97316'
-                    : 'rgba(255,255,255,0.8)',
-                  backgroundColor: desktopPortalsOpen
-                    ? 'rgba(249,115,22,0.1)'
-                    : 'transparent',
+                  color: 'rgba(255,255,255,0.8)',
                   textDecoration: 'none',
                   fontSize: '0.9rem',
                   fontWeight: 500,
-                  border: 'none',
-                  cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.5rem',
                   transition: 'all 0.2s',
                 }}
+                onMouseEnter={(e) => {
+                  const el = e.currentTarget;
+                  el.style.color = '#ffffff';
+                  el.style.backgroundColor = '#f97316';
+                }}
+                onMouseLeave={(e) => {
+                  const el = e.currentTarget;
+                  el.style.color = 'rgba(255,255,255,0.8)';
+                  el.style.backgroundColor = 'transparent';
+                }}
               >
-                Portaalit
-                <ChevronDown
-                  size={16}
-                  style={{
-                    transform: desktopPortalsOpen
-                      ? 'rotate(180deg)'
-                      : 'rotate(0)',
-                    transition: 'transform 0.2s ease-in-out',
-                  }}
-                />
-              </button>
-
-              {/* Portaalit Dropdown Content */}
-              {desktopPortalsOpen && (
-                <div
-                  onMouseEnter={() => setDesktopPortalsOpen(true)}
-                  onMouseLeave={() => setDesktopPortalsOpen(false)}
-                  style={{
-                    position: 'absolute',
-                    top: 'calc(100% + 8px)',
-                    left: 0,
-                    minWidth: 180,
-                    backgroundColor: '#ffffff',
-                    borderRadius: 10,
-                    boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
-                    border: '1px solid #e2e8f0',
-                    overflow: 'hidden',
-                    zIndex: 100,
-                  }}
-                >
-                  <button
-                    onClick={() => navigate('/admin')}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      padding: '0.75rem 1rem',
-                      backgroundColor: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      color: '#374151',
-                      fontSize: '0.875rem',
-                      textAlign: 'left',
-                    }}
-                  >
-                    🏢 Ajokeskus
-                  </button>
-                  <button
-                    onClick={() => navigate('/driver')}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      padding: '0.75rem 1rem',
-                      backgroundColor: 'transparent',
-                      border: 'none',
-                      borderTop: '1px solid #f1f5f9',
-                      cursor: 'pointer',
-                      color: '#374151',
-                      fontSize: '0.875rem',
-                      textAlign: 'left',
-                    }}
-                  >
-                    🚚 Kuljettaja
-                  </button>
-                  <button
-                    onClick={() => navigate('/customer')}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      padding: '0.75rem 1rem',
-                      backgroundColor: 'transparent',
-                      border: 'none',
-                      borderTop: '1px solid #f1f5f9',
-                      cursor: 'pointer',
-                      color: '#374151',
-                      fontSize: '0.875rem',
-                      textAlign: 'left',
-                    }}
-                  >
-                    👤 Asiakas
-                  </button>
-                </div>
-              )}
-            </div>
+                <span>{portalNav[0].emoji}</span>
+                {portalNav[0].label}
+              </Link>
+            )}
           </div>
 
           {/* Right side */}
@@ -405,30 +453,29 @@ export function Navbar() {
                           {roleLabels[user.role]}
                         </div>
                       </div>
-                      {user.role !== 'customer' && (
-                        <button
-                          onClick={() => {
-                            navigate(roleDashboard[user.role]);
-                            setUserMenuOpen(false);
-                          }}
-                          style={{
-                            width: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            padding: '0.75rem 1rem',
-                            backgroundColor: 'transparent',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: '#374151',
-                            fontSize: '0.875rem',
-                            textAlign: 'left',
-                          }}
-                        >
-                          <Settings size={15} />
-                          Hallintapaneeli
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigate(portalNav[0].path);
+                          setUserMenuOpen(false);
+                        }}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.75rem 1rem',
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: '#374151',
+                          fontSize: '0.875rem',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <Settings size={15} />
+                        {portalNav[0].label}
+                      </button>
                       <button
                         onClick={handleLogout}
                         style={{
@@ -580,91 +627,69 @@ export function Navbar() {
               </Link>
             ))}
 
-            {/* UUSI: Portaalit Dropdown mobiilissa */}
-            <div>
-              <button
-                onClick={() => setMobilePortalsOpen(!mobilePortalsOpen)}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0.75rem 0',
-                  color: 'rgba(255,255,255,0.8)',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  borderBottom: '1px solid rgba(255,255,255,0.05)',
-                  fontSize: '1rem',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                }}
-              >
-                Portaalit
-                <ChevronDown
-                  size={18}
+            {showPortalDropdown && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setMobilePortalsOpen(!mobilePortalsOpen)}
                   style={{
-                    transform: mobilePortalsOpen
-                      ? 'rotate(180deg)'
-                      : 'rotate(0)',
-                    transition: 'transform 0.2s ease-in-out',
-                  }}
-                />
-              </button>
-
-              {/* Portaalit Aukeava Sisältö */}
-              {mobilePortalsOpen && (
-                <div
-                  style={{
-                    padding: '0.5rem 0 0.5rem 1rem',
+                    width: '100%',
                     display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.75rem',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.75rem 0',
+                    color: 'rgba(255,255,255,0.8)',
+                    backgroundColor: 'transparent',
+                    border: 'none',
                     borderBottom: '1px solid rgba(255,255,255,0.05)',
-                    backgroundColor: 'rgba(0,0,0,0.1)', // Pieni tummennus erottaa sen päävalikosta
+                    fontSize: '1rem',
+                    fontWeight: 500,
+                    cursor: 'pointer',
                   }}
                 >
-                  <Link
-                    to="/admin"
-                    onClick={() => setMobileOpen(false)}
+                  Portaalit
+                  <ChevronDown
+                    size={18}
                     style={{
-                      color: 'rgba(255,255,255,0.7)',
-                      textDecoration: 'none',
+                      transform: mobilePortalsOpen
+                        ? 'rotate(180deg)'
+                        : 'rotate(0)',
+                      transition: 'transform 0.2s ease-in-out',
+                    }}
+                  />
+                </button>
+
+                {mobilePortalsOpen && (
+                  <div
+                    style={{
+                      padding: '0.5rem 0 0.5rem 1rem',
                       display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
+                      flexDirection: 'column',
+                      gap: '0.75rem',
+                      borderBottom: '1px solid rgba(255,255,255,0.05)',
+                      backgroundColor: 'rgba(0,0,0,0.1)',
                     }}
                   >
-                    🏢 Ajokeskus
-                  </Link>
-                  <Link
-                    to="/driver"
-                    onClick={() => setMobileOpen(false)}
-                    style={{
-                      color: 'rgba(255,255,255,0.7)',
-                      textDecoration: 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                    }}
-                  >
-                    🚚 Kuljettaja
-                  </Link>
-                  <Link
-                    to="/customer"
-                    onClick={() => setMobileOpen(false)}
-                    style={{
-                      color: 'rgba(255,255,255,0.7)',
-                      textDecoration: 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                    }}
-                  >
-                    👤 Asiakas
-                  </Link>
-                </div>
-              )}
-            </div>
+                    {portalNav.map((p) => (
+                      <Link
+                        key={p.path}
+                        to={p.path}
+                        onClick={() => setMobileOpen(false)}
+                        style={{
+                          color: 'rgba(255,255,255,0.7)',
+                          textDecoration: 'none',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                        }}
+                      >
+                        {p.emoji} {p.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Kirjautumisen tilan mukainen lisävalikko mobiiliin */}
             <div style={{marginTop: '1rem'}}>
@@ -696,29 +721,28 @@ export function Navbar() {
                     </span>
                   </div>
 
-                  {user.role !== 'customer' && (
-                    <button
-                      onClick={() => {
-                        navigate(roleDashboard[user.role]);
-                        setMobileOpen(false);
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        padding: '0.75rem 0',
-                        color: 'rgba(255,255,255,0.8)',
-                        backgroundColor: 'transparent',
-                        border: 'none',
-                        fontSize: '1rem',
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <Settings size={18} />
-                      Hallintapaneeli
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigate(portalNav[0].path);
+                      setMobileOpen(false);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.75rem 0',
+                      color: 'rgba(255,255,255,0.8)',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      fontSize: '1rem',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Settings size={18} />
+                    {portalNav[0].label}
+                  </button>
 
                   <button
                     onClick={() => {
