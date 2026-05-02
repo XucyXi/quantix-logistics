@@ -1,61 +1,94 @@
 const productModel = require('../services/productsService.js');
 
-// GET /products
-async function getProducts(req, res) {
+// GET /products?cursor=0
+async function getProductsCursor(req, res) {
   try {
-    const products = await productModel.getAllProducts();
-    res.json(products);
+    const cursor = Number(req.query.cursor || 0);
+
+    const result = await productModel.getProductsCursor(cursor);
+
+    res.json(result);
+
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch products' });
+    console.error(err);
+
+    res.status(500).json({
+      error: 'Failed to fetch paginated products'
+    });
   }
 }
 
-// POST /products
+
 async function createProduct(req, res) {
   try {
-    const { name, base_price, stock_quantity } = req.body;
+    const { name, description, base_price, stock_quantity, category_names } = req.body;
 
-    if (!name || !base_price) {
+    if (!name || !base_price == null) {
       return res.status(400).json({ error: 'Missing fields' });
     }
 
-    const id = await productModel.createProduct(
+    const product = await productModel.createProduct(
       name,
+      description,
       base_price,
-      stock_quantity || 0
+      stock_quantity ?? 0,
+      Array.isArray(category_names) ? category_names : []
     );
 
-    res.status(201).json({ message: 'Product created', id });
+    res.status(201).json(
+      { 
+        message: 'Product created', 
+        product 
+      }
+    );
   } catch (err) {
-    res.status(500).json({ error: 'Failed to create product' });    
+    console.error("CREATE PRODUCT ERROR:", err);
+
+    res.status(500).json({
+      error: err.message || 'Failed to create product'
+    });   
   }
 }
 
 async function getProductById(req, res) {
-  console.log("🔥 HIT getProductById:", req.params);
-    try {
-        const { id } = req.params;
-        const product_getter = await productModel.getProductById(id);
-        if (!product_getter) {
-            throw new Error("Product not found. ");
-        }
-        res.json(product_getter);
+  try {
+    const { id } = req.params;
+
+    const product = await productModel.getProductById(id);
+
+    if (!product) {
+      return res.status(404).json({
+        error: 'Product not found'
+      });
     }
-    catch (err) {
-        console.error("Product fetching by ID error: " + err);
-        res.status(404).json({ error: err.message });
-    }
+
+    res.json(product);
+
+  } catch (err) {
+    console.error("Product fetching error:", err);
+
+    res.status(500).json({
+      error: 'Failed to fetch product'
+    });
+  }
 }
 
 // PUT /products/:id
 async function updateProduct(req, res) {
   try {
     const { id } = req.params;
-    const { name, base_price, stock_quantity } = req.body;
+    const { name, description, base_price, stock_quantity } = req.body;
+
+    if (!name || base_price == null) {
+      return res.status(400).json({
+        error: 'Missing required fields'
+      });
+    }
 
     const updated = await productModel.updateProduct(
       id,
       name,
+      description,
       base_price,
       stock_quantity
     );
@@ -70,8 +103,10 @@ async function updateProduct(req, res) {
   }
 }
 
+// Add remove product by ID
+
 module.exports = {
-  getProducts,
+  getProductsCursor,
   getProductById,
   createProduct,
   updateProduct,

@@ -16,26 +16,34 @@ router.get(
   orderController.getAssignedOrders
 );
 
-// Get customer orders (customer) - TÄYTYY OLLA ENNEN /stats!
-router.get('/', authMiddleware.authenticate, orderController.getCustomerOrders);
-
-// Get order stats (customer)
 router.get(
-  '/stats',
+  '/my-orders',
   authMiddleware.authenticate,
-  orderController.getOrderStats
+  roleMiddleware.requireRole('customer'),
+  orderController.getCustomerOrders
+);
+
+router.get(
+  '/cursor', 
+  authMiddleware.authenticate, 
+  roleMiddleware.requireRole('admin'), 
+  orderController.getOrdersCursor
 );
 
 // Assign driver (admin)
 router.put(
-  '/:id/assign',
+  '/:id/assign',  
   authMiddleware.authenticate,
   roleMiddleware.requireRole('admin'),
   orderController.assignDriverToOrder
 );
 
 // Get single order
-router.get('/:id', authMiddleware.authenticate, orderController.getOrder);
+router.get(
+  '/:id', 
+  authMiddleware.authenticate,
+  orderController.getOrder
+);
 
 router.put(
   '/:id/status',
@@ -43,5 +51,44 @@ router.put(
   roleMiddleware.requireRole('driver'),
   orderController.updateOrderStatus
 );
+
+router.put(
+  '/driver/availability',
+  authMiddleware.authenticate,
+  roleMiddleware.requireRole('driver'),
+  orderController.updateAvailability
+);
+
+router.put(
+  '/:id/cancel',
+  authMiddleware.authenticate,
+  roleMiddleware.requireRole('admin'),
+  orderController.cancelOrder
+);
+
+router.get(
+  '/admin/drivers', 
+  authMiddleware.authenticate, 
+  roleMiddleware.requireRole('admin'), 
+  orderController.getAllDrivers
+);
+
+// Get platform revenue stats (admin)
+router.get(
+  '/admin/revenue',
+  authMiddleware.authenticate,
+  roleMiddleware.requireRole('admin'),
+  orderController.getRevenueStats
+);
+
+
+// Get order stats (customer)
+router.get(
+  '/my-stats',
+  authMiddleware.authenticate,
+  roleMiddleware.requireRole('customer'),
+  orderController.getCustomerStats
+);
+
 
 module.exports = router;

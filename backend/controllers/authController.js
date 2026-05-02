@@ -31,5 +31,8 @@ async function login(req, res) {
     res.status(400).json({error: err.message});
   }
 }
+  
+
+// Make sure all error handling returns same form of error (error: err.message)
 
 module.exports = {register, login};

@@ -2,13 +2,23 @@ const pool = require('../config/db');
 const productModel = require('../services/productsService.js');
 const getCoords = require('../utils/geocoder.js');
 
+const ACTIVE_STATUSES = ['assigned', 'done', 'ready_for_pickup', 'in_transit'];
+
+const orderCache = new Map();
+const ORDER_CACHE_TTL = 60 * 1000; // 1 min
+
+function invalidateOrderCache() {
+  orderCache.clear();
+}
+
 async function createOrder(customerId, payload) {
-  const {delivery_address, notes, scheduled_delivery, items} = payload;
+  const { delivery_address, notes, items } = payload;
 
   if (!items || items.length === 0) {
-    throw new Error('Items are required');
+    throw new Error("Items are required");
   }
 
+  // 1. Geocoding (Restored from old version)
   let lat = null;
   let lng = null;
   try {
@@ -17,58 +27,81 @@ async function createOrder(customerId, payload) {
       lat = coords.lat;
       lng = coords.lng;
     }
-    console.log('coords', coords);
   } catch (err) {
+    // We log but don't throw, allowing the order to proceed without coords if necessary
     console.error('Geocoding failed during order creation:', err);
   }
+
+  // 2. Normalize / merge duplicate items
+  const merged = {};
+  for (const item of items) {
+    if (!merged[item.product_id]) {
+      merged[item.product_id] = 0;
+    }
+    merged[item.product_id] += item.quantity;
+  }
+
+  const normalizedItems = Object.entries(merged).map(
+    ([product_id, quantity]) => ({
+      product_id: Number(product_id),
+      quantity
+    })
+  );
+
+  // 3. Fetch products once (Batch)
+  const [products] = await pool.query(
+    `SELECT product_id, base_price FROM PRODUCTS WHERE product_id IN (?)`,
+    [normalizedItems.map(i => i.product_id)]
+  );
+
+  const productMap = new Map(products.map(p => [p.product_id, p]));
 
   let totalPrice = 0;
   const enrichedItems = [];
 
-  for (const item of items) {
-    const product = await productModel.getProductById(item.product_id);
-    console.log('product', product);
-    console.log('product', product);
+  for (const item of normalizedItems) {
+    const product = productMap.get(item.product_id);
 
     if (!product) {
       throw new Error(`Product ${item.product_id} not found`);
     }
 
     if (item.quantity <= 0) {
-      throw new Error('Quantity must be greater than 0');
+      throw new Error(`Invalid quantity`);
     }
 
-    const unitPrice = product.base_price;
-    const itemTotal = unitPrice * item.quantity;
-
-    totalPrice += itemTotal;
+    const unitPrice = Number(product.base_price);
+    totalPrice += unitPrice * item.quantity;
 
     enrichedItems.push({
       product_id: item.product_id,
       quantity: item.quantity,
-      unit_price: unitPrice,
+      unit_price: unitPrice
     });
   }
 
-  const orderData = {
+  // 4. Execute Transaction
+  const orderId = await createOrderWithItems({
     customer_id: customerId,
     delivery_address,
     latitude: lat,
     longitude: lng,
-    latitude: lat,
-    longitude: lng,
     notes,
-    scheduled_delivery,
-    total_price: totalPrice,
-  };
+    total_price: totalPrice
+  }, enrichedItems);
 
-  const orderId = await createOrderWithItems(orderData, enrichedItems);
+  // 5. Cache Invalidation
+  if (typeof productModel.invalidateProductCache === 'function') {
+    productModel.invalidateProductCache();
+  }
+  if (typeof invalidateOrderCache === 'function') {
+    invalidateOrderCache();
+  }
 
   return {
     order_id: orderId,
     total_price: totalPrice,
-    coords: {lat, lng},
-    coords: {lat, lng},
+    coords: { lat, lng }
   };
 }
 
@@ -78,48 +111,56 @@ async function createOrderWithItems(orderData, items) {
   try {
     await connection.beginTransaction();
 
-    // Insert order
-    const [orderResult] = await connection.query(
-      `INSERT INTO ORDERS
-         (customer_id, delivery_address, latitude, longitude, notes, scheduled_delivery, total_price)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    // 1. Stock Check & Deduction (Atomic protection against over-selling)
+    for (const item of items) {
+      const [result] = await connection.query(
+        `UPDATE PRODUCTS 
+         SET stock_quantity = stock_quantity - ? 
+         WHERE product_id = ? AND stock_quantity >= ?`,
+        [item.quantity, item.product_id, item.quantity]
+      );
 
+      if (result.affectedRows === 0) {
+        throw new Error(`Insufficient stock or race condition for product ${item.product_id}`);
+      }
+    }
+
+    // 2. Insert Order (Including restored Lat/Lng/Scheduled fields)
+    const [orderResult] = await connection.query(
+      `INSERT INTO ORDERS 
+       (customer_id, delivery_address, latitude, longitude, notes, total_price) 
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         orderData.customer_id,
         orderData.delivery_address,
         orderData.latitude,
         orderData.longitude,
-        orderData.latitude,
-        orderData.longitude,
         orderData.notes || null,
-        orderData.scheduled_delivery || null,
-        orderData.total_price,
+        orderData.total_price
       ]
     );
 
     const orderId = orderResult.insertId;
 
-    // Insert items
-    const itemValues = items.map((item) => [
+    // 3. Bulk Insert Order Items
+    const itemValues = items.map(item => [
       orderId,
       item.product_id,
       item.quantity,
-      item.unit_price,
+      item.unit_price
     ]);
 
     await connection.query(
-      `INSERT INTO ORDER_ITEMS
-         (order_id, product_id, quantity, unit_price)
-         VALUES ?`,
+      `INSERT INTO ORDER_ITEMS (order_id, product_id, quantity, unit_price) VALUES ?`,
       [itemValues]
     );
 
     await connection.commit();
-
     return orderId;
+
   } catch (err) {
     await connection.rollback();
-    console.error('DB Transaction error:', err);
+    console.error("DB Transaction error:", err);
     throw err;
   } finally {
     connection.release();
@@ -145,59 +186,84 @@ async function getOrderById(orderId) {
   return order;
 }
 
-async function assignDriverToOrder(orderId) {
+async function assignDriverToOrder(orderId, driverId) {
   const connection = await pool.getConnection();
 
   try {
     await connection.beginTransaction();
 
-    const [drivers] = await connection.query(
-      `
-      SELECT dp.user_id
-      FROM DRIVER_PROFILES dp
-      JOIN USERS u ON dp.user_id = u.user_id
-      WHERE dp.active = TRUE
-        AND u.role = 'driver'
-      LIMIT 1
-      `
+    // Lock driver
+    const [[driver]] = await connection.query(
+      `SELECT active, current_orders, max_orders
+       FROM DRIVER_PROFILES
+       WHERE user_id = ?
+       FOR UPDATE`,
+      [driverId]
     );
 
-    if (!drivers.length) {
-      throw new Error('No available drivers');
+    if (!driver) throw new Error('Driver not found');
+    if (!driver.active) throw new Error('Driver not accepting orders');
+
+    // Self-heal counter
+    const [[{ actualCount }]] = await connection.query(
+      `
+      SELECT COUNT(*) as actualCount
+      FROM ORDERS
+      WHERE driver_id = ?
+      AND status IN (${ACTIVE_STATUSES.map(() => '?').join(',')})
+      `,
+      [driverId, ...ACTIVE_STATUSES]
+    );
+
+    if (actualCount !== driver.current_orders) {
+      await connection.query(
+        `UPDATE DRIVER_PROFILES SET current_orders = ? WHERE user_id = ?`,
+        [actualCount, driverId]
+      );
+      driver.current_orders = actualCount;
     }
 
-    const driverId = drivers[0].user_id;
+    if (driver.current_orders >= driver.max_orders) {
+      throw new Error('Driver at capacity');
+    }
 
-    const [orderResult] = await connection.query(
-      `
-      UPDATE ORDERS
-      SET driver_id = ?, status = 'assigned'
-      WHERE order_id = ?
-        AND driver_id IS NULL
-      `,
+    // Lock order
+    const [orders] = await connection.query(
+      `SELECT order_id
+       FROM ORDERS
+       WHERE order_id = ?
+       AND driver_id IS NULL
+       AND status = 'pending'
+       FOR UPDATE`,
+      [orderId]
+    );
+
+    if (!orders.length) {
+      throw new Error('Order not available');
+    }
+
+    await connection.query(
+      `UPDATE ORDERS
+       SET driver_id = ?, status = 'assigned'
+       WHERE order_id = ?`,
       [driverId, orderId]
     );
 
-    if (orderResult.affectedRows === 0) {
-      throw new Error('Order not found or already assigned');
-    }
-
-    // Mark driver as inactive (USES idx_driver_active)
     await connection.query(
-      `
-      UPDATE DRIVER_PROFILES
-      SET active = FALSE
-      WHERE user_id = ?
-      `,
+      `UPDATE DRIVER_PROFILES
+       SET current_orders = current_orders + 1
+       WHERE user_id = ?`,
       [driverId]
     );
 
     await connection.commit();
 
-    return {
-      order_id: orderId,
-      driver_id: driverId,
-    };
+    if (typeof invalidateOrderCache === 'function') {
+      invalidateOrderCache();
+    }
+
+    return { order_id: orderId, driver_id: driverId };
+
   } catch (err) {
     await connection.rollback();
     throw err;
@@ -211,62 +277,101 @@ async function updateOrderStatus(orderId, driverId, newStatus) {
 
   const validTransitions = {
     assigned: ['in_progress'],
-    in_progress: ['in_transit', 'stuck'],
-    in_transit: ['done'],
+    in_progress: ['ready_for_pickup', 'stuck'],
+    ready_for_pickup: ['in_transit', 'stuck'],
+    in_transit: ['done', 'stuck'],
     done: [],
-    stuck: [],
+    stuck: ['in_transit']
   };
-
-  //  status ENUM('pending','assigned','in_progress','in_transit','done','stuck') DEFAULT 'pending',
 
   try {
     await connection.beginTransaction();
 
-    const [orders] = await connection.query(
+    const [[order]] = await connection.query(
       `SELECT status, driver_id
        FROM ORDERS
-       WHERE order_id = ? AND driver_id = ?`,
-      [orderId, driverId]
+       WHERE order_id = ?
+       FOR UPDATE`,
+      [orderId]
     );
 
-    if (!orders.length) {
-      throw new Error('Order not found or not assigned to this driver');
-    }
-
-    const order = orders[0];
-
+    if (!order) throw new Error('Order not found');
+    if (newStatus === 'cancelled') {
+      throw new Error('Drivers cannot cancel orders');
+    }    
     if (order.driver_id !== driverId) {
-      throw new Error('Unauthorized: Not your order');
+      throw new Error('Unauthorized');
     }
 
-    const expectedNext = validTransitions[order.status];
+    // Lock driver
+    const [[driver]] = await connection.query(
+      `SELECT current_orders
+       FROM DRIVER_PROFILES
+       WHERE user_id = ?
+       FOR UPDATE`,
+      [driverId]
+    );
 
-    if (!expectedNext.includes(newStatus)) {
-      throw new Error(
-        `Invalid status transition: ${order.status} → ${newStatus}`
+    if (!driver) throw new Error('Driver not found');
+
+    // Self-heal counter
+    const [[{ actualCount }]] = await connection.query(
+      `
+      SELECT COUNT(*) as actualCount
+      FROM ORDERS
+      WHERE driver_id = ?
+      AND status IN (${ACTIVE_STATUSES.map(() => '?').join(',')})
+      `,
+      [driverId, ...ACTIVE_STATUSES]
+    );
+
+    if (actualCount !== driver.current_orders) {
+      await connection.query(
+        `UPDATE DRIVER_PROFILES SET current_orders = ? WHERE user_id = ?`,
+        [actualCount, driverId]
       );
     }
 
-    await connection.query(`UPDATE ORDERS SET status = ? WHERE order_id = ?`, [
-      newStatus,
-      orderId,
-    ]);
+    const expectedNext = validTransitions[order.status] || [];
+
+    if (!expectedNext.includes(newStatus)) {
+      throw new Error(`Invalid transition`);
+    }
 
     if (newStatus === 'done') {
       await connection.query(
-        `UPDATE DRIVER_PROFILES
-         SET active = TRUE
-         WHERE user_id = ?`,
+        `
+        UPDATE ORDERS
+        SET status = ?, order_finished = CURRENT_TIMESTAMP
+        WHERE order_id = ?
+        `,
+        [newStatus, orderId]
+      );
+
+      await connection.query(
+        `
+        UPDATE DRIVER_PROFILES
+        SET current_orders = GREATEST(current_orders - 1, 0)
+        WHERE user_id = ?
+        `,
         [driverId]
+      );
+
+    } else {
+      await connection.query(
+        `UPDATE ORDERS SET status = ? WHERE order_id = ?`,
+        [newStatus, orderId]
       );
     }
 
     await connection.commit();
 
-    return {
-      order_id: orderId,
-      status: newStatus,
-    };
+    if (typeof invalidateOrderCache === 'function') {
+      invalidateOrderCache();
+    }
+
+    return { order_id: orderId, status: newStatus };
+
   } catch (err) {
     await connection.rollback();
     throw err;
@@ -275,8 +380,6 @@ async function updateOrderStatus(orderId, driverId, newStatus) {
   }
 }
 
-const ACTIVE_STATUSES = ['assigned', 'done', 'ready_for_pickup', 'in_transit'];
-
 async function getAssignedOrders(driverId) {
   if (!driverId) {
     throw new Error('Driver ID is required');
@@ -284,53 +387,51 @@ async function getAssignedOrders(driverId) {
 
   const [rows] = await pool.query(
     `
-SELECT
-  o.order_id,
-  o.status,
-  o.delivery_address,
-  o.notes,
-  o.ordered_at,
-  o.scheduled_delivery,
+      SELECT 
+        o.order_id,
+        o.status,
+        o.delivery_address,
+        o.notes,
+        o.ordered_at,
 
-  -- Customer info
-  cp.company_name,
-  cp.address AS customer_address,
-  cp.tel AS customer_tel,
+        -- Customer info
+        cp.company_name,
+        cp.address AS customer_address,
+        cp.tel AS customer_tel,
 
-  -- Driver info
-  dp.vehicle_info,
-  dp.active AS driver_active,
+        -- Driver info
+        dp.vehicle_info,
+        dp.active AS driver_active,
 
-  -- Items
-  oi.product_id,
-  oi.quantity,
-  oi.unit_price,
+        -- Items
+        oi.product_id,
+        oi.quantity,
+        oi.unit_price,
 
-  -- Product info
-  p.name AS product_name
+        -- Product info
+        p.name AS product_name
 
-FROM ORDERS o
+      FROM ORDERS o
 
--- Customer profile
-JOIN CUSTOMER_PROFILES cp
-  ON o.customer_id = cp.user_id
+      -- Customer profile 
+      LEFT JOIN CUSTOMER_PROFILES cp
+        ON o.customer_id = cp.user_id
 
--- Driver profile (Order might not be assigned yet)
-LEFT JOIN DRIVER_PROFILES dp
-  ON o.driver_id = dp.user_id
+      -- Driver profile (Order might not be assigned yet)
+      LEFT JOIN DRIVER_PROFILES dp
+        ON o.driver_id = dp.user_id
 
--- Order items
-LEFT JOIN ORDER_ITEMS oi
-  ON o.order_id = oi.order_id
+      -- Order items
+      LEFT JOIN ORDER_ITEMS oi
+        ON o.order_id = oi.order_id
 
--- Product info
-LEFT JOIN PRODUCTS p
-  ON oi.product_id = p.product_id
+      -- Product info
+      LEFT JOIN PRODUCTS p
+        ON oi.product_id = p.product_id
 
-WHERE o.driver_id = ?
-AND o.status IN (?, ?, ?, ?)
-
-ORDER BY o.order_id;
+      WHERE o.driver_id = ?
+      AND o.status IN (${ACTIVE_STATUSES.map(() => '?').join(',')})
+      ORDER BY o.order_id, oi.product_id;
 
     `,
     [driverId, ...ACTIVE_STATUSES]
@@ -345,42 +446,279 @@ ORDER BY o.order_id;
 }
 
 function shapeOrders(rows) {
-  const ordersMap = {};
-
-  for (const row of rows) {
-    // Create order if not exists
-    if (!ordersMap[row.order_id]) {
-      ordersMap[row.order_id] = {
-        order_id: row.order_id,
-        status: row.status,
-        delivery_address: row.delivery_address,
-        notes: row.notes,
-        customer: {
-          company_name: row.company_name,
-          tel: row.tel,
-        },
-        items: [],
-      };
+    const ordersMap = {};
+  
+    for (const row of rows) {
+  
+      // Create order if not exists
+      if (!ordersMap[row.order_id]) {
+        ordersMap[row.order_id] = {
+          order_id: row.order_id,
+          status: row.status,
+          delivery_address: row.delivery_address,
+          notes: row.notes,
+          customer: {
+            company_name: row.company_name,
+            tel: row.customer_tel
+          },
+          items: []
+        };
+      }
+  
+      // Skip null items (LEFT JOIN case)
+      if (row.product_id) {
+        ordersMap[row.order_id].items.push({
+          name: row.product_name,
+          quantity: row.quantity
+        });
+      }
     }
+  
+    return Object.values(ordersMap);
+  }
 
-    // Skip null items (LEFT JOIN case)
-    if (row.product_id) {
-      ordersMap[row.order_id].items.push({
-        name: row.product_name,
-        quantity: row.quantity,
-      });
+  async function cancelOrder(orderId) {
+    const connection = await pool.getConnection();
+  
+    try {
+      await connection.beginTransaction();
+  
+      const [[order]] = await connection.query(
+        `
+        SELECT status, driver_id
+        FROM ORDERS
+        WHERE order_id = ?
+        FOR UPDATE
+        `,
+        [orderId]
+      );
+  
+      if (!order) throw new Error('Order not found');
+  
+      if (order.status === 'done') {
+        throw new Error('Cannot cancel completed order');
+      }
+  
+      // Restore stock
+      const [items] = await connection.query(
+        `
+        SELECT product_id, quantity
+        FROM ORDER_ITEMS
+        WHERE order_id = ?
+        `,
+        [orderId]
+      );
+  
+      for (const item of items) {
+        await connection.query(
+          `
+          UPDATE PRODUCTS
+          SET stock_quantity = stock_quantity + ?
+          WHERE product_id = ?
+          `,
+          [item.quantity, item.product_id]
+        );
+      }
+  
+      // If driver assigned → decrement counter
+      if (order.driver_id) {
+        await connection.query(
+          `
+          UPDATE DRIVER_PROFILES
+          SET current_orders = GREATEST(current_orders - 1, 0)
+          WHERE user_id = ?
+          `,
+          [order.driver_id]
+        );
+      }
+  
+      // Mark as "cancelled"
+      await connection.query(
+        `
+        UPDATE ORDERS
+        SET status = 'cancelled'
+        WHERE order_id = ?
+        `,
+        [orderId]
+      );
+  
+      await connection.commit();
+
+      invalidateOrderCache();
+  
+      return {
+        order_id: orderId,
+        status: 'cancelled'
+      };
+  
+    } catch (err) {
+      await connection.rollback();
+      throw err;
+    } finally {
+      connection.release();
     }
   }
 
-  return Object.values(ordersMap);
+
+  async function setDriverAvailability(driverId, isActive) {
+    const [result] = await pool.query(
+      `
+      UPDATE DRIVER_PROFILES
+      SET active = ?
+      WHERE user_id = ?
+      `,
+      [isActive, driverId]
+    );
+  
+    if (result.affectedRows === 0) {
+      throw new Error('Driver not found');
+    }
+  
+    return {
+      driver_id: driverId,
+      active: isActive
+    };
+  }
+
+
+
+  async function getAllDrivers() {
+    const [rows] = await pool.query(
+      `
+      SELECT 
+        dp.driver_id,
+        dp.user_id,
+        dp.vehicle_info,
+        dp.active,
+        dp.current_orders,
+        dp.max_orders,
+  
+        u.full_name,
+        u.email,
+        u.created_at,
+        u.last_login
+  
+      FROM DRIVER_PROFILES dp
+      JOIN USERS u ON dp.user_id = u.user_id
+      ORDER BY dp.driver_id DESC
+      `
+    );
+  
+    return rows;
+  }  
+
+  function normalizeCursor(cursor) {
+    const parsed = Number(cursor);
+    if (!Number.isFinite(parsed) || parsed < 0) return 0;
+    return Math.floor(parsed);
+  }
+
+  const DEFAULT_LIMIT = 5;
+
+async function getOrdersCursor(rawCursor = 0) {
+  const cursor = normalizeCursor(rawCursor);
+  const limit = Math.min(DEFAULT_LIMIT, 5);
+
+  const key = `orders:${cursor}:${limit}`;
+  const now = Date.now();
+
+  const cached = orderCache.get(key);
+
+  if (cached && (now - cached.timestamp < ORDER_CACHE_TTL)) {
+    console.log("Order cache hit:", key);
+    return cached.data;
+  }
+
+  const fetchPromise = (async () => {
+    try {
+      // 1. Get orders ONLY (no joins!)
+      const [orders] = await pool.query(
+        `
+        SELECT 
+          order_id,
+          customer_id,
+          driver_id,
+          status,
+          delivery_address,
+          notes,
+          ordered_at,
+          total_price
+        FROM ORDERS
+        WHERE order_id > ?
+        ORDER BY order_id
+        LIMIT ?
+        `,
+        [cursor, limit]
+      );
+
+      if (!orders.length) {
+        return { data: [], nextCursor: null };
+      }
+
+      const orderIds = orders.map(o => o.order_id);
+
+      // 2. Fetch items
+      const [items] = await pool.query(
+        `
+        SELECT 
+          oi.order_id,
+          oi.product_id,
+          oi.quantity,
+          oi.unit_price,
+          p.name AS product_name
+        FROM ORDER_ITEMS oi
+        LEFT JOIN PRODUCTS p ON oi.product_id = p.product_id
+        WHERE oi.order_id IN (?)
+        `,
+        [orderIds]
+      );
+
+      // 3. Shape
+      const ordersMap = {};
+
+      for (const order of orders) {
+        ordersMap[order.order_id] = {
+          ...order,
+          items: []
+        };
+      }
+
+      for (const item of items) {
+        if (ordersMap[item.order_id]) {
+          ordersMap[item.order_id].items.push({
+            product_id: item.product_id,
+            name: item.product_name,
+            quantity: item.quantity,
+            unit_price: item.unit_price
+          });
+        }
+      }
+
+      const result = {
+        data: Object.values(ordersMap),
+        nextCursor: orders.length
+          ? orders[orders.length - 1].order_id
+          : null
+      };
+
+      return result;
+
+    } catch (err) {
+      orderCache.delete(key);
+      throw err;
+    }
+  })();
+
+  orderCache.set(key, {
+    data: fetchPromise,
+    timestamp: now
+  });
+
+  return fetchPromise;
 }
 
-const getOrdersByCustomerId = async (
-  customerId,
-  limit = 20,
-  offset = 0,
-  status = null
-) => {
+const getOrdersByCustomerId = async (customerId, { limit = 20, offset = 0, status = null } = {}) => {
+  // Use the rich query from Version 1
   let query = `
     SELECT
       o.order_id,
@@ -394,6 +732,7 @@ const getOrdersByCustomerId = async (
     LEFT JOIN ORDER_ITEMS oi ON o.order_id = oi.order_id
     LEFT JOIN USERS u ON o.driver_id = u.user_id
     WHERE o.customer_id = ?`;
+  
   const params = [customerId];
 
   if (status) {
@@ -401,8 +740,11 @@ const getOrdersByCustomerId = async (
     params.push(status);
   }
 
+  // GROUP BY is required because of the COUNT() aggregate
   query += ` GROUP BY o.order_id ORDER BY o.ordered_at DESC LIMIT ? OFFSET ?`;
-  params.push(limit, offset);
+  
+  // Use your Number() casting for safety
+  params.push(Number(limit), Number(offset));
 
   try {
     const [orders] = await pool.query(query, params);
@@ -413,21 +755,73 @@ const getOrdersByCustomerId = async (
   }
 };
 
-async function getOrderStats(customerId) {
-  if (!customerId) {
-    throw new Error('Customer ID is required');
-  }
+/*
 
-  const [stats] = await pool.query(
-    `
+async function getRevenueStats(req, res) {
+  try {
+    const [rows] = await pool.query(`
+      SELECT
+        COALESCE(SUM(total_price), 0) AS total_revenue,
+        COUNT(*) AS total_orders,
+        COALESCE(AVG(total_price), 0) AS avg_order_value,
+        SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) AS delivered_orders
+      FROM ORDERS
+      WHERE ordered_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+    `);
+
+    return res.json({success: true, stats: rows[0]});
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch revenue stats',
+      error: error.message,
+    });
+  }
+}
+
+*/
+
+
+/**
+ * Fetches platform-wide revenue for the last 30 days
+ */
+const getGlobalRevenueStats = async () => {
+  const [rows] = await pool.query(`
+    SELECT
+      COALESCE(SUM(total_price), 0) AS total_revenue,
+      COUNT(*) AS total_orders,
+      COALESCE(AVG(total_price), 0) AS avg_order_value,
+      SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) AS delivered_orders
+    FROM ORDERS
+    WHERE ordered_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+  `);
+  return rows[0];
+};
+
+
+/**
+ * Fetches detailed stats for a specific customer using the verified schema
+ */
+const getOrderStatsByCustomer = async (customerId) => {
+  if (!customerId) throw new Error('Customer ID is required');
+
+  const [stats] = await pool.query(`
     SELECT
       COUNT(*) as total_orders,
       SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) as delivered_count,
       SUM(CASE WHEN status IN ('pending', 'assigned') THEN 1 ELSE 0 END) as pending_count,
-      SUM(CASE WHEN status IN ('in_progress', 'in_transit') THEN 1 ELSE 0 END) as in_transit_count,
+      SUM(CASE WHEN status IN ('in_progress', 'in_transit', 'ready_for_pickup') THEN 1 ELSE 0 END) as in_transit_count,
       COALESCE(SUM(total_price), 0) as total_spent,
       COALESCE(AVG(total_price), 0) as average_order_value,
-      COALESCE(ROUND(AVG(DATEDIFF(CURDATE(), ordered_at)), 1), 0) as delivery_speed_days,
+      
+      /* Logic Fix: Calculate speed as the difference between 
+         when they ordered and when the order was marked 'done'.
+      */
+      COALESCE(
+        ROUND(AVG(TIMESTAMPDIFF(HOUR, ordered_at, order_finished)) / 24, 1), 
+        0
+      ) as avg_delivery_speed_days,
+
       COALESCE(
         ROUND(
           SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0),
@@ -437,30 +831,33 @@ async function getOrderStats(customerId) {
       ) as success_rate
     FROM ORDERS
     WHERE customer_id = ?
-    `,
-    [customerId]
+    `, [customerId]
   );
 
-  return (
-    stats[0] || {
-      total_orders: 0,
-      delivered_count: 0,
-      pending_count: 0,
-      in_transit_count: 0,
-      total_spent: 0,
-      average_order_value: 0,
-      delivery_speed_days: 0,
-      success_rate: 0,
-    }
-  );
-}
+  return stats[0] || {
+    total_orders: 0,
+    delivered_count: 0,
+    pending_count: 0,
+    in_transit_count: 0,
+    total_spent: 0,
+    average_order_value: 0,
+    avg_delivery_speed_days: 0,
+    success_rate: 0,
+  };
+};
 
 module.exports = {
   createOrder,
+  createOrderWithItems,
   getOrderById,
   assignDriverToOrder,
-  getAssignedOrders,
   updateOrderStatus,
+  getAssignedOrders,
+  getAllDrivers,
+  getOrdersCursor,
   getOrdersByCustomerId,
-  getOrderStats,
+  getGlobalRevenueStats,
+  getOrderStatsByCustomer,
+  cancelOrder,
+  setDriverAvailability
 };
