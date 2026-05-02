@@ -3,7 +3,7 @@ const productsService = require('../services/productsService');
 // GET /products
 async function getProducts(req, res) {
   try {
-    const products = await productModel.getAllProducts();
+    const products = await productsService.getAllProducts();
     res.json(products);
   } catch (err) {
     res.status(500).json({error: 'Failed to fetch products'});
@@ -19,7 +19,7 @@ async function createProduct(req, res) {
       return res.status(400).json({error: 'Missing fields'});
     }
 
-    const id = await productModel.createProduct(
+    const id = await productsService.createProduct(
       name,
       base_price,
       stock_quantity || 0
@@ -35,7 +35,7 @@ async function getProductById(req, res) {
   console.log('🔥 HIT getProductById:', req.params);
   try {
     const {id} = req.params;
-    const product_getter = await productModel.getProductById(id);
+    const product_getter = await productsService.getProductById(id);
     if (!product_getter) {
       throw new Error('Product not found. ');
     }
@@ -52,7 +52,7 @@ async function updateProduct(req, res) {
     const {id} = req.params;
     const {name, base_price, stock_quantity} = req.body;
 
-    const updated = await productModel.updateProduct(
+    const updated = await productsService.updateProduct(
       id,
       name,
       base_price,

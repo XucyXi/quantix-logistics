@@ -1,5 +1,5 @@
 import {Outlet, useNavigate, useLocation, Navigate} from 'react-router';
-import {Store, LogOut, Bell, Package} from 'lucide-react';
+import {Store, LogOut, Bell} from 'lucide-react';
 import {useAuth} from '../contexts/AuthContext';
 
 export function StoreRoot() {
