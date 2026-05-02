@@ -53,11 +53,16 @@ async function register({email, password, role, extraData = {}}) {
     // 2. Hash password
     const password_hash = await bcrypt.hash(password, 10);
 
+    const fullName =
+      extraData.full_name?.trim() ||
+      [extraData.first_name, extraData.last_name].filter(Boolean).join(' ') ||
+      email.split('@')[0];
+
     // 3. Insert into USERS
     const [userResult] = await connection.query(
-      `INSERT INTO USERS (email, password_hash, role)
-       VALUES (?, ?, ?)`,
-      [email, password_hash, role]
+      `INSERT INTO USERS (full_name, email, password_hash, role)
+       VALUES (?, ?, ?, ?)`,
+      [fullName, email, password_hash, role]
     );
 
     const userId = userResult.insertId;
@@ -121,7 +126,12 @@ async function login({email, password}) {
     expiresIn: '1h',
   });
 
-  return {token, user_id: user.user_id, role: user.role};
+  return {
+    token,
+    user_id: user.user_id,
+    role: user.role,
+    name: user.full_name || email.split('@')[0],
+  };
 }
 
 async function getProfile(userId) {

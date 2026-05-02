@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useState, useEffect, useMemo} from 'react';
 import {motion, AnimatePresence} from 'motion/react';
 import {
   Package,
@@ -286,15 +286,61 @@ const tagColors: Record<string, {bg: string; color: string}> = {
   Suomalainen: {bg: '#ede9fe', color: '#7c3aed'},
 };
 
+/** Live-updating “X sitten” for the catalog header (fi, relative time). */
+function formatCatalogAge(since: Date, now: Date): string {
+  const diffMs = Math.max(0, now.getTime() - since.getTime());
+  const rtf = new Intl.RelativeTimeFormat('fi', {numeric: 'auto'});
+  const seconds = Math.floor(diffMs / 1000);
+  if (seconds < 60) return rtf.format(-seconds, 'second');
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return rtf.format(-minutes, 'minute');
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return rtf.format(-hours, 'hour');
+  const days = Math.floor(hours / 24);
+  if (days < 7) return rtf.format(-days, 'day');
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return rtf.format(-weeks, 'week');
+  const months = Math.floor(days / 30);
+  if (months < 12) return rtf.format(-months, 'month');
+  const years = Math.floor(days / 365);
+  return rtf.format(-years, 'year');
+}
+
 export function ProductsPage() {
   const {addItem} = useCart();
   const {user} = useAuth();
   const isBusinessCustomer = user?.tier === 'business';
+  const catalogUpdatedAt = useMemo(
+    () => new Date(PRODUCTS_DATA.updated),
+    []
+  );
+  const [liveNow, setLiveNow] = useState(() => new Date());
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [onlyInStock, setOnlyInStock] = useState(false);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [addedIds, setAddedIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const id = window.setInterval(() => setLiveNow(new Date()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const catalogAgeLabel = useMemo(
+    () => formatCatalogAge(catalogUpdatedAt, liveNow),
+    [catalogUpdatedAt, liveNow]
+  );
+
+  const liveClock = useMemo(
+    () =>
+      liveNow.toLocaleTimeString('fi-FI', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      }),
+    [liveNow]
+  );
 
   const filtered = PRODUCTS_DATA.products.filter((p) => {
     const matchesCat =
@@ -405,9 +451,32 @@ export function ProductsPage() {
           >
             Tukkutuotteet
           </h1>
-          <p style={{color: 'rgba(255,255,255,0.65)', fontSize: '0.9rem'}}>
+          <p
+            style={{
+              color: 'rgba(255,255,255,0.65)',
+              fontSize: '0.9rem',
+              lineHeight: 1.5,
+            }}
+          >
             Päivitetty:{' '}
-            {new Date(PRODUCTS_DATA.updated).toLocaleString('fi-FI')} ·{' '}
+            {catalogUpdatedAt.toLocaleString('fi-FI', {
+              dateStyle: 'short',
+              timeStyle: 'medium',
+            })}{' '}
+            <span style={{color: 'rgba(255,255,255,0.82)'}}>
+              ({catalogAgeLabel})
+            </span>
+            {' · '}
+            <span
+              style={{
+                fontVariantNumeric: 'tabular-nums',
+                color: 'rgba(255,255,255,0.88)',
+              }}
+              title="Paikallinen aika (päivittyy sekunnissa)"
+            >
+              Nyt {liveClock}
+            </span>
+            {' · '}
             {PRODUCTS_DATA.products.length} tuotetta · Data haetaan omasta
             API-rajapinnasta
           </p>
@@ -415,62 +484,49 @@ export function ProductsPage() {
       </div>
 
       <div style={{maxWidth: 1280, margin: '0 auto', padding: '2rem 1.5rem'}}>
-        {/* Category tabs */}
-        <div style={{overflowX: 'auto', marginBottom: '1.5rem'}}>
-          <div
-            style={{display: 'flex', gap: '0.5rem', minWidth: 'max-content'}}
+        <div
+          style={{
+            marginBottom: '1.5rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.5rem',
+          }}
+        >
+          <label
+            htmlFor="product-category"
+            style={{
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              color: '#64748b',
+            }}
           >
-            <button
-              onClick={() => setActiveCategory('all')}
-              style={{
-                padding: '0.6rem 1.25rem',
-                borderRadius: 8,
-                border: 'none',
-                cursor: 'pointer',
-                fontFamily: "'Space Grotesk', sans-serif",
-                fontWeight: 600,
-                fontSize: '0.875rem',
-                transition: 'all 0.2s',
-                backgroundColor: activeCategory === 'all' ? '#0f2444' : 'white',
-                color: activeCategory === 'all' ? 'white' : '#64748b',
-                boxShadow:
-                  activeCategory === 'all'
-                    ? '0 4px 12px rgba(15,36,68,0.2)'
-                    : '0 1px 4px rgba(0,0,0,0.06)',
-              }}
-            >
-              Kaikki tuotteet
-            </button>
+            Kategoria
+          </label>
+          <select
+            id="product-category"
+            value={activeCategory}
+            onChange={(e) => setActiveCategory(e.target.value)}
+            style={{
+              maxWidth: 420,
+              width: '100%',
+              padding: '0.65rem 1rem',
+              borderRadius: 10,
+              border: '1px solid #e2e8f0',
+              fontFamily: "'Space Grotesk', sans-serif",
+              fontSize: '0.9rem',
+              color: '#0f2444',
+              backgroundColor: 'white',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+              cursor: 'pointer',
+            }}
+          >
+            <option value="all">Kaikki tuotteet</option>
             {PRODUCTS_DATA.categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                style={{
-                  padding: '0.6rem 1.25rem',
-                  borderRadius: 8,
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  fontWeight: 600,
-                  fontSize: '0.875rem',
-                  transition: 'all 0.2s',
-                  backgroundColor:
-                    activeCategory === cat.id ? '#0f2444' : 'white',
-                  color: activeCategory === cat.id ? 'white' : '#64748b',
-                  boxShadow:
-                    activeCategory === cat.id
-                      ? '0 4px 12px rgba(15,36,68,0.2)'
-                      : '0 1px 4px rgba(0,0,0,0.06)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.375rem',
-                }}
-              >
-                <span>{cat.icon}</span>
+              <option key={cat.id} value={cat.id}>
                 {cat.name}
-              </button>
+              </option>
             ))}
-          </div>
+          </select>
         </div>
 
         {/* Filters bar */}

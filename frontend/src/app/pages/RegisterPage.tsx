@@ -1,12 +1,10 @@
 import {useState} from 'react';
 import {Link, useNavigate} from 'react-router';
-import {Eye, EyeOff, Truck, CheckCircle, Building2, User} from 'lucide-react';
-
-type AccountType = 'customer' | 'store';
+import {Eye, EyeOff, Truck, CheckCircle} from 'lucide-react';
+import api from '../lib/api';
 
 export function RegisterPage() {
   const [step, setStep] = useState(1);
-  const [accountType, setAccountType] = useState<AccountType>('customer');
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -20,6 +18,7 @@ export function RegisterPage() {
   });
   const [showPw, setShowPw] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState('');
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const navigate = useNavigate();
@@ -27,26 +26,19 @@ export function RegisterPage() {
   const update = (field: string, value: string | boolean) => {
     setForm((f) => ({...f, [field]: value}));
     setErrors((e) => ({...e, [field]: ''}));
+    setSubmitError('');
   };
 
-  const validateStep1 = () => {
-    const e: Record<string, string> = {};
-    if (!accountType) e.accountType = 'Valitse tili tyyppi';
-    return e;
-  };
-
-  const validateStep2 = () => {
+  const validatePersonal = () => {
     const e: Record<string, string> = {};
     if (!form.firstName) e.firstName = 'Etunimi vaaditaan';
     if (!form.lastName) e.lastName = 'Sukunimi vaaditaan';
     if (!form.email || !form.email.includes('@'))
       e.email = 'Kelvollinen sähköposti vaaditaan';
-    if (accountType === 'store' && !form.company)
-      e.company = 'Yrityksen nimi vaaditaan';
     return e;
   };
 
-  const validateStep3 = () => {
+  const validatePasswordStep = () => {
     const e: Record<string, string> = {};
     if (form.password.length < 8) e.password = 'Vähintään 8 merkkiä';
     if (form.password !== form.confirmPassword)
@@ -56,20 +48,46 @@ export function RegisterPage() {
   };
 
   const handleNext = () => {
-    const e = step === 1 ? validateStep1() : step === 2 ? validateStep2() : {};
+    const e = validatePersonal();
     setErrors(e);
-    if (Object.keys(e).length === 0) setStep((s) => s + 1);
+    if (Object.keys(e).length === 0) setStep(2);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const errs = validateStep3();
+    const errs = validatePasswordStep();
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    setLoading(false);
-    setDone(true);
+    setSubmitError('');
+    try {
+      await api.post('/auth/register', {
+        email: form.email.trim(),
+        password: form.password,
+        role: 'customer',
+        full_name: `${form.firstName} ${form.lastName}`.trim(),
+        company_name: form.company.trim() || null,
+        tel: form.phone.trim() || null,
+        vat_number: form.businessId.trim() || null,
+      });
+      setDone(true);
+    } catch (err: unknown) {
+      const msg =
+        err &&
+        typeof err === 'object' &&
+        'response' in err &&
+        err.response &&
+        typeof err.response === 'object' &&
+        'data' in err.response &&
+        err.response.data &&
+        typeof err.response.data === 'object' &&
+        'error' in err.response.data
+          ? String((err.response.data as {error?: string}).error)
+          : 'Rekisteröinti epäonnistui. Yritä uudelleen.';
+      setSubmitError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const inputStyle = (hasError?: boolean) => ({
@@ -186,7 +204,6 @@ export function RegisterPage() {
             border: '1px solid #f1f5f9',
           }}
         >
-          {/* Header */}
           <div style={{textAlign: 'center', marginBottom: '2rem'}}>
             <div
               style={{
@@ -217,7 +234,6 @@ export function RegisterPage() {
             </p>
           </div>
 
-          {/* Step indicators */}
           <div
             style={{
               display: 'flex',
@@ -225,7 +241,7 @@ export function RegisterPage() {
               marginBottom: '2rem',
             }}
           >
-            {[1, 2, 3].map((s) => (
+            {[1, 2].map((s) => (
               <div
                 key={s}
                 style={{display: 'flex', alignItems: 'center', flex: 1}}
@@ -248,7 +264,7 @@ export function RegisterPage() {
                 >
                   {step > s ? '✓' : s}
                 </div>
-                {s < 3 && (
+                {s < 2 && (
                   <div
                     style={{
                       flex: 1,
@@ -262,104 +278,19 @@ export function RegisterPage() {
             ))}
           </div>
 
-          {/* Step 1: Account type */}
-          {step === 1 && (
-            <div>
-              <h3
-                style={{
-                  color: '#0f2444',
-                  fontWeight: 700,
-                  marginBottom: '1.25rem',
-                  fontSize: '1rem',
-                }}
-              >
-                Valitse tilityyppi
-              </h3>
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.75rem',
-                }}
-              >
-                {[
-                  {
-                    type: 'customer' as AccountType,
-                    icon: User,
-                    title: 'Yksityisasiakas',
-                    desc: 'Tilaa lounasboxeja ja seuraa toimituksia',
-                  },
-                  {
-                    type: 'store' as AccountType,
-                    icon: Building2,
-                    title: 'Kauppias / Yritys',
-                    desc: 'Hallinnoi kaupan tilauksia ja vastaanota toimituksia',
-                  },
-                ].map(({type, icon: Icon, title, desc}) => (
-                  <button
-                    key={type}
-                    onClick={() => setAccountType(type)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '1rem',
-                      padding: '1.25rem',
-                      borderRadius: 12,
-                      border: `2px solid ${accountType === type ? '#f97316' : '#e2e8f0'}`,
-                      backgroundColor:
-                        accountType === type ? '#fff7ed' : 'white',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      fontFamily: "'Space Grotesk', sans-serif",
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 12,
-                        backgroundColor:
-                          accountType === type ? '#fed7aa' : '#f1f5f9',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Icon
-                        size={22}
-                        color={accountType === type ? '#f97316' : '#94a3b8'}
-                      />
-                    </div>
-                    <div>
-                      <div
-                        style={{
-                          fontWeight: 700,
-                          color: '#0f2444',
-                          fontSize: '0.95rem',
-                        }}
-                      >
-                        {title}
-                      </div>
-                      <div style={{color: '#64748b', fontSize: '0.8rem'}}>
-                        {desc}
-                      </div>
-                    </div>
-                    {accountType === type && (
-                      <CheckCircle
-                        size={18}
-                        color="#f97316"
-                        style={{marginLeft: 'auto'}}
-                      />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          <p
+            style={{
+              textAlign: 'center',
+              color: '#64748b',
+              fontSize: '0.8rem',
+              marginTop: '-1rem',
+              marginBottom: '1.25rem',
+            }}
+          >
+            {step === 1 ? 'Henkilötiedot' : 'Salasana'}
+          </p>
 
-          {/* Step 2: Personal info */}
-          {step === 2 && (
+          {step === 1 && (
             <div>
               <h3
                 style={{
@@ -486,64 +417,48 @@ export function RegisterPage() {
                   style={inputStyle()}
                 />
               </div>
-              {accountType === 'store' && (
-                <>
-                  <div style={{marginBottom: '1rem'}}>
-                    <label
-                      style={{
-                        display: 'block',
-                        color: '#374151',
-                        fontWeight: 600,
-                        marginBottom: '0.4rem',
-                        fontSize: '0.85rem',
-                      }}
-                    >
-                      Yrityksen nimi *
-                    </label>
-                    <input
-                      value={form.company}
-                      onChange={(e) => update('company', e.target.value)}
-                      placeholder="K-Market Tampere"
-                      style={inputStyle(!!errors.company)}
-                    />
-                    {errors.company && (
-                      <p
-                        style={{
-                          color: '#dc2626',
-                          fontSize: '0.75rem',
-                          marginTop: '0.25rem',
-                        }}
-                      >
-                        {errors.company}
-                      </p>
-                    )}
-                  </div>
-                  <div style={{marginBottom: '1rem'}}>
-                    <label
-                      style={{
-                        display: 'block',
-                        color: '#374151',
-                        fontWeight: 600,
-                        marginBottom: '0.4rem',
-                        fontSize: '0.85rem',
-                      }}
-                    >
-                      Y-tunnus
-                    </label>
-                    <input
-                      value={form.businessId}
-                      onChange={(e) => update('businessId', e.target.value)}
-                      placeholder="1234567-8"
-                      style={inputStyle()}
-                    />
-                  </div>
-                </>
-              )}
+              <div style={{marginBottom: '1rem'}}>
+                <label
+                  style={{
+                    display: 'block',
+                    color: '#374151',
+                    fontWeight: 600,
+                    marginBottom: '0.4rem',
+                    fontSize: '0.85rem',
+                  }}
+                >
+                  Yrityksen nimi <span style={{fontWeight: 400}}>(valinnainen)</span>
+                </label>
+                <input
+                  value={form.company}
+                  onChange={(e) => update('company', e.target.value)}
+                  placeholder="Yritys Oy"
+                  style={inputStyle()}
+                />
+              </div>
+              <div style={{marginBottom: '1rem'}}>
+                <label
+                  style={{
+                    display: 'block',
+                    color: '#374151',
+                    fontWeight: 600,
+                    marginBottom: '0.4rem',
+                    fontSize: '0.85rem',
+                  }}
+                >
+                  Y-tunnus <span style={{fontWeight: 400}}>(valinnainen)</span>
+                </label>
+                <input
+                  value={form.businessId}
+                  onChange={(e) => update('businessId', e.target.value)}
+                  placeholder="1234567-8"
+                  style={inputStyle()}
+                />
+              </div>
             </div>
           )}
 
-          {/* Step 3: Password */}
-          {step === 3 && (
+          {step === 2 && (
             <form onSubmit={handleSubmit}>
               <h3
                 style={{
@@ -555,6 +470,20 @@ export function RegisterPage() {
               >
                 Luo salasana
               </h3>
+              {submitError && (
+                <p
+                  style={{
+                    color: '#dc2626',
+                    fontSize: '0.85rem',
+                    marginBottom: '1rem',
+                    padding: '0.75rem',
+                    backgroundColor: '#fef2f2',
+                    borderRadius: 8,
+                  }}
+                >
+                  {submitError}
+                </p>
+              )}
               <div style={{marginBottom: '1rem'}}>
                 <label
                   style={{
@@ -703,9 +632,9 @@ export function RegisterPage() {
             </form>
           )}
 
-          {/* Navigation */}
-          {step < 3 && (
+          {step === 1 && (
             <button
+              type="button"
               onClick={handleNext}
               style={{
                 width: '100%',
@@ -726,6 +655,7 @@ export function RegisterPage() {
           )}
           {step > 1 && (
             <button
+              type="button"
               onClick={() => setStep((s) => s - 1)}
               style={{
                 width: '100%',
