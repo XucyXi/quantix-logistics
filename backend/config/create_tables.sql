@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS ORDERS (
     order_id INT AUTO_INCREMENT PRIMARY KEY,
     customer_id INT NOT NULL,
     driver_id INT DEFAULT NULL,
-    status ENUM('pending','assigned','in_progress','ready_for_pickup','in_transit','done','stuck') DEFAULT 'pending',
+    status ENUM('pending','assigned','in_progress','ready_for_pickup','in_transit','done','stuck', 'cancelled') DEFAULT 'pending',
     delivery_address VARCHAR(255),
     notes TEXT,
     ordered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -121,7 +121,7 @@ CREATE TABLE IF NOT EXISTS ANNOUNCEMENTS (
     expires_at TIMESTAMP NULL
 );
 
--- 9. NOTIFICATIONS table (User Notifications)
+-- 10. NOTIFICATIONS table (User Notifications)
 CREATE TABLE IF NOT EXISTS NOTIFICATIONS (
     notification_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,

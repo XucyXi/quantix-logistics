@@ -8,6 +8,16 @@ async function createOrder(req, res) {
     const customerId = req.user.user_id;
     const result = await orderService.createOrder(customerId, req.body);
 
+    // Fetch user details for notifications
+    const [userRows] = await db.query(
+      'SELECT email, full_name FROM USERS WHERE user_id = ?',
+      [customerId]
+    );
+    if (userRows.length === 0) {
+      throw new Error('User not found');
+    }
+    const userDetails = {email: userRows[0].email, name: userRows[0].full_name};
+
     // Notifications
     const orderForNtf = {
       order_id: result.order_id,
@@ -15,7 +25,6 @@ async function createOrder(req, res) {
       total_price: result.total_price,
       delivery_address: req.body.delivery_address,
     };
-    const userDetails = {email: req.user.email, name: req.user.name}; // Assuming req.user has these
     await notificationService.notifyOrderCreated(orderForNtf, userDetails);
     await notificationService.notifyAdminNewOrder(
       orderForNtf,
@@ -190,6 +199,60 @@ const getCustomerOrders = async (req, res) => {
   }
 };
 
+async function updateAvailability(req, res) {
+  try {
+    const driverId = req.user.user_id; // Extracted from authMiddleware
+    const {active} = req.body;
+
+    const success = await orderService.setDriverAvailability(driverId, active);
+    if (!success) {
+      return res
+        .status(404)
+        .json({success: false, message: 'Driver not found'});
+    }
+
+    return res.json({success: true, message: 'Availability updated'});
+  } catch (error) {
+    return res.status(500).json({success: false, error: error.message});
+  }
+}
+
+async function cancelOrder(req, res) {
+  try {
+    const {id} = req.params;
+    const success = await orderService.cancelOrder(id);
+
+    if (!success) {
+      return res.status(404).json({success: false, message: 'Order not found'});
+    }
+
+    return res.json({success: true, message: 'Order cancelled successfully'});
+  } catch (error) {
+    return res.status(500).json({success: false, error: error.message});
+  }
+}
+
+async function getAllDrivers(req, res) {
+  try {
+    const drivers = await orderService.getAllDrivers();
+    return res.json({success: true, drivers});
+  } catch (error) {
+    return res.status(500).json({success: false, error: error.message});
+  }
+}
+
+async function getOrdersCursor(req, res) {
+  try {
+    const cursor = req.query.cursor || 0;
+    const limit = req.query.limit || 20;
+
+    const result = await orderService.getOrdersCursor(cursor, limit);
+    return res.json({success: true, ...result});
+  } catch (error) {
+    return res.status(500).json({success: false, error: error.message});
+  }
+}
+
 module.exports = {
   createOrder,
   getOrder,
@@ -198,4 +261,8 @@ module.exports = {
   updateOrderStatus,
   getOrderStats,
   getCustomerOrders,
+  updateAvailability,
+  cancelOrder,
+  getAllDrivers,
+  getOrdersCursor,
 };

@@ -1,13 +1,19 @@
-import {Outlet, useNavigate, useLocation} from 'react-router';
+import {Outlet, useNavigate, useLocation, Navigate} from 'react-router';
 import {Package, MapPin, User, Home} from 'lucide-react';
 import {DeliveryTracking, Order} from '../../types/logistics';
 import {useEffect, useState} from 'react';
+
+import {useAuth} from '../contexts/AuthContext';
+import api from '../lib/api';
 
 export function DriverRoot() {
   const navigate = useNavigate();
   const location = useLocation();
   const [orders, setOrders] = useState<Order[]>([]);
-  const [deliveries, setDeliveries] = useState<DeliveryTracking[]>([]);
+
+  const [deliveries] = useState<DeliveryTracking[]>([]);
+
+  const {user, isLoading} = useAuth();
 
   const navItems = [
     {to: '/driver', icon: Home, label: 'Koti'},
@@ -19,16 +25,14 @@ export function DriverRoot() {
   useEffect(() => {
     const fetchMyDeliveries = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const response = await fetch('/api/orders/assigned', {
-          headers: {Authorization: `Bearer ${token}`},
-        });
-        const data = await response.json();
+        const {data} = await api.get('/orders/assigned');
 
-        if (response.ok && Array.isArray(data)) {
+        if (Array.isArray(data)) {
           setOrders(data);
+        } else if (data.success && Array.isArray(data.orders)) {
+          setOrders(data.orders);
         } else {
-          console.error('Bäkki palautti virheen:', data);
+          console.error('Bäkki palautti odottamattoman rakenteen:', data);
           setOrders([]);
         }
       } catch (err) {
@@ -36,8 +40,31 @@ export function DriverRoot() {
       }
     };
 
-    fetchMyDeliveries();
-  }, []);
+    if (user && user.role === 'driver') {
+      fetchMyDeliveries();
+    }
+  }, [user]);
+
+  // --- ROUTE GUARD (PORTSARI) Tulee vasta hookkien jälkeen ---
+  if (isLoading) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          height: '100vh',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        Ladataan...
+      </div>
+    );
+  }
+
+  if (!user || user.role !== 'driver') {
+    return <Navigate to="/admin-login" state={{from: location}} replace />;
+  }
+  // -----------------------------------------------------------
 
   const isActive = (path: string) =>
     path === '/driver'

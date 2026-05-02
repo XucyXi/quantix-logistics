@@ -5,8 +5,13 @@ const authMiddleware = require('../middlewares/authMiddleware');
 
 router.post('/register', authController.register);
 router.post('/login', authController.login);
+router.post('/refresh', authController.refresh);
 router.get('/profile', authMiddleware.authenticate, authController.getProfile);
-router.put('/profile', authMiddleware.authenticate, authController.updateProfile);
+router.put(
+  '/profile',
+  authMiddleware.authenticate,
+  authController.updateProfile
+);
 router.put(
   '/change-password',
   authMiddleware.authenticate,
@@ -19,6 +24,5 @@ router.get('/test', (req, res) => {
     method: req.method,
   });
 });
-
 
 module.exports = router;

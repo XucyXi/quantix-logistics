@@ -1,11 +1,35 @@
-import {Outlet, useNavigate} from 'react-router';
+import {Outlet, useNavigate, useLocation, Navigate} from 'react-router';
 import {Store, LogOut, Bell, Package} from 'lucide-react';
 import {useAuth} from '../contexts/AuthContext';
 
 export function StoreRoot() {
-  const {user, logout} = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
+  const {user, isLoading, logout} = useAuth();
+
+  // Portsari (tai Route Guard) VASTA hookkien jälkeen
+  if (isLoading) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          height: '100vh',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        Ladataan...
+      </div>
+    );
+  }
+
+  // Varmistetaan, että käyttäjä on olemassa ja että rooli on asiakas
+  if (!user || user.role !== 'customer') {
+    return <Navigate to="/login" state={{from: location}} replace />;
+  }
+
+  // Normi apufunktiot
   const handleLogout = () => {
     logout();
     navigate('/');

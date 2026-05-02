@@ -1,4 +1,4 @@
-const productModel = require('../services/productsService.js');
+const productsService = require('../services/productsService');
 
 // GET /products
 async function getProducts(req, res) {
@@ -6,17 +6,17 @@ async function getProducts(req, res) {
     const products = await productModel.getAllProducts();
     res.json(products);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch products' });
+    res.status(500).json({error: 'Failed to fetch products'});
   }
 }
 
 // POST /products
 async function createProduct(req, res) {
   try {
-    const { name, base_price, stock_quantity } = req.body;
+    const {name, base_price, stock_quantity} = req.body;
 
     if (!name || !base_price) {
-      return res.status(400).json({ error: 'Missing fields' });
+      return res.status(400).json({error: 'Missing fields'});
     }
 
     const id = await productModel.createProduct(
@@ -25,33 +25,32 @@ async function createProduct(req, res) {
       stock_quantity || 0
     );
 
-    res.status(201).json({ message: 'Product created', id });
+    res.status(201).json({message: 'Product created', id});
   } catch (err) {
-    res.status(500).json({ error: 'Failed to create product' });    
+    res.status(500).json({error: 'Failed to create product'});
   }
 }
 
 async function getProductById(req, res) {
-  console.log("🔥 HIT getProductById:", req.params);
-    try {
-        const { id } = req.params;
-        const product_getter = await productModel.getProductById(id);
-        if (!product_getter) {
-            throw new Error("Product not found. ");
-        }
-        res.json(product_getter);
+  console.log('🔥 HIT getProductById:', req.params);
+  try {
+    const {id} = req.params;
+    const product_getter = await productModel.getProductById(id);
+    if (!product_getter) {
+      throw new Error('Product not found. ');
     }
-    catch (err) {
-        console.error("Product fetching by ID error: " + err);
-        res.status(404).json({ error: err.message });
-    }
+    res.json(product_getter);
+  } catch (err) {
+    console.error('Product fetching by ID error: ' + err);
+    res.status(404).json({error: err.message});
+  }
 }
 
 // PUT /products/:id
 async function updateProduct(req, res) {
   try {
-    const { id } = req.params;
-    const { name, base_price, stock_quantity } = req.body;
+    const {id} = req.params;
+    const {name, base_price, stock_quantity} = req.body;
 
     const updated = await productModel.updateProduct(
       id,
@@ -61,12 +60,24 @@ async function updateProduct(req, res) {
     );
 
     if (updated === 0) {
-      return res.status(404).json({ error: 'Product not found' });
+      return res.status(404).json({error: 'Product not found'});
     }
 
-    res.json({ message: 'Product updated' });
+    res.json({message: 'Product updated'});
   } catch (err) {
-    res.status(500).json({ error: 'Failed to update product' });
+    res.status(500).json({error: 'Failed to update product'});
+  }
+}
+
+async function getProductsCursor(req, res) {
+  try {
+    const cursor = req.query.cursor || 0;
+    const limit = req.query.limit || 20;
+
+    const result = await productsService.getProductsCursor(cursor, limit);
+    return res.json({success: true, ...result});
+  } catch (error) {
+    return res.status(500).json({success: false, error: error.message});
   }
 }
 
@@ -75,4 +86,5 @@ module.exports = {
   getProductById,
   createProduct,
   updateProduct,
+  getProductsCursor,
 };

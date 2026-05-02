@@ -50,4 +50,36 @@ router.put(
   orderController.updateOrderStatus
 );
 
+// Driver updates their availability
+router.put(
+  '/driver/availability',
+  authMiddleware.authenticate,
+  roleMiddleware.requireRole('driver'),
+  orderController.updateAvailability
+);
+
+// Admin cancels an order
+router.put(
+  '/:id/cancel',
+  authMiddleware.authenticate,
+  roleMiddleware.requireRole('admin'),
+  orderController.cancelOrder
+);
+
+// Admin fetches all drivers
+router.get(
+  '/admin/drivers',
+  authMiddleware.authenticate,
+  roleMiddleware.requireRole('admin'),
+  orderController.getAllDrivers
+);
+
+// Admin cursor-based order pagination
+router.get(
+  '/cursor',
+  authMiddleware.authenticate,
+  roleMiddleware.requireRole('admin'),
+  orderController.getOrdersCursor
+);
+
 module.exports = router;

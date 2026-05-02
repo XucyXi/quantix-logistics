@@ -368,9 +368,7 @@ function shapeOrders(rows) {
 
 const getOrdersByCustomerId = async (
   customerId,
-  limit = 20,
-  offset = 0,
-  status = null
+  {limit = 20, offset = 0, status = null} = {}
 ) => {
   let query = `
     SELECT
@@ -385,6 +383,7 @@ const getOrdersByCustomerId = async (
     LEFT JOIN ORDER_ITEMS oi ON o.order_id = oi.order_id
     LEFT JOIN USERS u ON o.driver_id = u.user_id
     WHERE o.customer_id = ?`;
+
   const params = [customerId];
 
   if (status) {
@@ -392,8 +391,11 @@ const getOrdersByCustomerId = async (
     params.push(status);
   }
 
+  // GROUP BY is required because of the COUNT() aggregate
   query += ` GROUP BY o.order_id ORDER BY o.ordered_at DESC LIMIT ? OFFSET ?`;
-  params.push(limit, offset);
+
+  // Using Number() casting for safety
+  params.push(Number(limit), Number(offset));
 
   try {
     const [orders] = await pool.query(query, params);
@@ -446,6 +448,125 @@ async function getOrderStats(customerId) {
   );
 }
 
+async function setDriverAvailability(driverId, active) {
+  const query = `UPDATE DRIVER_PROFILES SET active = ? WHERE user_id = ?`;
+  const [result] = await pool.query(query, [active ? 1 : 0, driverId]);
+  return result.affectedRows > 0;
+}
+
+async function cancelOrder(orderId) {
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [[order]] = await connection.query(
+      `
+        SELECT status, driver_id
+        FROM ORDERS
+        WHERE order_id = ?
+        FOR UPDATE
+        `,
+      [orderId]
+    );
+
+    if (!order) throw new Error('Order not found');
+
+    if (order.status === 'done') {
+      throw new Error('Cannot cancel completed order');
+    }
+
+    if (order.status === 'cancelled') {
+      throw new Error('Order is already cancelled');
+    }
+
+    // Restore stock
+    const [items] = await connection.query(
+      `
+        SELECT product_id, quantity
+        FROM ORDER_ITEMS
+        WHERE order_id = ?
+        `,
+      [orderId]
+    );
+
+    for (const item of items) {
+      await connection.query(
+        `
+          UPDATE PRODUCTS
+          SET stock_quantity = stock_quantity + ?
+          WHERE product_id = ?
+          `,
+        [item.quantity, item.product_id]
+      );
+    }
+
+    // If driver assigned → decrement counter
+    if (order.driver_id) {
+      await connection.query(
+        `
+          UPDATE DRIVER_PROFILES
+          SET current_orders = GREATEST(current_orders - 1, 0)
+          WHERE user_id = ?
+          `,
+        [order.driver_id]
+      );
+    }
+
+    // Mark as "cancelled"
+    await connection.query(
+      `
+        UPDATE ORDERS
+        SET status = 'cancelled'
+        WHERE order_id = ?
+        `,
+      [orderId]
+    );
+
+    await connection.commit();
+
+    invalidateOrderCache();
+
+    return {
+      order_id: orderId,
+      status: 'cancelled',
+    };
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
+}
+
+async function getAllDrivers() {
+  // Joins the USERS table with DRIVER_PROFILES to get the full picture
+  const query = `
+    SELECT u.user_id, u.full_name, u.email, d.active AS is_available 
+    FROM USERS u
+    JOIN DRIVER_PROFILES d ON u.user_id = d.user_id
+    WHERE u.role = 'driver'
+  `;
+  const [rows] = await pool.query(query);
+  return rows;
+}
+
+async function getOrdersCursor(cursor = 0, limit = 20) {
+  // Cursor-based pagination (faster than OFFSET for large datasets)
+  const query = `
+    SELECT * FROM ORDERS 
+    WHERE order_id > ? 
+    ORDER BY order_id ASC 
+    LIMIT ?
+  `;
+  const [rows] = await pool.query(query, [Number(cursor), Number(limit)]);
+
+  // Determine the next cursor
+  const nextCursor = rows.length > 0 ? rows[rows.length - 1].order_id : null;
+
+  return {data: rows, nextCursor};
+}
+
 module.exports = {
   createOrder,
   getOrderById,
@@ -454,4 +575,8 @@ module.exports = {
   updateOrderStatus,
   getOrdersByCustomerId,
   getOrderStats,
+  setDriverAvailability,
+  cancelOrder,
+  getAllDrivers,
+  getOrdersCursor,
 };

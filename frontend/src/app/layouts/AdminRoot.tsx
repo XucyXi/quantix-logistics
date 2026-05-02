@@ -1,5 +1,5 @@
 import {useState, useEffect} from 'react';
-import {Outlet, Link, useLocation, useNavigate} from 'react-router';
+import {Outlet, Link, useLocation, useNavigate, Navigate} from 'react-router';
 import {
   LayoutDashboard,
   Truck,
@@ -36,6 +36,7 @@ export function AdminRoot() {
   const navigate = useNavigate();
   const {user, logout} = useAuth();
 
+  // Kaikki useEffect-hookit TÄYTYY olla ennen if-lausekkeita (early returns)
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 1024);
@@ -49,6 +50,13 @@ export function AdminRoot() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // --- PORTSARI (tai Route Guard) ---
+  // Vasta kun kaikki hookit on ajettu, voimme sitten tehdä palautuksen, ihanaa.
+  if (!user || user.role !== 'admin') {
+    return <Navigate to="/admin-login" state={{from: location}} replace />;
+  }
+  // ------------------------------
 
   const handleLogout = () => {
     logout();
@@ -67,7 +75,6 @@ export function AdminRoot() {
   };
 
   return (
-    // !! Käytetään tässä Tailwind-luokkia dynaamisiin väreihin kaverit !!
     <div className="flex min-h-screen bg-background text-foreground font-sans">
       {/* Mobile Overlay */}
       {isMobile && sidebarOpen && (
@@ -77,7 +84,7 @@ export function AdminRoot() {
         />
       )}
 
-      {/* Sidebar - Tässä pidetään inline-tyylit layoutille, mutta värit classNameen */}
+      {/* Sidebar */}
       <aside
         className="bg-sidebar border-r border-sidebar-border z-50 flex flex-col shrink-0"
         style={{
@@ -182,9 +189,7 @@ export function AdminRoot() {
             </h2>
           </div>
           <div className="flex items-center gap-4">
-            {/* Theme toggle */}
             <ModeToggle />
-
             <div className="relative cursor-pointer hover:text-primary transition-colors text-muted-foreground">
               <Bell size={20} />
               <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-primary text-primary-foreground text-[0.6rem] flex items-center justify-center">
