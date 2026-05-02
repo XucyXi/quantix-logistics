@@ -40,8 +40,21 @@ export function RegisterPage() {
     const e: Record<string, string> = {};
     if (!form.firstName) e.firstName = 'Etunimi vaaditaan';
     if (!form.lastName) e.lastName = 'Sukunimi vaaditaan';
-    if (!form.email || !form.email.includes('@'))
+    if (!form.email) {
       e.email = 'Kelvollinen sähköposti vaaditaan';
+    } else {
+      // Split on '@' and validate both parts
+      const [localPart, domain] = form.email.split('@');
+      const domainParts = domain ? domain.split('.') : [];
+      const isValidEmail =
+        localPart &&
+        localPart.length > 0 &&
+        domain &&
+        domain.length > 0 &&
+        domainParts.length > 1 &&
+        domainParts[domainParts.length - 1].length > 0;
+      if (!isValidEmail) e.email = 'Kelvollinen sähköposti vaaditaan';
+    }
     return e;
   };
 
@@ -434,7 +447,8 @@ export function RegisterPage() {
                     fontSize: '0.85rem',
                   }}
                 >
-                  Yrityksen nimi <span style={{fontWeight: 400}}>(valinnainen)</span>
+                  Yrityksen nimi{' '}
+                  <span style={{fontWeight: 400}}>(valinnainen)</span>
                 </label>
                 <input
                   value={form.company}
