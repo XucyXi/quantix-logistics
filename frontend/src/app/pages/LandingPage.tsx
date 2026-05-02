@@ -1,4 +1,5 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useState, useRef} from 'react';
+import type {RefObject} from 'react';
 import {Link} from 'react-router-dom';
 import {motion} from 'motion/react';
 import testimonialVideo from '../../assets/videos/Ravintolaomistajan_suositus_kuljetuspalvelulle.mp4';
@@ -29,11 +30,125 @@ const distImg =
 
 // Hero-osan KPI-luvut: desktopissa kortteina, mobiilissa omana rivinään.
 const stats = [
-  {value: '340+', label: 'Kauppaa palveltu'},
-  {value: '12 000', label: 'Toimitusta / viikko'},
-  {value: '99.2%', label: 'Ajallaan-prosentti'},
-  {value: '5', label: 'Toimintavuotta'},
-];
+  {
+    key: 'shops',
+    end: 340,
+    suffix: '+',
+    label: 'Kauppaa palveltu',
+  },
+  {
+    key: 'deliveries',
+    end: 12000,
+    label: 'Toimitusta / viikko',
+    group: true,
+  },
+  {
+    key: 'ontime',
+    end: 99.2,
+    suffix: '%',
+    label: 'Ajallaan-prosentti',
+    decimals: 1,
+  },
+  {
+    key: 'years',
+    end: 5,
+    label: 'Toimintavuotta',
+  },
+] as const;
+
+type StatItem = (typeof stats)[number];
+
+function formatStatDisplay(value: number, s: StatItem): string {
+  if ('decimals' in s && s.decimals !== undefined) {
+    return `${value.toFixed(s.decimals)}${s.suffix ?? ''}`;
+  }
+  if ('group' in s && s.group) {
+    return `${Math.round(value).toLocaleString('fi-FI')}`;
+  }
+  return `${Math.round(value)}${s.suffix ?? ''}`;
+}
+
+function useIntersectionActivate(ref: RefObject<HTMLElement | null>) {
+  const [active, setActive] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || active) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) setActive(true);
+      },
+      {threshold: 0.15, rootMargin: '0px 0px -8% 0px'}
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [ref, active]);
+  return active;
+}
+
+function useCountUpStat(end: number, active: boolean, decimals?: number) {
+  const [value, setValue] = useState(0);
+  const startedRef = useRef(false);
+
+  useEffect(() => {
+    if (!active || startedRef.current) return;
+    startedRef.current = true;
+    const duration = 1800;
+    let startTs: number | null = null;
+    let raf = 0;
+
+    const tick = (ts: number) => {
+      if (startTs === null) startTs = ts;
+      const p = Math.min((ts - startTs) / duration, 1);
+      const eased = 1 - (1 - p) ** 3;
+      const cur = end * eased;
+      if (decimals !== undefined) {
+        setValue(Number(cur.toFixed(decimals)));
+      } else {
+        setValue(cur);
+      }
+      if (p < 1) {
+        raf = requestAnimationFrame(tick);
+      } else {
+        setValue(end);
+      }
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [active, end, decimals]);
+
+  return value;
+}
+
+function AnimatedStatFigure({
+  stat,
+  color,
+  active,
+  fontSize,
+}: {
+  stat: StatItem;
+  color: string;
+  active: boolean;
+  fontSize: string;
+}) {
+  const decimals = 'decimals' in stat ? stat.decimals : undefined;
+  const v = useCountUpStat(stat.end, active, decimals);
+  const text = formatStatDisplay(v, stat);
+
+  return (
+    <div
+      style={{
+        fontSize,
+        fontWeight: 800,
+        color,
+        lineHeight: 1,
+        marginBottom: '0.5rem',
+        fontVariantNumeric: 'tabular-nums',
+      }}
+    >
+      {text}
+    </div>
+  );
+}
 
 // Ominaisuuskortit: icon + teksti + korostusväri, renderöidään features-gridiin.
 const features = [
@@ -142,6 +257,10 @@ const inputStyle = {
 export function LandingPage() {
   // now-tila päivittyy sekunnin välein, jotta hero-badgen kello käy reaaliajassa.
   const [now, setNow] = useState(() => new Date());
+  const desktopStatsRef = useRef<HTMLDivElement>(null);
+  const mobileStatsRef = useRef<HTMLElement>(null);
+  const desktopStatsVisible = useIntersectionActivate(desktopStatsRef);
+  const mobileStatsVisible = useIntersectionActivate(mobileStatsRef);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 1000);
@@ -368,6 +487,7 @@ export function LandingPage() {
             </motion.div>
 
             <motion.div
+              ref={desktopStatsRef}
               initial={{opacity: 0, x: 40}}
               animate={{opacity: 1, x: 0}}
               transition={{duration: 0.7, delay: 0.2}}
@@ -375,7 +495,7 @@ export function LandingPage() {
             >
               {stats.map((stat, i) => (
                 <div
-                  key={stat.label}
+                  key={stat.key}
                   style={{
                     backgroundColor: 'rgba(255,255,255,0.05)',
                     border: '1px solid rgba(255,255,255,0.1)',
@@ -384,17 +504,12 @@ export function LandingPage() {
                     backdropFilter: 'blur(10px)',
                   }}
                 >
-                  <div
-                    style={{
-                      fontSize: '2rem',
-                      fontWeight: 800,
-                      color: i % 2 === 0 ? '#f97316' : '#60a5fa',
-                      lineHeight: 1,
-                      marginBottom: '0.5rem',
-                    }}
-                  >
-                    {stat.value}
-                  </div>
+                  <AnimatedStatFigure
+                    stat={stat}
+                    active={desktopStatsVisible}
+                    color={i % 2 === 0 ? '#f97316' : '#60a5fa'}
+                    fontSize="2rem"
+                  />
                   <div
                     style={{
                       color: 'rgba(255,255,255,0.6)',
@@ -423,14 +538,15 @@ export function LandingPage() {
 
       {/* Stats row (mobile) */}
       <section
+        ref={mobileStatsRef}
         style={{backgroundColor: '#f8fafc', padding: '2rem 1.5rem'}}
         className="lg:hidden"
       >
         <div style={{maxWidth: 1280, margin: '0 auto'}}>
           <div className="grid grid-cols-2 gap-4">
-            {stats.map((stat) => (
+            {stats.map((stat, i) => (
               <div
-                key={stat.label}
+                key={stat.key}
                 style={{
                   backgroundColor: 'white',
                   borderRadius: 12,
@@ -439,15 +555,12 @@ export function LandingPage() {
                   boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
                 }}
               >
-                <div
-                  style={{
-                    fontSize: '1.75rem',
-                    fontWeight: 800,
-                    color: '#f97316',
-                  }}
-                >
-                  {stat.value}
-                </div>
+                <AnimatedStatFigure
+                  stat={stat}
+                  active={mobileStatsVisible}
+                  color={i % 2 === 0 ? '#f97316' : '#3b82f6'}
+                  fontSize="1.75rem"
+                />
                 <div style={{color: '#64748b', fontSize: '0.8rem'}}>
                   {stat.label}
                 </div>
