@@ -4,7 +4,7 @@ import {OrderList} from './OrderList';
 import {DeliveryTracking, Order} from '../../../types/logistics';
 import {updateDeliveryLocation} from '../../utils/updateDeliveryLocation';
 import {useOutletContext} from 'react-router';
-const WAREHOUSE_COORDS: [number, number] = [60.1719, 24.9395];
+import {WAREHOUSE_COORDS} from '../../../types/logistics';
 
 export const DeliveryManager = () => {
   const lastCoords = useRef({lat: 0, lng: 0});
@@ -15,15 +15,16 @@ export const DeliveryManager = () => {
     deliveries: DeliveryTracking[];
   }>();
   const isSimulating = useRef(false);
-
+  const [isSimulatingState, setIsSimulatingState] = useState(false);
   const ordersList = Array.isArray(orders) ? orders : [];
-  const filteredOrdersList = ordersList.filter((order) => {
-    return order.status !== 'done';
-  });
+  const filteredOrdersList = useMemo(() => {
+    return Array.isArray(orders)
+      ? orders.filter((o) => o.status !== 'done')
+      : [];
+  }, [orders]);
 
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const currentOrder = ordersList.find((o) => o.order_id === selectedOrderId);
-
   const destination: [number, number] = useMemo(() => {
     if (!currentOrder || currentOrder.status === 'ready_for_pickup') {
       return WAREHOUSE_COORDS;
@@ -42,19 +43,21 @@ export const DeliveryManager = () => {
   const UPDATE_INTERVAL = 15000;
   const MOVE_THRESHOLD = 0.0001;
 
-  // Simulate moving
   const runSimulation = async () => {
-    if (!currentOrder || !destination) {
-      alert('Valitse ensin tilaus, joka on in_transit tai ready_for_pickup!');
+    if (!currentOrder || currentOrder?.status !== 'in_transit') {
+      alert('Valitse ensin tilaus, joka on in_transit');
       return;
     }
 
     if (isSimulating.current) {
       isSimulating.current = false;
+      setIsSimulatingState(false);
       return;
     }
     isSimulating.current = true;
-    const start = WAREHOUSE_COORDS;
+    setIsSimulatingState(true);
+
+    const start = driverCoords;
     const end = destination;
 
     try {
@@ -65,8 +68,6 @@ export const DeliveryManager = () => {
 
       if (!data?.routes?.length) return;
       const points = data.routes[0].geometry.coordinates;
-
-      console.log('Simuloidaan ajoa, pisteitä:', points.length);
 
       for (let i = 0; i < points.length; i += 2) {
         if (!isSimulating.current) break;
@@ -79,31 +80,41 @@ export const DeliveryManager = () => {
         console.log(`Simuloitu sijainti: ${lat}, ${lng}`);
         await new Promise((resolve) => setTimeout(resolve, 2500));
       }
-      alert('Simulaatio valmis!');
     } catch (error) {
       console.error('Simulaatiovirhe:', error);
     } finally {
       isSimulating.current = false;
     }
   };
+  useEffect(() => {
+    console.log('Sijainti päivittyi:', driverCoords, 'Kohde:', destination);
+  }, [driverCoords, destination]);
 
   useEffect(() => {
-    if (!selectedOrderId || !('geolocation' in navigator)) return;
+    if (!('geolocation' in navigator)) return;
 
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const {latitude, longitude} = pos.coords;
         const now = Date.now();
-        setDriverCoords([latitude, longitude]);
 
-        const timePassed = now - lastUpdateTimestamp.current > UPDATE_INTERVAL;
-        const movedEnough =
-          Math.abs(lastCoords.current.lat - latitude) > MOVE_THRESHOLD ||
-          Math.abs(lastCoords.current.lng - longitude) > MOVE_THRESHOLD;
-        if (timePassed && movedEnough) {
-          updateDeliveryLocation(selectedOrderId, latitude, longitude);
-          lastUpdateTimestamp.current = now;
-          lastCoords.current = {lat: latitude, lng: longitude};
+        if (
+          selectedOrderId &&
+          currentOrder?.status === 'in_transit' &&
+          !isSimulating.current
+        ) {
+          const timePassed =
+            now - lastUpdateTimestamp.current > UPDATE_INTERVAL;
+          const dist = Math.sqrt(
+            Math.pow(latitude - lastCoords.current.lat, 2) +
+              Math.pow(longitude - lastCoords.current.lng, 2)
+          );
+          if (timePassed && dist > MOVE_THRESHOLD) {
+            updateDeliveryLocation(selectedOrderId, latitude, longitude);
+            lastUpdateTimestamp.current = now;
+            lastCoords.current = {lat: latitude, lng: longitude};
+            setDriverCoords([latitude, longitude]);
+          }
         }
       },
       (err) => console.error('GPS virhe:', err),
@@ -118,8 +129,16 @@ export const DeliveryManager = () => {
   }
 
   return (
-    <div style={{display: 'flex', flexDirection: 'column', height: '100%'}}>
-      <div style={{flex: 1, minHeight: '300px'}}>
+    <div style={{display: 'flex', flexDirection: 'column', height: '90vh'}}>
+      <div
+        style={{
+          flex: '1 1 auto',
+          position: 'relative',
+          width: '100%',
+          minHeight: '300px',
+          overflow: 'hidden',
+        }}
+      >
         {import.meta.env.DEV && (
           <button
             onClick={runSimulation}
@@ -137,14 +156,17 @@ export const DeliveryManager = () => {
               fontWeight: 'bold',
             }}
           >
-            Simuloi ajo
+            {isSimulatingState ? 'Pysäytä' : 'Simuloi ajo'}{' '}
           </button>
         )}
         <Map
-          key={selectedOrderId}
           startCoords={driverCoords}
           endCoords={destination}
-          variant={'driver'}
+          showRoute={
+            (!!currentOrder && currentOrder.status === 'in_transit') ||
+            currentOrder?.status === 'ready_for_pickup'
+          }
+          variant="driver"
         />
         {!currentOrder && filteredOrdersList.length > 0 && (
           <div
@@ -175,6 +197,7 @@ export const DeliveryManager = () => {
             orders={filteredOrdersList}
             selectedId={selectedOrderId}
             onSelect={(order) => setSelectedOrderId(order.order_id)}
+            variant="driver"
           />
         ) : (
           <div style={{padding: '2rem', textAlign: 'center'}}>
