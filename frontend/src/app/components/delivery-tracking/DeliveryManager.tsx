@@ -144,6 +144,7 @@ export const DeliveryManager = () => {
           key={selectedOrderId}
           startCoords={driverCoords}
           endCoords={destination}
+          variant={'driver'}
         />
         {!currentOrder && filteredOrdersList.length > 0 && (
           <div
