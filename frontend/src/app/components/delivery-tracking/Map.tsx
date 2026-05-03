@@ -12,7 +12,7 @@ import {fetchRoute} from '../../utils/osrmApi.ts';
 import {RouteWatcher} from './RouteWatcher.tsx';
 import L from 'leaflet';
 import driverMarker from '../../../assets/icons/driver.webp';
-
+import {WAREHOUSE_COORDS} from '../../../types/logistics.ts';
 const driverIcon = L.divIcon({
   html: `
     <div style="
@@ -41,7 +41,6 @@ interface MapProps {
   showRoute?: boolean;
 }
 
-const HELSINKI: [number, number] = [60.1699, 24.9384];
 export const Map = ({
   startCoords,
   endCoords,
@@ -74,7 +73,7 @@ export const Map = ({
   }, [startCoords, endCoords, showRoute]);
 
   const initialCenter =
-    startCoords && startCoords[0] !== 0 ? startCoords : HELSINKI;
+    startCoords && startCoords[0] !== 0 ? startCoords : WAREHOUSE_COORDS;
   const watchPoints =
     currentRoute.length > 0 ? currentRoute : [initialCenter, endCoords];
 
@@ -107,10 +106,12 @@ export const Map = ({
       {showRoute && route.length > 0 && (
         <Polyline
           positions={route}
-          color={variant === 'driver' ? '#3b82f6' : '#ff4757'}
-          dashArray="5, 10"
-          weight={5}
-          opacity={0.7}
+          pathOptions={{
+            color: 'red',
+            weight: 5,
+            dashArray: variant === 'customer' ? '5, 10' : undefined,
+            lineJoin: 'round',
+          }}
         />
       )}
       <RouteWatcher coords={watchPoints as [number, number][]} />
