@@ -14,6 +14,7 @@ export const DeliveryManager = () => {
     orders: Order[];
     deliveries: DeliveryTracking[];
   }>();
+  const isSimulating = useRef(false);
 
   const ordersList = Array.isArray(orders) ? orders : [];
   const filteredOrdersList = ordersList.filter((order) => {
@@ -38,7 +39,7 @@ export const DeliveryManager = () => {
   }, [currentOrder]);
 
   const lastUpdateTimestamp = useRef<number>(0);
-  const UPDATE_INTERVAL = 20000;
+  const UPDATE_INTERVAL = 15000;
   const MOVE_THRESHOLD = 0.0001;
 
   // Simulate moving
@@ -48,6 +49,11 @@ export const DeliveryManager = () => {
       return;
     }
 
+    if (isSimulating.current) {
+      isSimulating.current = false;
+      return;
+    }
+    isSimulating.current = true;
     const start = WAREHOUSE_COORDS;
     const end = destination;
 
@@ -57,22 +63,27 @@ export const DeliveryManager = () => {
       );
       const data = await res.json();
 
-      if (!data.routes || data.routes.length === 0) return;
+      if (!data?.routes?.length) return;
       const points = data.routes[0].geometry.coordinates;
 
       console.log('Simuloidaan ajoa, pisteitä:', points.length);
 
-      for (let i = 0; i < points.length; i += 10) {
+      for (let i = 0; i < points.length; i += 2) {
+        if (!isSimulating.current) break;
         const [lng, lat] = points[i];
         setDriverCoords([lat, lng]);
 
-        await updateDeliveryLocation(currentOrder.order_id, lat, lng);
+        await updateDeliveryLocation(currentOrder.order_id, lat, lng).catch(
+          console.error
+        );
         console.log(`Simuloitu sijainti: ${lat}, ${lng}`);
-        await new Promise((resolve) => setTimeout(resolve, 800));
+        await new Promise((resolve) => setTimeout(resolve, 2500));
       }
       alert('Simulaatio valmis!');
     } catch (error) {
       console.error('Simulaatiovirhe:', error);
+    } finally {
+      isSimulating.current = false;
     }
   };
 
