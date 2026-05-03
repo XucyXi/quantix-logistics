@@ -5,12 +5,11 @@ exports.updateLocation = async (req, res) => {
   console.log('Body:', req.body);
   try {
     const {orderId} = req.params;
-    const {latitude, longitude, status} = req.body;
+    const { latitude, longitude } = req.body;
 
     const result = await deliveryService.createTrackingPoint(orderId, {
       latitude,
-      longitude,
-      status,
+      longitude
     });
 
     res.status(201).json({success: true, data: result});
@@ -45,6 +44,8 @@ exports.getMyActiveDeliveries = async (req, res) => {
 exports.getTrackingData = async (req, res) => {
   const {order_id} = req.params;
   const customerId = req.user.user_id;
+
+  // order_id not defined, orderId not defined (assuming these both are referenced equally)
 
   try {
     const orders = await orderService.getOrdersByCustomerId(customerId);
