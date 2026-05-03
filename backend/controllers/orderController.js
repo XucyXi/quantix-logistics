@@ -1,49 +1,36 @@
 const orderService = require('../services/orderService.js');
-const {getCoords} = require('../utils/geocoder.js');
-const db = require('../config/db.js');
 const notificationService = require('../services/notificationService.js');
+const db = require('../config/db.js'); // Pidetty ainoastaan notifikaatioiden käyttäjähakua varten
 
 async function createOrder(req, res) {
   try {
     const customerId = req.user.user_id;
-    const result = await orderService.createOrder(customerId, req.body);
+    const {delivery_address, notes, items} = req.body;
 
-    // Fetch user details for notifications
-    const [userRows] = await db.query(
-      'SELECT email, full_name FROM USERS WHERE user_id = ?',
-      [customerId]
-    );
-    if (userRows.length === 0) {
-      throw new Error('User not found');
+    if (!items || items.length === 0) {
+      return res.status(400).json({error: 'No items in order'});
     }
-    const userDetails = {email: userRows[0].email, name: userRows[0].full_name};
 
-    // Notifications
-    const orderForNtf = {
-      order_id: result.order_id,
-      customer_id: customerId,
-      total_price: result.total_price,
-      delivery_address: req.body.delivery_address,
-    };
-    await notificationService.notifyOrderCreated(orderForNtf, userDetails);
-    await notificationService.notifyAdminNewOrder(
-      orderForNtf,
-      req.body.items.length
+    const result = await orderService.createOrder(
+      customerId,
+      delivery_address,
+      notes,
+      items
     );
 
     res.status(201).json(result);
   } catch (err) {
-    console.error('Controller error:', err.message);
-    res.status(500).json({
-      error: err.message || 'Failed to create order',
-    });
+    console.error('Error creating order:', err);
+    if (err.message.includes('ei ole tarpeeksi varastossa')) {
+      return res.status(400).json({error: err.message});
+    }
+    res.status(500).json({error: 'Failed to create order'});
   }
 }
 
 async function getOrder(req, res) {
   try {
     const {id} = req.params;
-
     const order = await orderService.getOrderById(id);
 
     if (!order) {
@@ -53,89 +40,96 @@ async function getOrder(req, res) {
     res.json(order);
   } catch (err) {
     console.error('Get order error:', err.message);
-
-    res.status(500).json({
-      error: err.message || 'Failed to fetch order',
-    });
+    res.status(500).json({error: err.message || 'Failed to fetch order'});
   }
 }
 
 async function getAssignedOrders(req, res) {
   try {
     const driverId = req.user.user_id;
-
+    // Puhdas Service-kutsu, ei suoria DB-muokkauksia tai Geokoodauksia controllerissa
     const orders = await orderService.getAssignedOrders(driverId);
-
-    for (let order of orders) {
-      if (!order.latitude || !order.longitude) {
-        const coords = await getCoords(order.delivery_address);
-        if (coords) {
-          await db.execute(
-            'UPDATE ORDERS SET latitude = ?, longitude = ? WHERE order_id = ?',
-            [coords.lat, coords.lon, order.order_id]
-          );
-          order.latitude = coords.lat;
-          order.longitude = coords.lon;
-        }
-      }
-    }
     res.json(orders);
   } catch (err) {
-    console.error(err);
-
-    res.status(500).json({
-      error: err.message || 'Failed to fetch assigned orders',
-    });
+    console.error('Error fetching assigned orders:', err);
+    res
+      .status(500)
+      .json({error: err.message || 'Failed to fetch assigned orders'});
   }
 }
 
-async function assignDriverToOrder(req, res) {
+async function assignDriver(req, res) {
   try {
-    const orderId = req.params.id;
+    const {id} = req.params;
+    const {driver_id} = req.body;
 
-    const result = await orderService.assignDriverToOrder(orderId);
+    const newStatus = driver_id ? 'assigned' : 'pending';
+    const updated = await orderService.assignDriver(id, driver_id, newStatus);
 
-    // Notification
-    if (result.driver_id) {
-      const order = await orderService.getOrderById(orderId);
-      const [users] = await db.query(
-        'SELECT email, name, phone FROM USERS WHERE user_id = ?',
-        [result.driver_id]
-      );
-      if (users.length > 0) {
-        const driverDetails = users[0];
-        await notificationService.notifyDriverAssignment(
-          result.driver_id,
-          order,
-          driverDetails
+    if (!updated) {
+      return res.status(404).json({error: 'Order not found'});
+    }
+
+    // Notifikaatio kuskille (Jos driver_id annettu)
+    if (driver_id) {
+      try {
+        const order = await orderService.getOrderById(id);
+        const [users] = await db.query(
+          'SELECT email, name, phone FROM USERS WHERE user_id = ?',
+          [driver_id]
         );
+        if (users.length > 0) {
+          await notificationService.notifyDriverAssignment(
+            driver_id,
+            order,
+            users[0]
+          );
+        }
+      } catch (notifErr) {
+        console.error('Notification failed:', notifErr);
       }
     }
 
-    res.json(result);
-  } catch (err) {
-    console.error(err);
+    // Automaattinen varastosimulaatio (Jos siirtyi tilaan 'assigned')
+    if (newStatus === 'assigned') {
+      setTimeout(async () => {
+        try {
+          await orderService.updateOrderStatus(id, 'in_progress');
+          console.log(
+            `[Auto-Varasto] Tilaus ${id} tilaan 'in_progress' (Keräilyssä)`
+          );
 
-    res.status(500).json({
-      error: err.message || 'Failed to assign driver',
-    });
+          setTimeout(async () => {
+            await orderService.updateOrderStatus(id, 'ready_for_pickup');
+            console.log(
+              `[Auto-Varasto] Tilaus ${id} tilaan 'ready_for_pickup' (Odottaa noutoa)`
+            );
+          }, 5000);
+        } catch (err) {
+          console.error('Varastosimulaatio epäonnistui:', err);
+        }
+      }, 5000);
+    }
+
+    res.json({message: 'Driver assigned successfully', status: newStatus});
+  } catch (err) {
+    console.error('Error assigning driver:', err);
+    res.status(500).json({error: 'Failed to assign driver'});
   }
 }
 
 async function updateOrderStatus(req, res) {
   try {
     const orderId = req.params.id;
-    const driverId = req.user.user_id;
     const {newStatus} = req.body;
 
-    const result = await orderService.updateOrderStatus(
-      orderId,
-      driverId,
-      newStatus
-    );
+    const success = await orderService.updateOrderStatus(orderId, newStatus);
+    if (!success) {
+      return res.status(404).json({error: 'Order not found'});
+    }
 
-    // Notification
-    if (result.status) {
+    // Notifikaatio asiakkaalle
+    try {
       const order = await orderService.getOrderById(orderId);
       if (order && order.customer_id) {
         const [users] = await db.query(
@@ -150,15 +144,16 @@ async function updateOrderStatus(req, res) {
           );
         }
       }
+    } catch (notifErr) {
+      console.error('Notification failed:', notifErr);
     }
 
-    res.json(result);
+    res.json({success: true, status: newStatus});
   } catch (err) {
     console.error(err);
-
-    res.status(400).json({
-      error: err.message || 'Failed to update order status',
-    });
+    res
+      .status(400)
+      .json({error: err.message || 'Failed to update order status'});
   }
 }
 
@@ -169,39 +164,37 @@ const getOrderStats = async (req, res) => {
     res.json(stats);
   } catch (error) {
     console.error('Controller error getting stats:', error.message);
-    res.status(500).json({
-      error: error.message || 'Failed to fetch order stats',
-    });
+    res
+      .status(500)
+      .json({error: error.message || 'Failed to fetch order stats'});
   }
 };
 
 const getCustomerOrders = async (req, res) => {
   const customerId = req.user.user_id;
-
-  // Luetaan sivutus- ja filtteriparametrit query stringistä
   const limit = parseInt(req.query.limit) || 20;
   const offset = parseInt(req.query.offset) || 0;
   const status = req.query.status || null;
 
   try {
-    const orders = await orderService.getOrdersByCustomerId(
-      customerId,
+    // Lähetetään { limit, offset, status } objektina, kuten Service odottaa
+    const orders = await orderService.getOrdersByCustomerId(customerId, {
       limit,
       offset,
-      status
-    );
+      status,
+    });
     res.json({success: true, orders});
   } catch (error) {
     console.error('Controller error:', error.message);
-    res.status(500).json({
-      error: error.message || 'Failed to fetch customer orders',
-    });
+    res
+      .status(500)
+      .json({error: error.message || 'Failed to fetch customer orders'});
   }
 };
 
 async function updateAvailability(req, res) {
   try {
-    const driverId = req.user.user_id; // Extracted from authMiddleware
+    const driverId = req.user.user_id;
     const {active} = req.body;
 
     const success = await orderService.setDriverAvailability(driverId, active);
@@ -220,9 +213,9 @@ async function updateAvailability(req, res) {
 async function cancelOrder(req, res) {
   try {
     const {id} = req.params;
-    const success = await orderService.cancelOrder(id);
+    const result = await orderService.cancelOrder(id);
 
-    if (!success) {
+    if (!result) {
       return res.status(404).json({success: false, message: 'Order not found'});
     }
 
@@ -253,7 +246,6 @@ async function getOrdersCursor(req, res) {
   }
 }
 
-// Hakee KAIKKI tilaukset adminille JOIN-tietoineen
 async function getAllOrdersAdmin(req, res) {
   try {
     const orders = await orderService.getAllOrdersAdmin();
@@ -264,66 +256,11 @@ async function getAllOrdersAdmin(req, res) {
   }
 }
 
-// Määrää kuskin ja vaihtaa statuksen
-async function assignDriver(req, res) {
-  try {
-    const {id} = req.params;
-    const {driver_id} = req.body;
-
-    // Jos kuski annetaan, status on assigned. Muuten pending.
-    const newStatus = driver_id ? 'assigned' : 'pending';
-
-    const updated = await orderService.assignDriver(id, driver_id, newStatus);
-    if (!updated) return res.status(404).json({error: 'Order not found'});
-
-    // --- AUTOMAATTINEN VARASTOSIMULAATIO ---
-    if (newStatus === 'assigned') {
-      setTimeout(async () => {
-        try {
-          // Keräily alkaa (5 sekunnin kuluttua)
-          await orderService.updateOrderStatus(id, 'in_progress');
-          console.log(
-            `[Auto-Varasto] Tilaus ${id} tilaan 'in_progress' (Keräilyssä)`
-          );
-
-          setTimeout(async () => {
-            // Valmis noudettavaksi (toisen 5 sekunnin kuluttua)
-            await orderService.updateOrderStatus(id, 'ready_for_pickup');
-            console.log(
-              `[Auto-Varasto] Tilaus ${id} tilaan 'ready_for_pickup' (Odottaa noutoa)`
-            );
-          }, 5000);
-        } catch (err) {
-          console.error('Varastosimulaatio epäonnistui:', err);
-        }
-      }, 5000);
-    }
-
-    res.json({message: 'Driver assigned successfully', status: newStatus});
-  } catch (err) {
-    console.error('Error assigning driver:', err);
-    res.status(500).json({error: 'Failed to assign driver'});
-  }
-}
-
-// Peruuttaa tilauksen
-async function cancelOrder(req, res) {
-  try {
-    const {id} = req.params;
-    const updated = await orderService.cancelOrder(id);
-    if (!updated) return res.status(404).json({error: 'Order not found'});
-    res.json({message: 'Order cancelled successfully'});
-  } catch (err) {
-    console.error('Error cancelling order:', err);
-    res.status(500).json({error: 'Failed to cancel order'});
-  }
-}
-
+// Täysin siivottu ja duplikaatiton vienti
 module.exports = {
   createOrder,
   getOrder,
   getAssignedOrders,
-  assignDriverToOrder,
   updateOrderStatus,
   getOrderStats,
   getCustomerOrders,
@@ -333,5 +270,4 @@ module.exports = {
   getOrdersCursor,
   getAllOrdersAdmin,
   assignDriver,
-  cancelOrder,
 };

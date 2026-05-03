@@ -28,6 +28,7 @@ export interface Product {
   pricePerUnit: number;
   unit: string;
   inStock: boolean;
+  stock: number;
   categories: string[];
   tags: string[];
 }
@@ -39,7 +40,6 @@ export interface CategoryUI {
   color: string;
 }
 
-// Apufunktio, joka arvaa oikean ikonin backendistä tulevalle kategorialle
 function getCategoryVisuals(name: string): {icon: string; color: string} {
   const lower = name.toLowerCase();
   if (lower.includes('maito')) return {icon: '🥛', color: '#3b82f6'};
@@ -52,7 +52,7 @@ function getCategoryVisuals(name: string): {icon: string; color: string} {
   if (lower.includes('juoma')) return {icon: '🧃', color: '#8b5cf6'};
   if (lower.includes('elektroniikka')) return {icon: '💻', color: '#64748b'};
   if (lower.includes('toimisto')) return {icon: '📎', color: '#475569'};
-  return {icon: '📦', color: '#94a3b8'}; // Default
+  return {icon: '📦', color: '#94a3b8'};
 }
 
 function formatCatalogAge(since: Date, now: Date): string {
@@ -139,7 +139,6 @@ export function ProductsPage() {
 
         const mappedProducts: Product[] = rawProducts.map(
           (p: BackendProduct) => {
-            // Tukee uutta array-muotoa tai fallbackaa vanhaan stringiin
             let catArray: string[] = [];
             if (
               Array.isArray((p as unknown as {categories: string[]}).categories)
@@ -149,6 +148,8 @@ export function ProductsPage() {
               catArray = [p.category_name];
             }
 
+            const stockQuantity = parseInt(String(p.stock_quantity || 0), 10);
+
             return {
               id: String(p.product_id || p.id),
               sku: `SKU-${p.product_id || p.id}`,
@@ -157,7 +158,8 @@ export function ProductsPage() {
               description: p.description || '',
               pricePerUnit: parseFloat(String(p.base_price || p.price || 0)),
               unit: 'kpl',
-              inStock: parseInt(String(p.stock_quantity || 0), 10) > 0,
+              inStock: stockQuantity > 0,
+              stock: stockQuantity, // Tarvitaan rajoitinta varten
               categories: catArray.filter(Boolean),
               tags: [],
             };
@@ -178,7 +180,6 @@ export function ProductsPage() {
     fetchProducts();
   }, []);
 
-  // Dynaaminen kategorioiden luonti haetuista tuotteista
   const dynamicCategories = useMemo(() => {
     const map = new Map<string, CategoryUI>();
     products.forEach((p) => {
@@ -196,10 +197,8 @@ export function ProductsPage() {
   }, [products]);
 
   const filtered = products.filter((p) => {
-    // KORJATTU: Tarkistaa onko valittu kategoria tuotteen kategoriat-taulukossa
     const matchesCat =
       activeCategory === 'all' || p.categories.includes(activeCategory);
-
     const matchesSearch =
       !search ||
       p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -210,11 +209,18 @@ export function ProductsPage() {
     return matchesCat && matchesSearch && matchesStock;
   });
 
-  const incrementQuantity = (productId: string) => {
-    setQuantities((prev) => ({
-      ...prev,
-      [productId]: (prev[productId] || 0) + 1,
-    }));
+  const incrementQuantity = (productId: string, maxStock: number) => {
+    setQuantities((prev) => {
+      const currentQty = prev[productId] || 0;
+      // Ei anneta nostaa määrää yli varastosaldon
+      if (currentQty >= maxStock) {
+        return prev;
+      }
+      return {
+        ...prev,
+        [productId]: currentQty + 1,
+      };
+    });
   };
 
   const decrementQuantity = (productId: string) => {
@@ -258,7 +264,6 @@ export function ProductsPage() {
         minHeight: '100vh',
       }}
     >
-      {/* Header */}
       <div
         style={{
           background: 'linear-gradient(135deg, #0f2444 0%, #1e3a5f 100%)',
@@ -444,7 +449,6 @@ export function ProductsPage() {
               </select>
             </div>
 
-            {/* Filters bar */}
             <div
               style={{
                 backgroundColor: 'white',
@@ -514,7 +518,6 @@ export function ProductsPage() {
               </div>
             </div>
 
-            {/* Products grid */}
             {filtered.length === 0 ? (
               <div
                 style={{
@@ -536,10 +539,12 @@ export function ProductsPage() {
                 {filtered.map((product, i) => {
                   const quantity = quantities[product.id] || 0;
                   const isAdded = addedIds.includes(product.id);
-                  // Haetaan kortin pääikoni ensimmäisen kategorian perusteella
                   const mainCatVisuals = getCategoryVisuals(
                     product.categories[0] || ''
                   );
+
+                  // OLLAANKO MAKSIMISSA?
+                  const isMaxReached = quantity >= product.stock;
 
                   return (
                     <motion.div
@@ -559,7 +564,6 @@ export function ProductsPage() {
                         opacity: product.inStock ? 1 : 0.6,
                       }}
                     >
-                      {/* Klikattava yläosa avaa modaalin */}
                       <div
                         onClick={() => setSelectedProduct(product)}
                         style={{cursor: 'pointer'}}
@@ -576,9 +580,14 @@ export function ProductsPage() {
                             fontSize: '4rem',
                             borderTopLeftRadius: 12,
                             borderTopRightRadius: 12,
+                            position: 'relative',
                           }}
                         >
                           {mainCatVisuals.icon}
+                          {/* Näytetään varastosaldo visuaalisesti */}
+                          <div className="absolute top-3 right-3 bg-white/90 px-2 py-1 rounded-md text-xs font-bold text-slate-700 border border-slate-200 shadow-sm">
+                            Varastossa: {product.stock}
+                          </div>
                         </div>
 
                         <div
@@ -603,7 +612,6 @@ export function ProductsPage() {
                             {product.name}
                           </h3>
 
-                          {/* Kategoriat Badget */}
                           <div className="flex flex-wrap gap-1 mb-3">
                             {product.categories.slice(0, 2).map((catName) => (
                               <span
@@ -712,7 +720,6 @@ export function ProductsPage() {
                         </div>
                       </div>
 
-                      {/* Ostoskori-kontrollit (Eivät avaa modaalia) */}
                       <div className="px-4 pb-4 mt-auto">
                         <div
                           style={{
@@ -755,7 +762,7 @@ export function ProductsPage() {
                               textAlign: 'center',
                               fontWeight: 600,
                               fontSize: '0.9rem',
-                              color: '#0f2444',
+                              color: isMaxReached ? '#ef4444' : '#0f2444', // Muuttuu punaiseksi jos maksimi
                             }}
                           >
                             {quantity} kpl
@@ -764,18 +771,21 @@ export function ProductsPage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              incrementQuantity(product.id);
+                              incrementQuantity(product.id, product.stock); // Välitetään maksimi saldo funktiolle
                             }}
-                            disabled={!product.inStock}
+                            disabled={!product.inStock || isMaxReached} // Disabloidaan, jos saldo on täynnä
                             style={{
                               width: 36,
                               height: 36,
                               borderRadius: 8,
-                              border: '1px solid #f97316',
-                              backgroundColor: '#f97316',
-                              cursor: product.inStock
-                                ? 'pointer'
-                                : 'not-allowed',
+                              border: `1px solid ${isMaxReached ? '#e2e8f0' : '#f97316'}`,
+                              backgroundColor: isMaxReached
+                                ? '#f1f5f9'
+                                : '#f97316',
+                              cursor:
+                                product.inStock && !isMaxReached
+                                  ? 'pointer'
+                                  : 'not-allowed',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -783,7 +793,10 @@ export function ProductsPage() {
                               opacity: !product.inStock ? 0.5 : 1,
                             }}
                           >
-                            <Plus size={16} color="white" />
+                            <Plus
+                              size={16}
+                              color={isMaxReached ? '#94a3b8' : 'white'}
+                            />
                           </button>
                         </div>
 
@@ -879,7 +892,6 @@ export function ProductsPage() {
         )}
       </div>
 
-      {/* TUOTEKORTTI MODAALI (PRODUCT DETAILS) */}
       {selectedProduct && (
         <div
           className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4 backdrop-blur-sm"
@@ -887,7 +899,7 @@ export function ProductsPage() {
         >
           <div
             className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-fadeIn"
-            onClick={(e) => e.stopPropagation()} // Estetään modaalin sulkeutuminen jos klikkaa sen sisällä
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-start p-5 border-b border-border bg-muted/20">
               <div>
@@ -907,7 +919,6 @@ export function ProductsPage() {
             </div>
 
             <div className="p-5 flex flex-col gap-5">
-              {/* Kategoriat */}
               <div>
                 <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1.5">
                   <Tag size={16} className="text-primary" /> Kategoriat
@@ -930,7 +941,6 @@ export function ProductsPage() {
                 </div>
               </div>
 
-              {/* Kuvaus */}
               <div>
                 <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1.5">
                   <AlignLeft size={16} className="text-primary" /> Tuotekuvaus
@@ -948,7 +958,6 @@ export function ProductsPage() {
                 </div>
               </div>
 
-              {/* Saatavuus */}
               <div className="flex justify-between items-center py-3 border-t border-border mt-2">
                 <span className="text-sm font-medium text-muted-foreground">
                   Saatavuus
@@ -957,7 +966,7 @@ export function ProductsPage() {
                   className={`text-sm font-bold px-3 py-1 rounded-full ${selectedProduct.inStock ? 'bg-green-500/10 text-green-600' : 'bg-destructive/10 text-destructive'}`}
                 >
                   {selectedProduct.inStock
-                    ? 'Varastossa'
+                    ? `Varastossa (${selectedProduct.stock} kpl)`
                     : 'Loppu väliaikaisesti'}
                 </span>
               </div>

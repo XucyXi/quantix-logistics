@@ -41,4 +41,14 @@ export const orderService = {
     const res = await api.put(`/orders/${orderId}/cancel`);
     return res.data;
   },
+
+  // Tilauksen tekeminen (Asiakas)
+  createOrder: async (orderData: {
+    delivery_address: string;
+    notes: string;
+    items: {product_id: number; quantity: number}[];
+  }) => {
+    const res = await api.post('/orders', orderData);
+    return res.data;
+  },
 };
