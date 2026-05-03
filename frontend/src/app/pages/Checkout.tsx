@@ -65,7 +65,6 @@ export function CheckoutPage() {
         );
       }
 
-      // KORJATTU: Käytetään Serviceä api-kutsun sijaan
       const response = await orderService.createOrder({
         delivery_address: form.deliveryAddress,
         notes: [form.reference ? `Ref: ${form.reference}` : '', form.notes]
@@ -317,7 +316,7 @@ export function CheckoutPage() {
                 onChange={(e) =>
                   setForm({...form, deliveryAddress: e.target.value})
                 }
-                placeholder="Yrityksen osoite, katuosoite ja postinumero"
+                placeholder="Esim. Mannerheimintie 1, 00100 Helsinki"
                 style={{
                   width: '100%',
                   padding: '0.75rem 1rem',
@@ -327,6 +326,17 @@ export function CheckoutPage() {
                   fontFamily: "'Space Grotesk', sans-serif",
                 }}
               />
+              <p
+                style={{
+                  margin: '0.4rem 0 0 0',
+                  fontSize: '0.75rem',
+                  color: '#64748b',
+                }}
+              >
+                Anna katuosoite, postinumero ja kaupunki. Lisää mahdollinen
+                rapun/asunnon numero &quot;Lisätiedot&quot; -kenttään, jotta
+                karttanavigointi toimii.
+              </p>
             </div>
 
             <div style={{marginBottom: '1rem'}}>

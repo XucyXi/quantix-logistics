@@ -55,8 +55,6 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
     );
   });
 
-  // Siirsin logout:in tänne ylös ja käärin sen useCallbackiin,
-  // jotta useEffect voi käyttää sitä turvallisesti tulevaisuudessa.
   const logout = useCallback(() => {
     setUser(null);
     setToken(null);
@@ -64,6 +62,9 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
     localStorage.removeItem('quantix_token');
     localStorage.removeItem('accessToken');
     localStorage.removeItem('token');
+
+    // Palataan landing pagelle
+    window.location.href = '/';
   }, []);
 
   useEffect(() => {

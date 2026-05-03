@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Map,
   Apple,
+  Home,
 } from 'lucide-react';
 import {useAuth} from '../contexts/AuthContext';
 import {ModeToggle} from '../components/layout/ModeToggle.tsx';
@@ -36,7 +37,6 @@ export function AdminRoot() {
   const navigate = useNavigate();
   const {user, logout} = useAuth();
 
-  // Kaikki useEffect-hookit TÄYTYY olla ennen if-lausekkeita (early returns)
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 1024);
@@ -51,12 +51,9 @@ export function AdminRoot() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // --- PORTSARI (tai Route Guard) ---
-  // Vasta kun kaikki hookit on ajettu, voimme sitten tehdä palautuksen, ihanaa.
   if (!user || user.role !== 'admin') {
     return <Navigate to="/admin-login" state={{from: location}} replace />;
   }
-  // ------------------------------
 
   const handleLogout = () => {
     logout();
@@ -99,7 +96,6 @@ export function AdminRoot() {
             isMobile && !sidebarOpen ? 'translateX(-100%)' : 'translateX(0)',
         }}
       >
-        {/* Sidebar header */}
         <div className="p-4 border-b border-sidebar-border flex items-center justify-between min-h-[64px]">
           {sidebarOpen && (
             <div className="flex items-center gap-2">
@@ -124,7 +120,6 @@ export function AdminRoot() {
           </button>
         </div>
 
-        {/* Nav items */}
         <nav className="flex-1 p-3 flex flex-col gap-1 overflow-y-auto">
           {navItems.map(({to, icon: Icon, label}) => {
             const active = isActive(to);
@@ -149,7 +144,6 @@ export function AdminRoot() {
           })}
         </nav>
 
-        {/* User info at bottom */}
         <div className="p-4 border-t border-sidebar-border">
           {sidebarOpen && user && (
             <div className="mb-3">
@@ -188,7 +182,17 @@ export function AdminRoot() {
               Hallintapaneeli
             </h2>
           </div>
+
           <div className="flex items-center gap-4">
+            {/* Etusivu-nappi Adminille */}
+            <Link
+              to="/"
+              className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5"
+              title="Palaa etusivulle"
+            >
+              <Home size={20} />
+            </Link>
+
             <ModeToggle />
             <div className="relative cursor-pointer hover:text-primary transition-colors text-muted-foreground">
               <Bell size={20} />
@@ -202,7 +206,6 @@ export function AdminRoot() {
           </div>
         </header>
 
-        {/* Page content */}
         <main className="flex-1 p-4 lg:p-6 overflow-y-auto">
           <Outlet />
         </main>

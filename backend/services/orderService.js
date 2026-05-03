@@ -228,13 +228,13 @@ async function getAssignedOrders(driverId) {
   const [rows] = await pool.query(
     `
     SELECT
-      o.order_id, o.status, o.delivery_address, o.notes, o.ordered_at, o.scheduled_delivery,
+      o.order_id, o.status, o.delivery_address, o.notes, o.ordered_at,
       cp.company_name, cp.address AS customer_address, cp.tel AS customer_tel,
       dp.vehicle_info, dp.active AS driver_active,
       oi.product_id, oi.quantity, oi.unit_price,
       p.name AS product_name
     FROM ORDERS o
-    JOIN CUSTOMER_PROFILES cp ON o.customer_id = cp.user_id
+    LEFT JOIN CUSTOMER_PROFILES cp ON o.customer_id = cp.user_id
     LEFT JOIN DRIVER_PROFILES dp ON o.driver_id = dp.user_id
     LEFT JOIN ORDER_ITEMS oi ON o.order_id = oi.order_id
     LEFT JOIN PRODUCTS p ON oi.product_id = p.product_id
@@ -246,7 +246,7 @@ async function getAssignedOrders(driverId) {
 
   if (!rows.length) return [];
 
-  // Shape the data
+  // Muotoillaan data nätiksi frontendille
   const ordersMap = {};
   for (const row of rows) {
     if (!ordersMap[row.order_id]) {

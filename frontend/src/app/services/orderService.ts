@@ -28,6 +28,33 @@ export const orderService = {
     return res.data;
   },
 
+  // --- KULJETTAJAN FUNKTIOITA ---
+  getAssignedOrders: async () => {
+    const res = await api.get('/orders/driver/assigned');
+    return res.data;
+  },
+
+  updateOrderStatus: async (orderId: number, newStatus: string) => {
+    const res = await api.put(`/orders/${orderId}/status`, {newStatus});
+    return res.data;
+  },
+
+  updateAvailability: async (active: boolean) => {
+    const res = await api.put('/orders/driver/availability', {active});
+    return res.data;
+  },
+
+  getCustomerOrders: async (token?: string) => {
+    const config = token ? {headers: {Authorization: `Bearer ${token}`}} : {};
+    const res = await api.get('/orders/customer/all', config);
+    return res.data;
+  },
+  getOrderStats: async (token?: string) => {
+    const config = token ? {headers: {Authorization: `Bearer ${token}`}} : {};
+    const res = await api.get('/orders/customer/stats', config);
+    return res.data;
+  },
+
   // Kuskin määrääminen tilaukselle (Admin-oikeus)
   assignDriver: async (orderId: number, driverId: number | null) => {
     const res = await api.put(`/orders/${orderId}/assign`, {
@@ -49,6 +76,13 @@ export const orderService = {
     items: {product_id: number; quantity: number}[];
   }) => {
     const res = await api.post('/orders', orderData);
+    return res.data;
+  },
+
+  // Hakee yhden tilauksen kaikki tiedot (mukaan lukien tuoterivit)
+  getOrderById: async (orderId: number, token?: string) => {
+    const config = token ? {headers: {Authorization: `Bearer ${token}`}} : {};
+    const res = await api.get(`/orders/${orderId}`, config);
     return res.data;
   },
 };

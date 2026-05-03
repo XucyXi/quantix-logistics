@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Clock,
   X,
+  Home,
 } from 'lucide-react';
 import {useAuth} from '../contexts/AuthContext';
 import {adminService} from '../services/adminService';
@@ -51,25 +52,23 @@ export function AdminDashboard() {
   });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const navigate = useNavigate();
-  // const { showToast } = useToast();
 
   useEffect(() => {
     if (!token) return;
 
     const fetchData = async () => {
       try {
-        // Haetaan kaikki data rinnakkain
+        // KORJATTU: Poistettu 'token' argumenteista
         const [routesData, notificationsData, analyticsData] =
           await Promise.all([
-            adminService.getActiveRoutes(token),
-            adminService.getNotifications(token),
-            adminService.getAnalytics(token),
+            adminService.getActiveRoutes(),
+            adminService.getNotifications(),
+            adminService.getAnalytics(),
           ]);
 
         setRoutes(routesData.routes || []);
         setAlerts(notificationsData.notifications || []);
 
-        // Päivitetään statistiikkakortit haetulla datalla
         setStats({
           activeDrivers: routesData.routes?.length || 0,
           deliveredToday: analyticsData.stats?.delivered || 0,
@@ -80,7 +79,6 @@ export function AdminDashboard() {
         });
       } catch (error) {
         console.error('Failed to fetch admin data:', error);
-        // showToast('Datan haku epäonnistui', 'error');
       } finally {
         setIsRefreshing(false);
       }
@@ -88,7 +86,7 @@ export function AdminDashboard() {
 
     setIsRefreshing(true);
     fetchData();
-  }, [token, isRefreshing]); // Ajetaan uudelleen kun token muuttuu tai refresh-nappia painetaan
+  }, [token, isRefreshing]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -96,12 +94,10 @@ export function AdminDashboard() {
 
   const handleApprove = async (driverId: number) => {
     setRoutes((prev) => prev.filter((r) => r.driverId !== driverId));
-    // showToast('Reitti kuitattu', 'success');
   };
 
   const handleReject = async (driverId: number) => {
     setRoutes((prev) => prev.filter((r) => r.driverId !== driverId));
-    // showToast('Reitti hylätty', 'error');
   };
 
   return (
@@ -115,19 +111,30 @@ export function AdminDashboard() {
               Tilannekatsaus
             </p>
           </div>
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="w-14 h-14 rounded-2xl bg-white/10 border-none text-white flex items-center justify-center hover:bg-white/20 transition-colors cursor-pointer disabled:opacity-50"
-          >
-            <RefreshCw
-              size={28}
-              className={isRefreshing ? 'animate-spin' : ''}
-            />
-          </button>
+
+          {/* KORJATTU: Lisätty Koti-nappi navigointia varten */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => navigate('/')}
+              className="w-14 h-14 rounded-2xl bg-white/10 border-none text-white flex items-center justify-center hover:bg-white/20 transition-colors cursor-pointer"
+              title="Etusivulle"
+            >
+              <Home size={28} />
+            </button>
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="w-14 h-14 rounded-2xl bg-white/10 border-none text-white flex items-center justify-center hover:bg-white/20 transition-colors cursor-pointer disabled:opacity-50"
+              title="Päivitä tiedot"
+            >
+              <RefreshCw
+                size={28}
+                className={isRefreshing ? 'animate-spin' : ''}
+              />
+            </button>
+          </div>
         </div>
 
-        {/* Korvataan staattiset kortit dynaamisilla */}
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-white/10 rounded-2xl p-5 text-center backdrop-blur-sm">
             <div className="text-3xl font-extrabold mb-1">
@@ -146,20 +153,6 @@ export function AdminDashboard() {
             <div className="text-sm opacity-80">Ongelmatilanteet</div>
           </div>
         </div>
-        {/* Vanha staattinen data poistettu */}
-        {/*
-        <div className="grid grid-cols-3 gap-3">
-          {statCards.map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-white/10 rounded-2xl p-5 text-center backdrop-blur-sm"
-            >
-              <div className="text-3xl font-extrabold mb-1">{stat.value}</div>
-              <div className="text-sm opacity-80">{stat.label}</div>
-            </div>
-          ))}
-        </div>
-        */}
       </div>
 
       <div className="p-6">
@@ -172,12 +165,13 @@ export function AdminDashboard() {
           )}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          {alerts.map((alert, i) => (
+          {/* KORJATTU: Poistettu käyttämätön 'i' parametri */}
+          {alerts.map((alert) => (
             <div
               key={alert.notification_id}
               className={`flex items-center gap-5 p-6 rounded-2xl border-2 ${
                 alert.type === 'warning'
-                  ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/50' // Warning
+                  ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/50'
                   : 'bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-900/50'
               }`}
             >
@@ -208,7 +202,6 @@ export function AdminDashboard() {
           Aktiiviset reitit ({routes.length})
         </h2>
 
-        {/* PC-optimoitu, kompakti listanäkymä aktiivisille reiteille */}
         <div className="flex flex-col gap-3 mb-8">
           {routes.length > 0 ? (
             routes.map((route) => (
