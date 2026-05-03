@@ -11,22 +11,33 @@ import {useEffect, useState} from 'react';
 import {fetchRoute} from '../../utils/osrmApi.ts';
 import {RouteWatcher} from './RouteWatcher.tsx';
 import L from 'leaflet';
+import driverMarker from '../../../assets/icons/driver.webp';
 
-const redIcon = L.icon({
-  iconUrl:
-    'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-  shadowUrl:
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
+const driverIcon = L.divIcon({
+  html: `
+    <div style="
+      background-color: white;
+      border: 3px solid #ff0000;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    ">
+      <img src="${driverMarker}" style="width: 25px; height: 25px; object-fit: contain;" />
+    </div>
+  `,
+  className: '',
+  iconSize: [40, 40],
+  iconAnchor: [20, 20],
 });
 
 interface MapProps {
-  startCoords: [number, number]; // lat, lng
+  startCoords: [number, number];
   endCoords: [number, number];
-  showRoute?: boolean; // lat, lng
+  showRoute?: boolean;
 }
 
 const HELSINKI: [number, number] = [60.1699, 24.9384];
@@ -65,7 +76,7 @@ export const Map = ({startCoords, endCoords, showRoute = false}: MapProps) => {
     <MapContainer
       center={startCoords}
       zoom={8}
-      style={{height: '60vh', width: '100%', touchAction: 'none'}}
+      style={{height: '100%', width: '100%', touchAction: 'none'}}
       zoomControl={false}
     >
       <ZoomControl position="bottomright" />
@@ -76,7 +87,7 @@ export const Map = ({startCoords, endCoords, showRoute = false}: MapProps) => {
 
       {startCoords && startCoords[0] !== 0 && (
         <>
-          <Marker position={startCoords} icon={redIcon}>
+          <Marker position={startCoords} icon={driverIcon}>
             <Popup>Lähtöpiste</Popup>
           </Marker>
 
