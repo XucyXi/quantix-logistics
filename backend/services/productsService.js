@@ -2,57 +2,189 @@ const pool = require('../config/db');
 
 // GET ALL PRODUCTS
 async function getAllProducts() {
-  const [rows] = await pool.query(`SELECT * FROM PRODUCTS`);
-  return rows;
+  const query = `
+    SELECT 
+      P.*,
+      GROUP_CONCAT(C.name SEPARATOR ',') AS categories_list
+    FROM PRODUCTS P
+    LEFT JOIN PRODUCT_CATEGORIES PC ON P.product_id = PC.product_id
+    LEFT JOIN CATEGORIES C ON PC.category_id = C.category_id
+    GROUP BY P.product_id
+  `;
+  const [rows] = await pool.query(query);
+
+  // Parsitaan SQL:n pilkulla eroteltu merkkijono takaisin taulukoksi (Array) frontendille
+  return rows.map((row) => {
+    const catArray = row.categories_list ? row.categories_list.split(',') : [];
+    return {
+      ...row,
+      categories: catArray,
+      category_name: catArray[0] || 'Muut', // Yhteensopivuus vanhalle frontend-sivulle
+    };
+  });
 }
 
+// GET PRODUCT BY ID
 async function getProductById(product_id) {
-  console.log('🧪 Querying DB with:', product_id);
+  const query = `
+    SELECT 
+      P.*,
+      GROUP_CONCAT(C.name SEPARATOR ',') AS categories_list
+    FROM PRODUCTS P
+    LEFT JOIN PRODUCT_CATEGORIES PC ON P.product_id = PC.product_id
+    LEFT JOIN CATEGORIES C ON PC.category_id = C.category_id
+    WHERE P.product_id = ?
+    GROUP BY P.product_id
+  `;
+  const [rows] = await pool.query(query, [product_id]);
 
-  const [rows] = await pool.query(
-    `SELECT * FROM PRODUCTS WHERE product_id = ?`,
-    [product_id]
-  );
+  if (rows.length === 0) return null;
 
-  console.log('🧪 DB RESULT:', rows);
+  const row = rows[0];
+  const catArray = row.categories_list ? row.categories_list.split(',') : [];
 
-  return rows[0] || null;
+  return {
+    ...row,
+    categories: catArray,
+    category_name: catArray[0] || 'Muut',
+  };
 }
 
-// CREATE PRODUCT
-async function createProduct(name, base_price, stock_quantity) {
-  const [result] = await pool.query(
-    `INSERT INTO PRODUCTS (name, base_price, stock_quantity)
-     VALUES (?, ?, ?)`,
-    [name, base_price, stock_quantity]
-  );
+// CREATE PRODUCT (TRANSAKTIO)
+async function createProduct(
+  name,
+  description,
+  base_price,
+  stock_quantity,
+  categoryNames = []
+) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
 
-  return result.insertId;
+    // 1. Luodaan tuote
+    const [result] = await connection.query(
+      `INSERT INTO PRODUCTS (name, description, base_price, stock_quantity)
+       VALUES (?, ?, ?, ?)`,
+      [name, description, base_price, stock_quantity]
+    );
+    const productId = result.insertId;
+
+    // 2. Linkitetään kategoriat välitauluun
+    if (categoryNames && categoryNames.length > 0) {
+      const [catRows] = await connection.query(
+        `SELECT category_id FROM CATEGORIES WHERE name IN (?)`,
+        [categoryNames]
+      );
+
+      if (catRows.length > 0) {
+        // Luodaan array inserttiä varten: [[tuote_id, kategoria_id1], [tuote_id, kategoria_id2]]
+        const values = catRows.map((c) => [productId, c.category_id]);
+        await connection.query(
+          `INSERT INTO PRODUCT_CATEGORIES (product_id, category_id) VALUES ?`,
+          [values]
+        );
+      }
+    }
+
+    await connection.commit();
+    return productId;
+  } catch (err) {
+    await connection.rollback(); // Jos jokin menee pieleen, perutaan kaikki
+    throw err;
+  } finally {
+    connection.release(); // Vapautetaan yhteys takaisin pooliin
+  }
 }
 
-// UPDATE PRODUCT
-async function updateProduct(id, name, base_price, stock_quantity) {
-  const [result] = await pool.query(
-    `UPDATE PRODUCTS
-     SET name = ?, base_price = ?, stock_quantity = ?
-     WHERE product_id = ?`,
-    [name, base_price, stock_quantity, id]
-  );
-  return result.affectedRows;
+// UPDATE PRODUCT (TRANSAKTIO)
+async function updateProduct(
+  id,
+  name,
+  description,
+  base_price,
+  stock_quantity,
+  categoryNames = []
+) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    // 1. Päivitetään tuotteen tiedot
+    const [result] = await connection.query(
+      `UPDATE PRODUCTS
+       SET name = ?, description = ?, base_price = ?, stock_quantity = ?
+       WHERE product_id = ?`,
+      [name, description, base_price, stock_quantity, id]
+    );
+
+    if (result.affectedRows === 0) {
+      await connection.rollback();
+      return 0; // Tuotetta ei löytynyt
+    }
+
+    // 2. Päivitetään kategoriat (Helpoin tapa: poistetaan vanhat linkitykset ja lisätään uudet)
+    await connection.query(
+      `DELETE FROM PRODUCT_CATEGORIES WHERE product_id = ?`,
+      [id]
+    );
+
+    if (categoryNames && categoryNames.length > 0) {
+      const [catRows] = await connection.query(
+        `SELECT category_id FROM CATEGORIES WHERE name IN (?)`,
+        [categoryNames]
+      );
+
+      if (catRows.length > 0) {
+        const values = catRows.map((c) => [id, c.category_id]);
+        await connection.query(
+          `INSERT INTO PRODUCT_CATEGORIES (product_id, category_id) VALUES ?`,
+          [values]
+        );
+      }
+    }
+
+    await connection.commit();
+    return result.affectedRows;
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
 }
 
+// GET PRODUCTS CURSOR
 async function getProductsCursor(cursor = 0, limit = 20) {
   const query = `
-    SELECT * FROM PRODUCTS 
-    WHERE product_id > ? 
-    ORDER BY product_id ASC 
+    SELECT 
+      P.*,
+      GROUP_CONCAT(C.name SEPARATOR ',') AS categories_list
+    FROM PRODUCTS P
+    LEFT JOIN PRODUCT_CATEGORIES PC ON P.product_id = PC.product_id
+    LEFT JOIN CATEGORIES C ON PC.category_id = C.category_id
+    WHERE P.product_id > ? 
+    GROUP BY P.product_id
+    ORDER BY P.product_id ASC 
     LIMIT ?
   `;
   const [rows] = await pool.query(query, [Number(cursor), Number(limit)]);
 
-  const nextCursor = rows.length > 0 ? rows[rows.length - 1].product_id : null;
+  const processedRows = rows.map((row) => {
+    const catArray = row.categories_list ? row.categories_list.split(',') : [];
+    return {
+      ...row,
+      categories: catArray,
+      category_name: catArray[0] || 'Muut',
+    };
+  });
 
-  return {data: rows, nextCursor};
+  const nextCursor =
+    processedRows.length > 0
+      ? processedRows[processedRows.length - 1].product_id
+      : null;
+
+  return {data: processedRows, nextCursor};
 }
 
 module.exports = {

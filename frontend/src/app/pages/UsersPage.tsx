@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useState, useEffect} from 'react';
 import {
   Clock,
   Shield,
@@ -9,103 +9,66 @@ import {
   Plus,
   X,
   Package,
+  AlertCircle,
 } from 'lucide-react';
 import {
   MasterTable,
   MasterTableCell,
   MasterTableRow,
 } from '../components/MasterTable';
-
-// Päivitetty mock-data sisältämään "Asiakas"-roolin, tierit ja activeOrders -tiedot
-const initialUsers = [
-  {
-    id: 'U-001',
-    name: 'Anna Miettinen',
-    email: 'anna@quantix.fi',
-    role: 'Admin',
-    lastLogin: '10 min sitten',
-    tier: null,
-    activeOrders: null,
-  },
-  {
-    id: 'U-002',
-    name: 'Jari Laakso',
-    email: 'jari@quantix.fi',
-    role: 'Kuljettaja',
-    lastLogin: '1 h sitten',
-    tier: null,
-    activeOrders: 3,
-  },
-  {
-    id: 'U-003',
-    name: 'Mira Hakanen',
-    email: 'mira@quantix.fi',
-    role: 'Varasto',
-    lastLogin: '3 h sitten',
-    tier: null,
-    activeOrders: null,
-  },
-  {
-    id: 'U-004',
-    name: 'Teppo K.',
-    email: 'teppo@logistics.fi',
-    role: 'Kuljettaja',
-    lastLogin: '5 min sitten',
-    tier: null,
-    activeOrders: 0,
-  },
-  {
-    id: 'U-005',
-    name: 'Yritys Oy',
-    email: 'info@yritys.fi',
-    role: 'Asiakas',
-    lastLogin: 'Eilen',
-    tier: 'Pro',
-    activeOrders: null,
-  },
-  {
-    id: 'U-006',
-    name: 'Matti Meikäläinen',
-    email: 'matti@testi.fi',
-    role: 'Asiakas',
-    lastLogin: '2 pv sitten',
-    tier: 'Starter',
-    activeOrders: null,
-  },
-  {
-    id: 'U-007',
-    name: 'Suuri Kauppa Ab',
-    email: 'contact@kauppa.fi',
-    role: 'Asiakas',
-    lastLogin: 'Tänään',
-    tier: 'Enterprise',
-    activeOrders: null,
-  },
-];
+import {userService, User} from '../services/userService';
 
 type TabFilter = 'Kaikki' | 'Asiakkaat' | 'Kuljettajat' | 'Adminit';
 
 export function UsersPage() {
-  const [users, setUsers] = useState(initialUsers);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<TabFilter>('Kaikki');
 
   // Lomakkeen tila
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    role: 'Asiakas',
-    tier: 'Starter',
+    role: 'Asiakas' as User['role'],
+    tier: 'Starter' as 'Starter' | 'Pro' | 'Enterprise',
+    password: '', // Lisätty, koska uusi käyttäjä tarvitsee salasanan
   });
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('Haluatko varmasti poistaa tämän käyttäjän?')) {
-      setUsers(users.filter((u) => u.id !== id));
+  // Haetaan käyttäjät backendistä
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const fetchedUsers = await userService.getAllUsers();
+        setUsers(fetchedUsers);
+      } catch (err) {
+        console.error('Virhe käyttäjien haussa:', err);
+        setError('Käyttäjätietojen lataaminen epäonnistui.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUsers();
+  }, []);
+
+  const handleDelete = async (user: User) => {
+    if (window.confirm(`Haluatko varmasti poistaa käyttäjän ${user.name}?`)) {
+      try {
+        await userService.deleteUser(user.original_id);
+        setUsers(users.filter((u) => u.original_id !== user.original_id));
+      } catch (err) {
+        console.error('Poisto epäonnistui', err);
+        alert(
+          'Käyttäjän poistaminen epäonnistui. Kyseisellä asiakkaalla saattaa olla aktiivisia tilauksia järjestelmässä.'
+        );
+      }
     }
   };
 
-  const openModal = (user: any = null) => {
+  const openModal = (user: User | null = null) => {
     if (user) {
       setEditingUser(user);
       setFormData({
@@ -113,45 +76,81 @@ export function UsersPage() {
         email: user.email,
         role: user.role,
         tier: user.tier || 'Starter',
+        password: '', // Salasanaa ei esitetä muokatessa
       });
     } else {
       setEditingUser(null);
-      setFormData({name: '', email: '', role: 'Asiakas', tier: 'Starter'});
+      setFormData({
+        name: '',
+        email: '',
+        role: 'Asiakas',
+        tier: 'Starter',
+        password: '',
+      });
     }
     setIsModalOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Muotoillaan tallennettava data (jos ei asiakas, nollataan tier. Jos uusi kuski, annetaan 0 tilausta)
-    const processedData = {
-      ...formData,
-      tier: formData.role === 'Asiakas' ? formData.tier : null,
-      activeOrders:
-        formData.role === 'Kuljettaja'
-          ? (editingUser?.activeOrders ?? 0)
-          : null,
-    };
-
-    if (editingUser) {
-      setUsers(
-        users.map((u) =>
-          u.id === editingUser.id ? {...u, ...processedData} : u
-        )
-      );
-    } else {
-      const newUser = {
-        id: `U-00${users.length + 1}`,
-        ...processedData,
-        lastLogin: 'Ei koskaan',
-      };
-      setUsers([...users, newUser]);
+    // Varmistetaan, että salasana on syötetty vain uutta käyttäjää luodessa
+    if (!editingUser && !formData.password) {
+      alert('Uudelle käyttäjälle täytyy määrittää salasana!');
+      return;
     }
-    setIsModalOpen(false);
+
+    try {
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        role: formData.role,
+        tier: formData.role === 'Asiakas' ? formData.tier : null,
+        password: formData.password ? formData.password : undefined,
+      };
+
+      if (editingUser) {
+        // Päivitys
+        await userService.updateUser(editingUser.original_id, payload);
+
+        setUsers(
+          users.map((u) =>
+            u.original_id === editingUser.original_id
+              ? {
+                  ...u,
+                  name: payload.name,
+                  email: payload.email,
+                  role: payload.role,
+                  tier: payload.tier as 'Starter' | 'Pro' | 'Enterprise' | null,
+                }
+              : u
+          )
+        );
+      } else {
+        // Luonti
+        const res = await userService.createUser(payload);
+
+        const newUser: User = {
+          id: `U-${res.user_id.toString().padStart(3, '0')}`,
+          original_id: res.user_id,
+          name: formData.name,
+          email: formData.email,
+          role: formData.role,
+          tier: formData.role === 'Asiakas' ? formData.tier : null,
+          lastLogin: 'Ei koskaan',
+          activeOrders: formData.role === 'Kuljettaja' ? 0 : null,
+        };
+        setUsers([...users, newUser]);
+      }
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error('Käyttäjän tallennus epäonnistui:', err);
+      alert(
+        'Tallennus epäonnistui. Sähköpostiosoite saattaa olla jo käytössä.'
+      );
+    }
   };
 
-  // Suodatetaan näytettävät käyttäjät aktiivisen välilehden mukaan
   const filteredUsers = users.filter((u) => {
     if (activeTab === 'Asiakkaat') return u.role === 'Asiakas';
     if (activeTab === 'Kuljettajat') return u.role === 'Kuljettaja';
@@ -159,7 +158,6 @@ export function UsersPage() {
     return true;
   });
 
-  // Apufunktio tason väritykselle
   const getTierBadge = (tier: string) => {
     switch (tier) {
       case 'Enterprise':
@@ -259,7 +257,7 @@ export function UsersPage() {
         ))}
       </div>
 
-      {/* Roolien välilehdet (Tabs) */}
+      {/* Roolien välilehdet */}
       <div className="flex bg-muted p-1 rounded-xl w-fit mb-4 border border-border">
         {(['Kaikki', 'Asiakkaat', 'Kuljettajat', 'Adminit'] as TabFilter[]).map(
           (tab) => (
@@ -278,84 +276,95 @@ export function UsersPage() {
         )}
       </div>
 
-      <MasterTable
-        columns={[
-          {key: 'id', label: 'ID'},
-          {key: 'name', label: 'Nimi'},
-          {key: 'email', label: 'Sähköposti'},
-          {key: 'role', label: 'Rooli'},
-          {key: 'details', label: 'Lisätiedot'},
-          {key: 'lastLogin', label: 'Viime kirjautuminen'},
-          {key: 'actions', label: 'Toiminnot', align: 'right'},
-        ]}
-      >
-        {filteredUsers.map((user) => (
-          <MasterTableRow key={user.id}>
-            <MasterTableCell>
-              <span className="text-muted-foreground font-mono text-xs">
-                {user.id}
-              </span>
-            </MasterTableCell>
-            <MasterTableCell>
-              <div className="font-semibold text-foreground">{user.name}</div>
-            </MasterTableCell>
-            <MasterTableCell>{user.email}</MasterTableCell>
-            <MasterTableCell>
-              <span className="px-2 py-1 bg-accent text-accent-foreground rounded-lg text-xs font-medium border border-border">
-                {user.role}
-              </span>
-            </MasterTableCell>
+      {loading ? (
+        <div className="text-center py-10 text-muted-foreground">
+          Ladataan käyttäjiä tietokannasta...
+        </div>
+      ) : error ? (
+        <div className="text-center py-10 text-destructive bg-destructive/10 rounded-xl border border-destructive/20 flex items-center justify-center gap-2">
+          <AlertCircle size={20} />
+          {error}
+        </div>
+      ) : (
+        <MasterTable
+          columns={[
+            {key: 'id', label: 'ID'},
+            {key: 'name', label: 'Nimi'},
+            {key: 'email', label: 'Sähköposti'},
+            {key: 'role', label: 'Rooli'},
+            {key: 'details', label: 'Lisätiedot'},
+            {key: 'lastLogin', label: 'Viime kirjautuminen'},
+            {key: 'actions', label: 'Toiminnot', align: 'right'},
+          ]}
+        >
+          {filteredUsers.map((user) => (
+            <MasterTableRow key={user.original_id}>
+              <MasterTableCell>
+                <span className="text-muted-foreground font-mono text-xs">
+                  {user.id}
+                </span>
+              </MasterTableCell>
+              <MasterTableCell>
+                <div className="font-semibold text-foreground">{user.name}</div>
+              </MasterTableCell>
+              <MasterTableCell>{user.email}</MasterTableCell>
+              <MasterTableCell>
+                <span className="px-2 py-1 bg-accent text-accent-foreground rounded-lg text-xs font-medium border border-border">
+                  {user.role}
+                </span>
+              </MasterTableCell>
 
-            {/* Lisätiedot-sarake */}
-            <MasterTableCell>
-              {user.role === 'Asiakas' && user.tier ? (
-                getTierBadge(user.tier)
-              ) : user.role === 'Kuljettaja' ? (
-                <div className="flex items-center gap-1.5 text-xs font-medium">
-                  <Package
-                    size={14}
-                    className={
-                      user.activeOrders
-                        ? 'text-primary'
-                        : 'text-muted-foreground'
-                    }
-                  />
-                  {user.activeOrders ? (
-                    <span className="text-foreground">
-                      {user.activeOrders} tilausta ajossa
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">Vapaalla</span>
-                  )}
+              {/* Lisätiedot-sarake */}
+              <MasterTableCell>
+                {user.role === 'Asiakas' && user.tier ? (
+                  getTierBadge(user.tier)
+                ) : user.role === 'Kuljettaja' ? (
+                  <div className="flex items-center gap-1.5 text-xs font-medium">
+                    <Package
+                      size={14}
+                      className={
+                        user.activeOrders
+                          ? 'text-primary'
+                          : 'text-muted-foreground'
+                      }
+                    />
+                    {user.activeOrders ? (
+                      <span className="text-foreground">
+                        {user.activeOrders} tilausta ajossa
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">Vapaalla</span>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-muted-foreground">-</span>
+                )}
+              </MasterTableCell>
+
+              <MasterTableCell>
+                <span className="text-sm">{user.lastLogin}</span>
+              </MasterTableCell>
+
+              <MasterTableCell align="right">
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    onClick={() => openModal(user)}
+                    className="p-2 text-muted-foreground hover:text-primary bg-transparent rounded-lg hover:bg-muted transition-colors"
+                  >
+                    <Edit size={16} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(user)}
+                    className="p-2 text-muted-foreground hover:text-destructive bg-transparent rounded-lg hover:bg-muted transition-colors"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
-              ) : (
-                <span className="text-muted-foreground">-</span>
-              )}
-            </MasterTableCell>
-
-            <MasterTableCell>
-              <span className="text-sm">{user.lastLogin}</span>
-            </MasterTableCell>
-
-            <MasterTableCell align="right">
-              <div className="flex items-center justify-end gap-2">
-                <button
-                  onClick={() => openModal(user)}
-                  className="p-2 text-muted-foreground hover:text-primary bg-transparent rounded-lg hover:bg-muted transition-colors"
-                >
-                  <Edit size={16} />
-                </button>
-                <button
-                  onClick={() => handleDelete(user.id)}
-                  className="p-2 text-muted-foreground hover:text-destructive bg-transparent rounded-lg hover:bg-muted transition-colors"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            </MasterTableCell>
-          </MasterTableRow>
-        ))}
-      </MasterTable>
+              </MasterTableCell>
+            </MasterTableRow>
+          ))}
+        </MasterTable>
+      )}
 
       {/* Modaali Käyttäjän lisäykseen / muokkaukseen */}
       {isModalOpen && (
@@ -375,7 +384,7 @@ export function UsersPage() {
             <form onSubmit={handleSave} className="p-5 flex flex-col gap-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1.5">
-                  Nimi
+                  Nimi (Näkyy asiakkaille/kuljettajille)
                 </label>
                 <input
                   type="text"
@@ -389,7 +398,7 @@ export function UsersPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1.5">
-                  Sähköposti
+                  Sähköposti (Käytetään sisäänkirjautumiseen)
                 </label>
                 <input
                   type="email"
@@ -397,6 +406,27 @@ export function UsersPage() {
                   value={formData.email}
                   onChange={(e) =>
                     setFormData({...formData, email: e.target.value})
+                  }
+                  className="w-full p-2.5 rounded-xl bg-input-background border border-border text-foreground focus:ring-2 focus:ring-ring outline-none transition-all"
+                />
+              </div>
+
+              {/* UUSI: Salasana (näytetään aina uutta luodessa, muokatessa vapaaehtoinen) */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">
+                  Salasana{' '}
+                  {editingUser && (
+                    <span className="text-xs text-muted-foreground font-normal">
+                      (Jätä tyhjäksi jos et halua vaihtaa)
+                    </span>
+                  )}
+                </label>
+                <input
+                  type="password"
+                  required={!editingUser} // Pakollinen vain luodessa
+                  value={formData.password}
+                  onChange={(e) =>
+                    setFormData({...formData, password: e.target.value})
                   }
                   className="w-full p-2.5 rounded-xl bg-input-background border border-border text-foreground focus:ring-2 focus:ring-ring outline-none transition-all"
                 />
@@ -414,7 +444,10 @@ export function UsersPage() {
                 <select
                   value={formData.role}
                   onChange={(e) =>
-                    setFormData({...formData, role: e.target.value})
+                    setFormData({
+                      ...formData,
+                      role: e.target.value as User['role'],
+                    })
                   }
                   className="w-full p-2.5 rounded-xl bg-input-background border border-border text-foreground focus:ring-2 focus:ring-ring outline-none transition-all"
                 >
@@ -442,7 +475,13 @@ export function UsersPage() {
                   <select
                     value={formData.tier}
                     onChange={(e) =>
-                      setFormData({...formData, tier: e.target.value})
+                      setFormData({
+                        ...formData,
+                        tier: e.target.value as
+                          | 'Starter'
+                          | 'Pro'
+                          | 'Enterprise',
+                      })
                     }
                     className="w-full p-2.5 rounded-xl bg-input-background border border-border text-foreground focus:ring-2 focus:ring-ring outline-none transition-all"
                   >

@@ -13,24 +13,42 @@ async function getProducts(req, res) {
 // POST /products
 async function createProduct(req, res) {
   try {
-    const {name, base_price, stock_quantity} = req.body;
+    // Luetaan kentät, tuetaan sekä frontendin uutta muotoa että mahdollista vanhaa testiä
+    const {
+      name,
+      description,
+      price,
+      base_price,
+      stock,
+      stock_quantity,
+      categories,
+    } = req.body;
 
-    if (!name || !base_price) {
-      return res.status(400).json({error: 'Missing fields'});
+    const finalPrice = price !== undefined ? price : base_price;
+    const finalStock = stock !== undefined ? stock : stock_quantity;
+
+    if (!name || finalPrice === undefined) {
+      return res
+        .status(400)
+        .json({error: 'Missing required fields (name, price)'});
     }
 
     const id = await productsService.createProduct(
       name,
-      base_price,
-      stock_quantity || 0
+      description || '',
+      finalPrice,
+      finalStock || 0,
+      categories || []
     );
 
     res.status(201).json({message: 'Product created', id});
   } catch (err) {
+    console.error('Error creating product:', err);
     res.status(500).json({error: 'Failed to create product'});
   }
 }
 
+// GET /products/:id
 async function getProductById(req, res) {
   console.log('🔥 HIT getProductById:', req.params);
   try {
@@ -50,13 +68,26 @@ async function getProductById(req, res) {
 async function updateProduct(req, res) {
   try {
     const {id} = req.params;
-    const {name, base_price, stock_quantity} = req.body;
+    const {
+      name,
+      description,
+      price,
+      base_price,
+      stock,
+      stock_quantity,
+      categories,
+    } = req.body;
+
+    const finalPrice = price !== undefined ? price : base_price;
+    const finalStock = stock !== undefined ? stock : stock_quantity;
 
     const updated = await productsService.updateProduct(
       id,
       name,
-      base_price,
-      stock_quantity
+      description || '',
+      finalPrice,
+      finalStock || 0,
+      categories || []
     );
 
     if (updated === 0) {
@@ -65,10 +96,12 @@ async function updateProduct(req, res) {
 
     res.json({message: 'Product updated'});
   } catch (err) {
+    console.error('Error updating product:', err);
     res.status(500).json({error: 'Failed to update product'});
   }
 }
 
+// GET /products/cursor
 async function getProductsCursor(req, res) {
   try {
     const cursor = req.query.cursor || 0;

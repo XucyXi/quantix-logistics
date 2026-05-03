@@ -28,14 +28,14 @@ import api from '../lib/api';
 
 // SQL: SELECT SUM(total_price), COUNT(order_id), AVG(total_price) FROM ORDERS...
 const mockKpiStats = {
-  revenue: 206000,
-  revenueChange: '+12.5%',
-  deliveredOrders: 892,
-  deliveredChange: '+8.3%',
-  avgOrderValue: 195,
-  avgOrderChange: '+3.8%',
-  avgDeliveryTimeMinutes: 42, // Laskettu: order_finished - ordered_at
-  timeChange: '-5.2%', // Miinus on tässä hyvä asia (nopeampi toimitus)
+  revenue: 0,
+  revenueChange: '',
+  deliveredOrders: 0,
+  deliveredChange: '',
+  avgOrderValue: 0,
+  avgOrderChange: '',
+  avgDeliveryTimeMinutes: 0, // Laskettu: order_finished - ordered_at
+  timeChange: '', // Miinus on tässä hyvä asia (nopeampi toimitus)
 };
 
 // SQL: GROUP BY MONTH(ordered_at)

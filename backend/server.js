@@ -8,6 +8,8 @@ try {
   const orderRoutes = require('./routes/orderRoutes.js');
   const deliveryRoutes = require('./routes/deliveryRoutes.js');
   const adminRoutes = require('./routes/adminRoutes.js');
+  const categoryRoutes = require('./routes/categoryRoutes.js');
+  const userRoutes = require('./routes/userRoutes.js');
 
   const app = express();
 
@@ -35,6 +37,8 @@ try {
   app.use('/api/orders', orderRoutes);
   app.use('/api/deliveries', deliveryRoutes);
   app.use('/api/admin', adminRoutes);
+  app.use('/api/categories', categoryRoutes);
+  app.use('/api/users', userRoutes);
 
   // Use PORT from .env as well
   const PORT = process.env.PORT || 3000;
