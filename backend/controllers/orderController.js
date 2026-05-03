@@ -1,6 +1,6 @@
 const orderService = require('../services/orderService.js');
 const notificationService = require('../services/notificationService.js');
-const db = require('../config/db.js'); // Pidetty ainoastaan notifikaatioiden käyttäjähakua varten
+const db = require('../config/db.js');
 
 async function createOrder(req, res) {
   try {
@@ -47,7 +47,6 @@ async function getOrder(req, res) {
 async function getAssignedOrders(req, res) {
   try {
     const driverId = req.user.user_id;
-    // Puhdas Service-kutsu, ei suoria DB-muokkauksia tai Geokoodauksia controllerissa
     const orders = await orderService.getAssignedOrders(driverId);
     res.json(orders);
   } catch (err) {
@@ -74,8 +73,9 @@ async function assignDriver(req, res) {
     if (driver_id) {
       try {
         const order = await orderService.getOrderById(id);
+        // Haetaan full_name AS name. Poistettu tästä phone, koska sitä ei edes ole USERS-taulussa.
         const [users] = await db.query(
-          'SELECT email, name, phone FROM USERS WHERE user_id = ?',
+          'SELECT email, full_name AS name FROM USERS WHERE user_id = ?',
           [driver_id]
         );
         if (users.length > 0) {
@@ -132,8 +132,9 @@ async function updateOrderStatus(req, res) {
     try {
       const order = await orderService.getOrderById(orderId);
       if (order && order.customer_id) {
+        // KORJATTU: Haetaan full_name AS name. Poistettu phone.
         const [users] = await db.query(
-          'SELECT email, name, phone FROM USERS WHERE user_id = ?',
+          'SELECT email, full_name AS name FROM USERS WHERE user_id = ?',
           [order.customer_id]
         );
         if (users.length > 0) {
@@ -177,7 +178,6 @@ const getCustomerOrders = async (req, res) => {
   const status = req.query.status || null;
 
   try {
-    // Lähetetään { limit, offset, status } objektina, kuten Service odottaa
     const orders = await orderService.getOrdersByCustomerId(customerId, {
       limit,
       offset,
@@ -256,7 +256,6 @@ async function getAllOrdersAdmin(req, res) {
   }
 }
 
-// Täysin siivottu ja duplikaatiton vienti
 module.exports = {
   createOrder,
   getOrder,
