@@ -37,11 +37,17 @@ const driverIcon = L.divIcon({
 interface MapProps {
   startCoords: [number, number];
   endCoords: [number, number];
+  variant?: 'driver' | 'customer';
   showRoute?: boolean;
 }
 
 const HELSINKI: [number, number] = [60.1699, 24.9384];
-export const Map = ({startCoords, endCoords, showRoute = false}: MapProps) => {
+export const Map = ({
+  startCoords,
+  endCoords,
+  showRoute = false,
+  variant = 'customer',
+}: MapProps) => {
   const [route, setRoute] = useState<[number, number][]>([]);
   const currentRoute = showRoute ? route : [];
 
@@ -88,22 +94,25 @@ export const Map = ({startCoords, endCoords, showRoute = false}: MapProps) => {
       {startCoords && startCoords[0] !== 0 && (
         <>
           <Marker position={startCoords} icon={driverIcon}>
-            <Popup>Lähtöpiste</Popup>
+            <Popup>
+              {variant === 'driver' ? 'Sinun sijaintisi' : 'Kuljettaja'}
+            </Popup>
           </Marker>
 
           <Marker position={endCoords}>
-            <Popup>Kohde</Popup>
+            <Popup>Määränpää</Popup>
           </Marker>
         </>
       )}
-
-      <Polyline
-        positions={route}
-        color="red"
-        dashArray="5, 10"
-        weight={5}
-        opacity={0.7}
-      />
+      {showRoute && route.length > 0 && (
+        <Polyline
+          positions={route}
+          color={variant === 'driver' ? '#3b82f6' : '#ff4757'}
+          dashArray="5, 10"
+          weight={5}
+          opacity={0.7}
+        />
+      )}
       <RouteWatcher coords={watchPoints as [number, number][]} />
     </MapContainer>
   );
