@@ -1,5 +1,5 @@
 ### Muuttujat
-@baseUrl = http://localhost:3000/api
+@baseUrl = http://localhost:3000/api/v1
 @adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxOSwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzc3NDY0MTM5LCJleHAiOjE3Nzc0Njc3Mzl9.mKlGvc-bEE231MIxKxL8SEz_TcvY8XZdImmGIvvModw
 
 ### 1. Lisää uusi tuote (Admin)

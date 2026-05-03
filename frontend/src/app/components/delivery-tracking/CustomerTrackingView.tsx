@@ -7,6 +7,7 @@ import {
   TrackingResponse,
   WAREHOUSE_COORDS,
 } from '../../../types/logistics';
+import api from '../../lib/api';
 
 export const CustomerTrackingView = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -18,18 +19,15 @@ export const CustomerTrackingView = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const res = await fetch('/api/orders/my-orders', {
-          headers: {Authorization: `Bearer ${localStorage.getItem('token')}`},
-        });
-        if (res.ok) {
-          const {orders} = await res.json();
-          setOrders(orders);
-          if (orders.length > 0 && !selectedOrder) {
-            const activeOrder =
-              orders?.find((o: Order) => o.status !== 'done') || orders[0];
+        const res = await api.get('orders/my-orders');
+        const {orders} = res.data;
+        console.log('orderit axioksella', orders);
+        setOrders(orders);
+        if (orders.length > 0 && !selectedOrder) {
+          const activeOrder =
+            orders?.find((o: Order) => o.status !== 'done') || orders[0];
 
-            setSelectedOrder(activeOrder);
-          }
+          setSelectedOrder(activeOrder);
         }
       } catch (err) {
         console.error('Virhe haettaessa tilauksia:', err);
@@ -44,16 +42,11 @@ export const CustomerTrackingView = () => {
 
     const fetchTrackingData = async () => {
       try {
-        const res = await fetch(
-          `/api/deliveries/${selectedOrder?.order_id}/status`,
-          {
-            headers: {Authorization: `Bearer ${localStorage.getItem('token')}`},
-          }
+        const res = await api.get(
+          `/api/deliveries/${selectedOrder?.order_id}/status`
         );
-        if (res.ok) {
-          const data = await res.json();
-          setTrackingData(data);
-        }
+        console.log('tracking data axioksella', res.data);
+        setTrackingData(res.data);
       } catch (err) {
         console.error('Tracking fetch failed', err);
       }

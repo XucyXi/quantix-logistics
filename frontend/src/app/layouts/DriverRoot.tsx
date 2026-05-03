@@ -2,6 +2,7 @@ import {Outlet, useNavigate, useLocation} from 'react-router';
 import {Package, MapPin, User, Home} from 'lucide-react';
 import {DeliveryTracking, Order} from '../../types/logistics';
 import {useEffect, useState} from 'react';
+import api from '../lib/api';
 
 export function DriverRoot() {
   const navigate = useNavigate();
@@ -19,19 +20,13 @@ export function DriverRoot() {
   useEffect(() => {
     const fetchMyDeliveries = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const response = await fetch('/api/orders/assigned', {
-          headers: {Authorization: `Bearer ${token}`},
-        });
-        const data = await response.json();
+        const response = await api.get("/orders/assigned',");
+        const data = response.data;
 
-        if (response.ok && Array.isArray(data)) {
-          setOrders(data);
-        } else {
-          console.error('Bäkki palautti virheen:', data);
-          setOrders([]);
-        }
+        setOrders(data);
       } catch (err) {
+        setOrders([]);
+
         console.error('Datan haku epäonnistui:', err);
       }
     };
