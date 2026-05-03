@@ -8,7 +8,7 @@ export interface Order {
   order_id: number;
   customer_id: number;
   driver_id: number | null;
-  status: 'done' | 'assigned' | 'in_transit' | 'ready_for_pickup';
+  status: 'done' | 'assigned' | 'in_transit' | 'ready_for_pickup' | 'pending';
   delivery_address: string;
   notes?: string;
   customer?: {
