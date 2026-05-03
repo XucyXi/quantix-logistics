@@ -15,7 +15,7 @@ async function createOrder(customerId, payload) {
     const coords = await getCoords(delivery_address);
     if (coords) {
       lat = coords.lat;
-      lng = coords.lng;
+      lng = coords.lon;
     }
     console.log('coords', coords);
   } catch (err) {
@@ -58,6 +58,7 @@ async function createOrder(customerId, payload) {
     total_price: totalPrice,
   };
 
+  console.log('Tallennetaan kantaan:', orderData); // Tarkista näkyykö longitude tässä
   const orderId = await createOrderWithItems(orderData, enrichedItems);
 
   return {
