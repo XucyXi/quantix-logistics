@@ -200,7 +200,9 @@ export const DeliveryManager = () => {
       : [];
   }, [orders]);
 
-  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<number | undefined>(
+    undefined
+  );
   const currentOrder = ordersList.find((o) => o.order_id === selectedOrderId);
   const destination: [number, number] = useMemo(() => {
     if (!currentOrder || currentOrder.status === 'ready_for_pickup') {
