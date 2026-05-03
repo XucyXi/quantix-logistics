@@ -31,7 +31,7 @@ Content-Type: application/json
 
 ###
 
-### 3. Testaa virhetilanne: Puuttuvat tuotteet
+### Testaa virhetilanne: Puuttuvat tuotteet
 POST {{baseUrl}}/orders
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -43,7 +43,11 @@ Content-Type: application/json
 
 ###
 
-### 4. Varmista luonti hakemalla omat tilaukset
-# Täältä pitäisi nyt löytyä uusi tilaus, jossa on dest_lat ja dest_lng täytettynä!
+### Hae asiakkaan omat tilaukset
 GET {{baseUrl}}/orders/my-orders
+Authorization: Bearer {{token}}
+
+# HAE KULJETTAJALLE MÄÄRÄTYT TOIMITUKSET
+###
+GET {{baseUrl}}/orders/assigned
 Authorization: Bearer {{token}}

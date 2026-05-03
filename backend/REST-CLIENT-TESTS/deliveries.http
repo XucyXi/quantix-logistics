@@ -1,0 +1,25 @@
+@baseUrl = http://localhost:3000/api
+
+# @name login
+
+###
+@token = {{login.response.body.token}}
+
+### Testaa sijainnin päivitystä
+POST http://localhost:3000/api/deliveries/10124244/location
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "latitude": 63.2699,
+    "longitude": 22.731,
+    "status": "in_transit"
+}
+
+
+
+
+
+###
+GET http://localhost:3000/api/deliveries/1012221124/status
+Authorization: Bearer {{token}}
