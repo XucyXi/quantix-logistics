@@ -276,6 +276,29 @@ async function assignDriver(req, res) {
     const updated = await orderService.assignDriver(id, driver_id, newStatus);
     if (!updated) return res.status(404).json({error: 'Order not found'});
 
+    // --- AUTOMAATTINEN VARASTOSIMULAATIO ---
+    if (newStatus === 'assigned') {
+      setTimeout(async () => {
+        try {
+          // Keräily alkaa (5 sekunnin kuluttua)
+          await orderService.updateOrderStatus(id, 'in_progress');
+          console.log(
+            `[Auto-Varasto] Tilaus ${id} tilaan 'in_progress' (Keräilyssä)`
+          );
+
+          setTimeout(async () => {
+            // Valmis noudettavaksi (toisen 5 sekunnin kuluttua)
+            await orderService.updateOrderStatus(id, 'ready_for_pickup');
+            console.log(
+              `[Auto-Varasto] Tilaus ${id} tilaan 'ready_for_pickup' (Odottaa noutoa)`
+            );
+          }, 5000);
+        } catch (err) {
+          console.error('Varastosimulaatio epäonnistui:', err);
+        }
+      }, 5000);
+    }
+
     res.json({message: 'Driver assigned successfully', status: newStatus});
   } catch (err) {
     console.error('Error assigning driver:', err);

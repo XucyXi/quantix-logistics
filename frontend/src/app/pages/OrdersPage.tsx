@@ -104,7 +104,6 @@ export function OrdersPage() {
   );
   const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
 
-  // Haetaan tilaukset ja kuskit tietokannasta
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -113,14 +112,12 @@ export function OrdersPage() {
           userService.getAllUsers(),
         ]);
 
-        // Suodatetaan käyttäjistä vain kuskit
         setDrivers(allUsers.filter((u) => u.role === 'Kuljettaja'));
 
-        // Mapatataan backendin data frontendin tarvitsemaan muotoon
         const mappedOrders: Order[] = rawOrders.map((o) => ({
           id: o.order_id,
           customerName: o.customerName,
-          store: 'Yritysasiakas', // Voidaan hakea profiilista myöhemmin jos tarvis
+          store: 'Yritysasiakas',
           items: Number(o.items_count) || 0,
           total: parseFloat(String(o.total_price)),
           status: o.status,
@@ -142,36 +139,54 @@ export function OrdersPage() {
     fetchData();
   }, []);
 
-  // KUSKIN MÄÄRÄÄMINEN
+  // Apufunktio tilan turvalliseen päivittämiseen sekä taulukkoon että modaaliin
+  const updateLocalOrderStatus = (
+    orderId: number,
+    status: Order['status'],
+    driverId: number | null,
+    driverName: string | null
+  ) => {
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId ? {...o, status, driverId, driverName} : o
+      )
+    );
+    setViewingOrder((prev) =>
+      prev?.id === orderId ? {...prev, status, driverId, driverName} : prev
+    );
+  };
+
+  // KUSKIN MÄÄRÄÄMINEN + AUTOMAATTI-VARASTO SIMULAATIO
   const handleAssignDriver = async (orderId: number, driverIdStr: string) => {
     const dId = driverIdStr === '' ? null : parseInt(driverIdStr, 10);
     const newStatus: Order['status'] = dId ? 'assigned' : 'pending';
-
-    // Etsitään kuskin nimi näkyviin heti
     const driverName = dId
       ? drivers.find((d) => d.original_id === dId)?.name || null
       : null;
 
     try {
-      // 1. Backend-kutsu (päivittää kannan statuksen ja driver_id:n)
+      // 1. Backend-kutsu
       await orderService.assignDriver(orderId, dId);
 
-      // 2. Päivitetään paikallinen tila
-      const updatedOrders = orders.map((order) =>
-        order.id === orderId
-          ? {...order, driverId: dId, driverName: driverName, status: newStatus}
-          : order
-      );
-      setOrders(updatedOrders);
+      // 2. Päivitetään heti "Assigned"-tilaan
+      updateLocalOrderStatus(orderId, newStatus, dId, driverName);
 
-      // Päivitetään avattu modaali
-      if (viewingOrder && viewingOrder.id === orderId) {
-        setViewingOrder({
-          ...viewingOrder,
-          driverId: dId,
-          driverName: driverName,
-          status: newStatus,
-        });
+      // 3. Simulaatio: Frontend peilaa backendin ajastimia
+      if (dId) {
+        // Ensimmäinen viive: Keräily alkaa (5s)
+        setTimeout(() => {
+          updateLocalOrderStatus(orderId, 'in_progress', dId, driverName);
+
+          // Toinen viive: Keräily valmis, odottaa noutoa (5s)
+          setTimeout(() => {
+            updateLocalOrderStatus(
+              orderId,
+              'ready_for_pickup',
+              dId,
+              driverName
+            );
+          }, 5000);
+        }, 5000);
       }
     } catch (err) {
       console.error(err);
@@ -188,13 +203,12 @@ export function OrdersPage() {
       return;
     try {
       await orderService.cancelOrder(orderId);
-      const updatedOrders = orders.map((order) =>
-        order.id === orderId ? {...order, status: 'cancelled' as const} : order
+      updateLocalOrderStatus(
+        orderId,
+        'cancelled',
+        viewingOrder?.driverId || null,
+        viewingOrder?.driverName || null
       );
-      setOrders(updatedOrders);
-      if (viewingOrder && viewingOrder.id === orderId) {
-        setViewingOrder({...viewingOrder, status: 'cancelled'});
-      }
     } catch {
       alert('Tilauksen peruuttaminen epäonnistui.');
     }
@@ -300,6 +314,7 @@ export function OrdersPage() {
             <option value="pending">Odottaa kuskia</option>
             <option value="assigned">Kuski määrätty</option>
             <option value="in_progress">Keräilyssä</option>
+            <option value="ready_for_pickup">Odottaa noutoa</option>
             <option value="in_transit">Matkalla</option>
             <option value="done">Toimitettu</option>
             <option value="cancelled">Peruutettu</option>
@@ -384,11 +399,15 @@ export function OrdersPage() {
                       </td>
 
                       <td className="p-4">
-                        <span
+                        {/* Oikea taikatemppu on tässä motion.span -elementissä. Se animoituu sulavasti värin vaihtuessa! */}
+                        <motion.span
+                          key={order.status}
+                          initial={{opacity: 0, scale: 0.9}}
+                          animate={{opacity: 1, scale: 1}}
                           className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold ${st.bg} ${st.color}`}
                         >
                           <StatusIcon size={14} /> {st.label}
-                        </span>
+                        </motion.span>
                       </td>
 
                       <td className="p-4 text-right">
@@ -427,11 +446,14 @@ export function OrdersPage() {
               <div>
                 <h2 className="text-xl font-bold text-foreground m-0 flex items-center gap-3">
                   Tilaus #{viewingOrder.id}
-                  <span
+                  <motion.span
+                    key={viewingOrder.status}
+                    initial={{opacity: 0, scale: 0.9}}
+                    animate={{opacity: 1, scale: 1}}
                     className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${statusStyles[viewingOrder.status].bg} ${statusStyles[viewingOrder.status].color}`}
                   >
                     {statusStyles[viewingOrder.status].label}
-                  </span>
+                  </motion.span>
                 </h2>
                 <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
                   <Calendar size={14} /> Tilaus vastaanotettu:{' '}
@@ -493,7 +515,10 @@ export function OrdersPage() {
                     disabled={
                       viewingOrder.status === 'done' ||
                       viewingOrder.status === 'cancelled' ||
-                      viewingOrder.status === 'stuck'
+                      viewingOrder.status === 'stuck' ||
+                      viewingOrder.status === 'in_transit' ||
+                      viewingOrder.status === 'ready_for_pickup' ||
+                      viewingOrder.status === 'in_progress'
                     }
                   >
                     <option value="">-- Odottaa: Valitse kuljettaja --</option>
@@ -510,6 +535,13 @@ export function OrdersPage() {
                     ))}
                   </select>
                 </div>
+                {viewingOrder.status !== 'pending' &&
+                  viewingOrder.status !== 'assigned' && (
+                    <p className="text-xs text-muted-foreground mt-2 italic">
+                      Kuljettajaa ei voi vaihtaa enää kun tilaus on käsittelyssä
+                      tai matkalla.
+                    </p>
+                  )}
               </div>
 
               <div className="flex justify-between items-center p-4 bg-primary text-primary-foreground rounded-xl">

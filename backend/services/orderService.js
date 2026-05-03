@@ -607,6 +607,14 @@ async function cancelOrder(orderId) {
   return result.affectedRows > 0;
 }
 
+async function updateOrderStatus(orderId, status) {
+  const [result] = await pool.query(
+    `UPDATE ORDERS SET status = ? WHERE order_id = ?`,
+    [status, orderId]
+  );
+  return result.affectedRows > 0;
+}
+
 module.exports = {
   createOrder,
   getOrderById,
@@ -622,4 +630,5 @@ module.exports = {
   getAllOrdersAdmin,
   assignDriver,
   cancelOrder,
+  updateOrderStatus,
 };
