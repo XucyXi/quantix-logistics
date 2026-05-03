@@ -2,7 +2,11 @@
 import {useEffect, useState} from 'react';
 import {Map} from './Map';
 import {OrderList} from './OrderList';
-import {Order, TrackingResponse} from '../../../types/logistics';
+import {
+  Order,
+  TrackingResponse,
+  WAREHOUSE_COORDS,
+} from '../../../types/logistics';
 
 export const CustomerTrackingView = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -20,9 +24,11 @@ export const CustomerTrackingView = () => {
         if (res.ok) {
           const {orders} = await res.json();
           setOrders(orders);
-          console.log('data', orders);
           if (orders.length > 0 && !selectedOrder) {
-            setSelectedOrder(orders[0]);
+            const activeOrder =
+              orders?.find((o: Order) => o.status !== 'done') || orders[0];
+
+            setSelectedOrder(activeOrder);
           }
         }
       } catch (err) {
@@ -33,7 +39,9 @@ export const CustomerTrackingView = () => {
   }, []);
 
   useEffect(() => {
-    if (!selectedOrder?.order_id) return;
+    if (!selectedOrder?.order_id || selectedOrder.status !== 'in_transit')
+      return;
+
     const fetchTrackingData = async () => {
       try {
         const res = await fetch(
@@ -44,7 +52,6 @@ export const CustomerTrackingView = () => {
         );
         if (res.ok) {
           const data = await res.json();
-          console.log('tracking data', data?.latitude, data?.longitude);
           setTrackingData(data);
         }
       } catch (err) {
@@ -53,7 +60,7 @@ export const CustomerTrackingView = () => {
     };
 
     fetchTrackingData();
-    const interval = setInterval(fetchTrackingData, 100000); // Päivitys 100s välein
+    const interval = setInterval(fetchTrackingData, 20000);
 
     return () => clearInterval(interval);
   }, [selectedOrder]);
@@ -72,79 +79,53 @@ export const CustomerTrackingView = () => {
     const destLat = Number(selectedOrder?.latitude);
     const destLng = Number(selectedOrder?.longitude);
 
-    console.log('start coords', driverLat, driverLng);
+    const isInTransit = selectedOrder.status === 'in_transit';
     const hasDriverLocation =
-      !isNaN(driverLat) && !isNaN(driverLng) && driverLat !== 0;
+      isInTransit && !isNaN(driverLat) && !isNaN(driverLng) && driverLat !== 0;
     const hasDestination = !isNaN(destLat) && !isNaN(destLng) && destLat !== 0;
 
-    if (!hasDestination) {
-      return (
-        <p style={{textAlign: 'center', marginTop: '100px'}}>
-          Toimitusosoitteen koordinaatit puuttuvat.
-        </p>
-      );
-    }
-    if (!hasDriverLocation) {
-      return (
-        <div style={{height: '100%', width: '100%'}}>
-          <p
-            style={{
-              position: 'absolute',
-              zIndex: 1000,
-              background: 'white',
-              padding: '5px',
-            }}
-          >
-            Odotetaan kuljettajan sijaintia...
-          </p>
-          <Map
-            startCoords={[driverLat || 0, driverLng || 0]}
-            endCoords={[destLat || 0, destLng || 0]}
-          />
-        </div>
-      );
-    }
+    const startPoint: [number, number] = hasDriverLocation
+      ? [driverLat, driverLng]
+      : WAREHOUSE_COORDS;
 
     return (
-      <Map
-        startCoords={[driverLat, driverLng]}
-        endCoords={[destLat, destLng]}
-      />
+      <div style={{height: '100%', width: '100%', position: 'relative'}}>
+        {!isInTransit && (
+          <div style={overlayStyle}>
+            {selectedOrder.status === 'ready_for_pickup'
+              ? 'Tilaus on pakattu ja odottaa kuljetusta'
+              : 'Tilauksesi on käsittelyssä'}
+          </div>
+        )}
+
+        {isInTransit && !hasDriverLocation && (
+          <div style={overlayStyle}>
+            {' '}
+            Haetaan kuljettajan tarkkaa sijaintia...
+          </div>
+        )}
+
+        <Map
+          startCoords={startPoint}
+          endCoords={[destLat, destLng]}
+          showRoute={false}
+        />
+      </div>
     );
   };
 
-  /*useEffect(() => {
-    if (!selectedOrder?.dest_lat || !selectedOrder?.dest_lng) {
-      console.log('Tilauksella ei koordinaatteja, skipataan seuranta');
-      return;
-    }
-
-    if (selectedOrder?.status === 'done') {
-      fetchTracking();
-      return;
-    }
-
-    async function fetchTracking() {
-      try {
-        const res = await fetch(
-          `/api/deliveries/${selectedOrder?.order_id}/status`,
-          {
-            headers: {Authorization: `Bearer ${localStorage.getItem('token')}`},
-          }
-        );
-        if (res.ok) {
-          const trackingData = await res.json();
-          setTrackingData(trackingData);
-        }
-      } catch (err) {
-        console.error('Tracking fetch failed', err);
-      }
-    }
-
-    fetchTracking();
-    const interval = setInterval(fetchTracking, 10000);
-    return () => clearInterval(interval);
-  }, [selectedOrder]);*/
+  const overlayStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    zIndex: 1000,
+    background: 'rgba(255,255,255,0.95)',
+    padding: '10px',
+    borderRadius: '8px',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+    fontSize: '14px',
+    fontWeight: 'bold',
+  };
 
   return (
     <div
@@ -154,7 +135,6 @@ export const CustomerTrackingView = () => {
         height: '100vh',
         width: '100%',
         gap: '10px',
-        //overflow: 'hidden',
       }}
     >
       <div style={{flex: '1', position: 'relative', width: '100%'}}>
@@ -186,7 +166,6 @@ export const CustomerTrackingView = () => {
         )}
 
         <div style={{maxHeight: '300px', overflowY: 'auto'}}>
-          <h3>Omat toimitukset</h3>
           <OrderList
             orders={orders}
             selectedId={selectedOrder?.order_id}
