@@ -231,12 +231,56 @@ async function updateProduct(id, name, description, base_price, stock_quantity) 
   return result.affectedRows;
 }
 
-// Add remove product by ID
+
+// Please add a service to remove a product based on ID. Only admin has rights for this. 
+
+async function deleteProduct(productId) {
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    // Delete the product. 
+    // Note: If you have ON DELETE CASCADE on PRODUCT_CATEGORIES, those links drop automatically.
+    const [result] = await connection.query(
+      `DELETE FROM PRODUCTS WHERE product_id = ?`,
+      [productId]
+    );
+
+    if (result.affectedRows === 0) {
+      throw new Error(`Product ${productId} not found`);
+    }
+
+    await connection.commit();
+
+    // Critical: Clear the cache so the deleted item stops showing up on the frontend
+    invalidateProductCache();
+
+    return { 
+      product_id: productId, 
+      deleted: true 
+    };
+
+  } catch (err) {
+    await connection.rollback();
+    
+    // Safety Net: Catch foreign key constraint errors
+    // (e.g., If this product is already tied to past customer orders)
+    if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED') {
+      throw new Error('Cannot delete product: It is tied to existing order history. Consider setting stock to 0 instead.');
+    }
+    
+    throw err;
+  } finally {
+    connection.release();
+  }
+}
 
 module.exports = {
   getProductById,
   createProduct,
   updateProduct,
+  deleteProduct,
   getProductsCursor,
   createCategory,
   getCategories,

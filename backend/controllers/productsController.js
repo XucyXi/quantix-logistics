@@ -105,9 +105,22 @@ async function updateProduct(req, res) {
 
 // Add remove product by ID
 
+async function deleteProduct(req, res) {
+  try {
+    const productId = req.params.id;
+    const result = await productService.deleteProduct(productId);
+    res.json(result);
+  } catch (err) {
+    // If it's a foreign key error, returning a 409 Conflict is standard
+    const statusCode = err.message.includes('order history') ? 409 : 400;
+    res.status(statusCode).json({ error: err.message });
+  }
+}
+
 module.exports = {
   getProductsCursor,
   getProductById,
   createProduct,
   updateProduct,
+  deleteProduct
 };
