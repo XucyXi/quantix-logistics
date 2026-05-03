@@ -567,6 +567,46 @@ async function getOrdersCursor(cursor = 0, limit = 20) {
   return {data: rows, nextCursor};
 }
 
+async function getAllOrdersAdmin() {
+  const query = `
+    SELECT 
+      o.order_id, 
+      o.status, 
+      o.delivery_address, 
+      o.notes, 
+      o.ordered_at, 
+      o.total_price, 
+      o.driver_id,
+      cu.full_name AS customerName,
+      dr.full_name AS driverName,
+      COALESCE(SUM(oi.quantity), 0) AS items_count
+    FROM ORDERS o
+    LEFT JOIN USERS cu ON o.customer_id = cu.user_id
+    LEFT JOIN USERS dr ON o.driver_id = dr.user_id
+    LEFT JOIN ORDER_ITEMS oi ON o.order_id = oi.order_id
+    GROUP BY o.order_id
+    ORDER BY o.ordered_at DESC
+  `;
+  const [rows] = await pool.query(query);
+  return rows;
+}
+
+async function assignDriver(orderId, driverId, newStatus) {
+  const [result] = await pool.query(
+    `UPDATE ORDERS SET driver_id = ?, status = ? WHERE order_id = ?`,
+    [driverId, newStatus, orderId]
+  );
+  return result.affectedRows > 0;
+}
+
+async function cancelOrder(orderId) {
+  const [result] = await pool.query(
+    `UPDATE ORDERS SET status = 'cancelled' WHERE order_id = ?`,
+    [orderId]
+  );
+  return result.affectedRows > 0;
+}
+
 module.exports = {
   createOrder,
   getOrderById,
@@ -579,4 +619,7 @@ module.exports = {
   cancelOrder,
   getAllDrivers,
   getOrdersCursor,
+  getAllOrdersAdmin,
+  assignDriver,
+  cancelOrder,
 };

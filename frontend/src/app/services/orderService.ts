@@ -1,28 +1,44 @@
 import api from '../lib/api';
 
+export interface BackendOrder {
+  order_id: number;
+  customerName: string;
+  driverName?: string | null;
+  items_count: number;
+  total_price: string | number;
+  status:
+    | 'pending'
+    | 'assigned'
+    | 'in_progress'
+    | 'ready_for_pickup'
+    | 'in_transit'
+    | 'done'
+    | 'stuck'
+    | 'cancelled';
+  ordered_at: string;
+  delivery_address: string;
+  notes: string | null;
+  driver_id: number | null;
+}
+
 export const orderService = {
-  getOrderStats: async () => {
-    const res = await api.get('/orders/stats');
+  // Hakee KAIKKI tilaukset (Admin-oikeus)
+  getAllOrdersAdmin: async (): Promise<BackendOrder[]> => {
+    const res = await api.get('/orders/admin/all');
     return res.data;
   },
 
-  getCustomerOrders: async () => {
-    const res = await api.get('/orders');
+  // Kuskin määrääminen tilaukselle (Admin-oikeus)
+  assignDriver: async (orderId: number, driverId: number | null) => {
+    const res = await api.put(`/orders/${orderId}/assign`, {
+      driver_id: driverId,
+    });
     return res.data;
   },
 
-  getOrderById: async (orderId: string) => {
-    const res = await api.get(`/orders/${orderId}`);
-    return res.data;
-  },
-
-  getAssignedOrders: async () => {
-    const res = await api.get('/orders/assigned');
-    return res.data;
-  },
-
-  updateOrderStatus: async (orderId: number, newStatus: string) => {
-    const res = await api.put(`/orders/${orderId}/status`, {newStatus});
+  // Tilauksen peruuttaminen (Admin-oikeus)
+  cancelOrder: async (orderId: number) => {
+    const res = await api.put(`/orders/${orderId}/cancel`);
     return res.data;
   },
 };

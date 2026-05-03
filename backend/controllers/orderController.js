@@ -253,6 +253,49 @@ async function getOrdersCursor(req, res) {
   }
 }
 
+// Hakee KAIKKI tilaukset adminille JOIN-tietoineen
+async function getAllOrdersAdmin(req, res) {
+  try {
+    const orders = await orderService.getAllOrdersAdmin();
+    res.json(orders);
+  } catch (err) {
+    console.error('Error fetching admin orders:', err);
+    res.status(500).json({error: 'Failed to fetch admin orders'});
+  }
+}
+
+// Määrää kuskin ja vaihtaa statuksen
+async function assignDriver(req, res) {
+  try {
+    const {id} = req.params;
+    const {driver_id} = req.body;
+
+    // Jos kuski annetaan, status on assigned. Muuten pending.
+    const newStatus = driver_id ? 'assigned' : 'pending';
+
+    const updated = await orderService.assignDriver(id, driver_id, newStatus);
+    if (!updated) return res.status(404).json({error: 'Order not found'});
+
+    res.json({message: 'Driver assigned successfully', status: newStatus});
+  } catch (err) {
+    console.error('Error assigning driver:', err);
+    res.status(500).json({error: 'Failed to assign driver'});
+  }
+}
+
+// Peruuttaa tilauksen
+async function cancelOrder(req, res) {
+  try {
+    const {id} = req.params;
+    const updated = await orderService.cancelOrder(id);
+    if (!updated) return res.status(404).json({error: 'Order not found'});
+    res.json({message: 'Order cancelled successfully'});
+  } catch (err) {
+    console.error('Error cancelling order:', err);
+    res.status(500).json({error: 'Failed to cancel order'});
+  }
+}
+
 module.exports = {
   createOrder,
   getOrder,
@@ -265,4 +308,7 @@ module.exports = {
   cancelOrder,
   getAllDrivers,
   getOrdersCursor,
+  getAllOrdersAdmin,
+  assignDriver,
+  cancelOrder,
 };

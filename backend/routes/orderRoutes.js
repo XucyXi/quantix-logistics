@@ -82,4 +82,28 @@ router.get(
   orderController.getOrdersCursor
 );
 
+// Hakee kaikki tilaukset adminille
+router.get(
+  '/admin/all',
+  authMiddleware.authenticate,
+  roleMiddleware.requireRole('admin'),
+  orderController.getAllOrdersAdmin
+);
+
+// Kuskin assignaus
+router.put(
+  '/:id/assign',
+  authMiddleware.authenticate,
+  roleMiddleware.requireRole('admin'),
+  orderController.assignDriver
+);
+
+// Tilauksen peruutus
+router.put(
+  '/:id/cancel',
+  authMiddleware.authenticate,
+  roleMiddleware.requireRole('admin'),
+  orderController.cancelOrder
+);
+
 module.exports = router;
