@@ -3,7 +3,7 @@ import {Order} from '../../../types/logistics';
 
 interface OrderListProps {
   orders: Order[];
-  selectedId: number | undefined;
+  selectedId: number | null;
   onSelect: (order: Order) => void;
   variant?: 'customer' | 'driver';
 }
