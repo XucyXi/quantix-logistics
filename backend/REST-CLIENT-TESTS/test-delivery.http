@@ -13,13 +13,13 @@ Content-Type: application/json
 @token = {{login.response.body.token}}
 
 ### Testaa sijainnin päivitystä
-POST http://localhost:3000/api/deliveries/1012221123/location
+POST http://localhost:3000/api/deliveries/10124244/location
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-    "latitude": 60.2699,
-    "longitude": 23.131,
+    "latitude": 63.2699,
+    "longitude": 22.731,
     "status": "in_transit"
 }
 

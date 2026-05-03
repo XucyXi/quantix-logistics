@@ -18,7 +18,7 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-    "delivery_address": "Keimolankaarre 1",
+    "delivery_address": "TIKKURILANTIE 1",
     "notes": "Soita ovikelloa, summeri on rikki.",
     "scheduled_delivery": "2026-04-29 15:00:00",
     "items": [
