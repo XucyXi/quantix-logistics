@@ -45,4 +45,11 @@ router.get(
   productsController.getProductById
 );
 
+router.delete(
+  '/:id',
+  authMiddleware.authenticate,
+  roleMiddleware.requireRole('admin'),
+  productsController.deleteProduct
+);
+
 module.exports = router;

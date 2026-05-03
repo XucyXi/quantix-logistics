@@ -237,7 +237,7 @@ async function getAllDrivers(req, res) {
 async function getOrdersCursor(req, res) {
   try {
     const cursor = req.query.cursor || 0;
-    const limit = req.query.limit || 20;
+    const limit = req.query.limit || 16;
 
     const result = await orderService.getOrdersCursor(cursor, limit);
     return res.json({success: true, ...result});

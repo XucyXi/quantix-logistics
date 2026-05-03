@@ -50,7 +50,7 @@ async function createOrder(customerId, deliveryAddress, notes, items) {
     const [orderRes] = await connection.query(
       `INSERT INTO ORDERS (customer_id, delivery_address, notes, total_price, status) 
        VALUES (?, ?, ?, ?, 'pending')`,
-      [customerId, deliveryAddress, notes, totalPrice]
+      [customerId, deliveryAddress, notes, totalPrice]  
     );
     const orderId = orderRes.insertId;
 
@@ -76,8 +76,8 @@ async function createOrder(customerId, deliveryAddress, notes, items) {
 
     // LUODAAN TRACKING-RIVI LIVE-KARTTAA VARTEN
     await connection.query(
-      `INSERT INTO DELIVERY_TRACKING (order_id, status, latitude, longitude) 
-       VALUES (?, 'pending', ?, ?)`,
+      `INSERT INTO DELIVERY_TRACKING (order_id, latitude, longitude) 
+       VALUES (?, ?, ?)`,
       [orderId, lat, lng]
     );
 
@@ -225,6 +225,9 @@ const ACTIVE_STATUSES = [
 async function getAssignedOrders(driverId) {
   if (!driverId) throw new Error('Driver ID is required');
 
+// Luodaan dynaaminen määrä kysymysmerkkejä statuksia varten
+  const statusPlaceholders = ACTIVE_STATUSES.map(() => '?').join(',');
+
   const [rows] = await pool.query(
     `
     SELECT
@@ -238,7 +241,7 @@ async function getAssignedOrders(driverId) {
     LEFT JOIN DRIVER_PROFILES dp ON o.driver_id = dp.user_id
     LEFT JOIN ORDER_ITEMS oi ON o.order_id = oi.order_id
     LEFT JOIN PRODUCTS p ON oi.product_id = p.product_id
-    WHERE o.driver_id = ? AND o.status IN (?, ?, ?, ?)
+    WHERE o.driver_id = ? AND o.status IN (${statusPlaceholders})
     ORDER BY o.order_id;
     `,
     [driverId, ...ACTIVE_STATUSES]
@@ -255,7 +258,7 @@ async function getAssignedOrders(driverId) {
         status: row.status,
         delivery_address: row.delivery_address,
         notes: row.notes,
-        customer: {company_name: row.company_name, tel: row.tel},
+        customer: {company_name: row.company_name, tel: row.customer_tel},
         items: [],
       };
     }
@@ -339,23 +342,155 @@ async function getOrderStats(customerId) {
 }
 
 // KUSKI: ASETA AKTIIVISUUS (Töissä / Vapaalla)
-async function setDriverAvailability(driverId, active) {
-  const query = `UPDATE DRIVER_PROFILES SET active = ? WHERE user_id = ?`;
-  const [result] = await pool.query(query, [active ? 1 : 0, driverId]);
-  return result.affectedRows > 0;
+async function setDriverAvailability(driverId, isActive) {
+  const [result] = await pool.query(
+    `
+    UPDATE DRIVER_PROFILES
+    SET active = ?
+    WHERE user_id = ?
+    `,
+    [isActive, driverId]
+  );
+
+  if (result.affectedRows === 0) {
+    throw new Error('Driver not found');
+  }
+
+  return {
+    driver_id: driverId,
+    active: isActive
+  };
 }
 
-// HAE KAIKKI KUSKIT
 async function getAllDrivers() {
-  const query = `
-    SELECT u.user_id, u.full_name, u.email, d.active AS is_available 
-    FROM USERS u
-    JOIN DRIVER_PROFILES d ON u.user_id = d.user_id
-    WHERE u.role = 'driver'
-  `;
-  const [rows] = await pool.query(query);
+  const [rows] = await pool.query(
+    `
+    SELECT 
+      dp.driver_id,
+      dp.user_id,
+      dp.vehicle_info,
+      dp.active,
+      dp.current_orders,
+      dp.max_orders,
+
+      u.full_name,
+      u.email,
+      u.created_at,
+      u.last_login
+
+    FROM DRIVER_PROFILES dp
+    JOIN USERS u ON dp.user_id = u.user_id
+    ORDER BY dp.driver_id DESC
+    `
+  );
+
   return rows;
+}  
+
+
+function normalizeCursor(cursor) {
+  const parsed = Number(cursor);
+  if (!Number.isFinite(parsed) || parsed < 0) return 0;
+  return Math.floor(parsed);
 }
+
+// Default is 16, and the maximum is strictly clamped to 16
+function normalizeLimit(limit, defaultLimit = 16, maxLimit = 16) {
+  const parsed = Number(limit);
+  // Default to 16 if the input is invalid, zero, or negative
+  if (!Number.isFinite(parsed) || parsed <= 0) return defaultLimit;
+  // Cap the limit to the maxLimit (16)
+  return Math.min(Math.floor(parsed), maxLimit);
+}
+
+// --- 2. CURSOR PAGINATION ---
+
+async function getOrdersCursor(rawCursor = 0, rawLimit = 16) {
+  const cursor = normalizeCursor(rawCursor);
+  const limit = normalizeLimit(rawLimit);
+
+  try {
+    // Step 1: Fetch the Orders ONLY
+    const [orders] = await pool.query(
+      `
+      SELECT 
+        order_id,
+        customer_id,
+        driver_id,
+        status,
+        delivery_address,
+        notes,
+        ordered_at,
+        total_price
+      FROM ORDERS
+      WHERE order_id > ?
+      ORDER BY order_id ASC
+      LIMIT ?
+      `,
+      [cursor, limit]
+    );
+
+    // If no orders are found, bail out early to save database work
+    if (!orders.length) {
+      return { data: [], nextCursor: null };
+    }
+
+    const orderIds = orders.map(o => o.order_id);
+
+    // Step 2: Fetch the Items for ONLY these specific orders
+    const [items] = await pool.query(
+      `
+      SELECT 
+        oi.order_id,
+        oi.product_id,
+        oi.quantity,
+        oi.unit_price,
+        p.name AS product_name
+      FROM ORDER_ITEMS oi
+      LEFT JOIN PRODUCTS p ON oi.product_id = p.product_id
+      WHERE oi.order_id IN (?)
+      `,
+      [orderIds] // The mysql2 driver safely handles array expansion for IN (?)
+    );
+
+    // Step 3: Shape the data using a Map
+    // We iterate through the original array to attach items, ensuring the 
+    // original SQL sorting order is perfectly preserved.
+    const ordersMap = new Map();
+    for (const order of orders) {
+      order.items = [];
+      ordersMap.set(order.order_id, order);
+    }
+
+    for (const item of items) {
+      const order = ordersMap.get(item.order_id);
+      if (order) {
+        order.items.push({
+          product_id: item.product_id,
+          name: item.product_name,
+          quantity: item.quantity,
+          unit_price: item.unit_price
+        });
+      }
+    }
+
+    // Step 4: Determine the next cursor
+    // If we fetched exactly the limit, there might be more rows, so send the last ID.
+    // If we fetched fewer than the limit, we've hit the end of the table.
+    const nextCursor = orders.length === limit ? orders[orders.length - 1].order_id : null;
+
+    return {
+      data: orders, 
+      nextCursor
+    };
+
+  } catch (err) {
+    console.error('Database error in getOrdersCursor:', err);
+    throw err;
+  }
+}
+
+/*
 
 // HAE TILAUKSET CURSORILLA (Lataava scrollaus)
 async function getOrdersCursor(cursor = 0, limit = 20) {
@@ -369,6 +504,8 @@ async function getOrdersCursor(cursor = 0, limit = 20) {
   const nextCursor = rows.length > 0 ? rows[rows.length - 1].order_id : null;
   return {data: rows, nextCursor};
 }
+
+*/
 
 module.exports = {
   createOrder,

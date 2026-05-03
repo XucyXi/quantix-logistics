@@ -105,7 +105,7 @@ async function updateProduct(req, res) {
 async function getProductsCursor(req, res) {
   try {
     const cursor = req.query.cursor || 0;
-    const limit = req.query.limit || 20;
+    const limit = req.query.limit || 16;
 
     const result = await productsService.getProductsCursor(cursor, limit);
     return res.json({success: true, ...result});
@@ -114,10 +114,37 @@ async function getProductsCursor(req, res) {
   }
 }
 
+
+// DELETE /products/:id
+async function deleteProduct(req, res) {
+  try {
+    const { id } = req.params;
+    const result = await productsService.deleteProduct(id);
+    
+    res.json({ message: 'Product deleted successfully', id: result.product_id });
+  } catch (err) {
+    console.error(`Error deleting product ${req.params.id}:`, err);
+    
+    // Nappaa service-kerroksen heittämä "Not found" -virhe
+    if (err.message.includes('not found')) {
+      return res.status(404).json({ error: err.message });
+    }
+    
+    // Nappaa viiteavain-virhe (Foreign Key Constraint) - 409 Conflict on tähän oikea statuskoodi
+    if (err.message.includes('tied to existing order history')) {
+      return res.status(409).json({ error: err.message });
+    }
+
+    res.status(500).json({ error: 'Failed to delete product' });
+  }
+}
+
+
 module.exports = {
   getProducts,
   getProductById,
   createProduct,
   updateProduct,
   getProductsCursor,
+  deleteProduct
 };

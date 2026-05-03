@@ -1,10 +1,10 @@
 const db = require('../config/db');
 
 exports.createTrackingPoint = async (orderId, data) => {
-  const {latitude, longitude, status} = data;
+  const {latitude, longitude} = data;
 
   const query = `
-        INSERT INTO DELIVERY_TRACKING (order_id, latitude, longitude, status, updated_at)
+        INSERT INTO DELIVERY_TRACKING (order_id, latitude, longitude, updated_at)
         VALUES (?, ?, ?, ?, NOW())
     `;
 
@@ -12,8 +12,7 @@ exports.createTrackingPoint = async (orderId, data) => {
     const [result] = await db.execute(query, [
       orderId,
       latitude,
-      longitude,
-      status || 'in-transit',
+      longitude
     ]);
     return result;
   } catch (error) {

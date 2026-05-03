@@ -50,6 +50,32 @@ async function getProductById(product_id) {
   };
 }
 
+// SYÖTTEIDEN VALIDIOINTI
+function validateProduct({ name, base_price, stock_quantity }) {
+  if (!name || typeof name !== 'string') {
+    throw new Error("Invalid product name");
+  }
+
+  const price = Number(base_price);
+  const stock = Number(stock_quantity);
+
+  if (!Number.isFinite(price)) {
+    throw new Error("Invalid base_price");
+  }
+
+  if (price < 0) {
+    throw new Error("base_price cannot be negative");
+  }
+
+  if (!Number.isInteger(stock)) {
+    throw new Error("Invalid stock_quantity");
+  }
+
+  if (stock < 0) {
+    throw new Error("stock_quantity cannot be negative");
+  }
+}
+
 // CREATE PRODUCT (TRANSAKTIO)
 async function createProduct(
   name,
@@ -58,6 +84,8 @@ async function createProduct(
   stock_quantity,
   categoryNames = []
 ) {
+  validateProduct({ name, base_price, stock_quantity });
+
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
@@ -76,6 +104,10 @@ async function createProduct(
         `SELECT category_id FROM CATEGORIES WHERE name IN (?)`,
         [categoryNames]
       );
+
+      if (catRows.length !== categoryNames.length) {
+        throw new Error("One or more categories invalid");
+      }
 
       if (catRows.length > 0) {
         // Luodaan array inserttiä varten: [[tuote_id, kategoria_id1], [tuote_id, kategoria_id2]]
@@ -106,6 +138,8 @@ async function updateProduct(
   stock_quantity,
   categoryNames = []
 ) {
+
+  validateProduct({ name, base_price, stock_quantity });
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
@@ -154,8 +188,26 @@ async function updateProduct(
   }
 }
 
+function normalizeCursor(cursor) {
+  const parsed = Number(cursor);
+  if (!Number.isFinite(parsed) || parsed < 0) return 0;
+  return Math.floor(parsed);
+}
+
+// Default is 16, and the maximum is strictly clamped to 16
+function normalizeLimit(limit, defaultLimit = 16, maxLimit = 16) {
+  const parsed = Number(limit);
+  // Default to 16 if the input is invalid, zero, or negative
+  if (!Number.isFinite(parsed) || parsed <= 0) return defaultLimit;
+  // Cap the limit to the maxLimit (16)
+  return Math.min(Math.floor(parsed), maxLimit);
+}
+
 // GET PRODUCTS CURSOR
-async function getProductsCursor(cursor = 0, limit = 20) {
+async function getProductsCursor(rawCursor = 0, rawLimit = 16) {
+  const cursor = normalizeCursor(rawCursor);
+  const limit = normalizeLimit(rawLimit);
+  
   const query = `
     SELECT 
       P.*,
@@ -187,10 +239,54 @@ async function getProductsCursor(cursor = 0, limit = 20) {
   return {data: processedRows, nextCursor};
 }
 
+// DELETE PRODUCT (TRANSAKTIO)
+async function deleteProduct(productId) {
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    // Poistetaan tuote 
+    // Huom: Jos tietokannassa on ON DELETE CASCADE taulussa PRODUCT_CATEGORIES, 
+    // kategoriayhteydet poistuvat automaattisesti.
+    const [result] = await connection.query(
+      `DELETE FROM PRODUCTS WHERE product_id = ?`,
+      [productId]
+    );
+
+    if (result.affectedRows === 0) {
+      await connection.rollback();
+      throw new Error(`Product with ID ${productId} not found`);
+    }
+
+    await connection.commit();
+
+    return { 
+      product_id: productId, 
+      deleted: true 
+    };
+
+  } catch (err) {
+    await connection.rollback();
+    
+    // Turvaverkko: Estetään tuotteen poistaminen, jos se on jo sidottu tilaushistoriaan
+    if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED') {
+      throw new Error('Cannot delete product: It is tied to existing order history. Consider setting stock to 0 instead.');
+    }
+    
+    throw err;
+  } finally {
+    connection.release();
+  }
+}
+
+
+
 module.exports = {
   getAllProducts,
   getProductById,
   createProduct,
   updateProduct,
   getProductsCursor,
+  deleteProduct
 };
