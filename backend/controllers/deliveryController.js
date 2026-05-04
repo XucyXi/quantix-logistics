@@ -47,34 +47,48 @@ exports.getMyActiveDeliveries = async (req, res) => {
 };
 
 exports.getTrackingData = async (req, res) => {
-  // Luetaan "orderId" reitistä, koska router.get('/:orderId/status')
   const {orderId} = req.params;
   const customerId = req.user.user_id;
 
   try {
-    // Haetaan asiakkaan tilaukset
-    const orders = await orderService.getOrdersByCustomerId(customerId);
+    const order = await orderService.getOrderById(orderId);
 
-    // Etsitään oikea tilaus
-    const currentOrder = orders.find((o) => o.order_id == orderId);
-
-    if (!currentOrder) {
+    if (!order || Number(order.customer_id) !== Number(customerId)) {
       return res
         .status(404)
         .json({error: 'Tilausta ei löydy tai se ei kuulu sinulle'});
     }
 
-    // Haetaan kuskin tuorein sijainti (saattaa palauttaa null, jos kuski ei ole lähettänyt vielä mitään)
     const driverLocation = await deliveryService.getLatestLocation(orderId);
 
-    // Palautetaan data frontendille
+    const lat =
+      driverLocation != null ? Number(driverLocation.lat) : NaN;
+    const lng =
+      driverLocation != null ? Number(driverLocation.lng) : NaN;
+
+    const normalizedDriver =
+      driverLocation && !Number.isNaN(lat) && !Number.isNaN(lng)
+        ? {
+            lat,
+            lng,
+            latitude: lat,
+            longitude: lng,
+            updated_at: driverLocation.updated_at,
+          }
+        : null;
+
+    const destLat =
+      order.latitude != null ? Number(order.latitude) : 0;
+    const destLng =
+      order.longitude != null ? Number(order.longitude) : 0;
+
     res.json({
-      status: currentOrder.status,
+      status: order.status,
       destination: {
-        lat: currentOrder.dest_lat || 0,
-        lng: currentOrder.dest_lng || 0,
+        lat: Number.isFinite(destLat) ? destLat : 0,
+        lng: Number.isFinite(destLng) ? destLng : 0,
       },
-      driver: driverLocation || null, // Voi olla null, jolloin frontend näyttää latausikonin
+      driver: normalizedDriver,
     });
   } catch (error) {
     console.error('Tracking haku kaatui:', error);

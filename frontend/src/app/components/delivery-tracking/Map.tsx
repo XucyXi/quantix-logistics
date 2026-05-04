@@ -154,7 +154,7 @@ export const Map = ({
 
   return (
     <MapContainer
-      center={startCoords}
+      center={initialCenter}
       zoom={8}
       style={{height: '100%', width: '100%', touchAction: 'none'}}
       zoomControl={false}
@@ -167,7 +167,11 @@ export const Map = ({
 
       {shouldShowMarkers && startCoords && startCoords[0] !== 0 && (
         <>
-          <Marker position={startCoords} icon={driverIcon}>
+          <Marker
+            key={`driver-${startCoords[0]}-${startCoords[1]}`}
+            position={startCoords}
+            icon={driverIcon}
+          >
             <Popup>
               {variant === 'driver' ? 'Sinun sijaintisi' : 'Kuljettaja'}
             </Popup>

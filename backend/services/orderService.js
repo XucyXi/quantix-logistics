@@ -233,6 +233,7 @@ async function getAssignedOrders(driverId) {
     `
     SELECT
       o.order_id, o.status, o.delivery_address, o.notes, o.ordered_at,
+      o.latitude, o.longitude,
       cp.company_name, cp.address AS customer_address, cp.tel AS customer_tel,
       dp.vehicle_info, dp.active AS driver_active,
       oi.product_id, oi.quantity, oi.unit_price,
@@ -247,8 +248,6 @@ async function getAssignedOrders(driverId) {
     `,
     [driverId, ...ACTIVE_STATUSES]
   );
-  console.log('orderit', rows);
-
   if (!rows.length) return [];
 
   // Muotoillaan data nätiksi frontendille
@@ -260,6 +259,8 @@ async function getAssignedOrders(driverId) {
         status: row.status,
         delivery_address: row.delivery_address,
         notes: row.notes,
+        latitude: row.latitude != null ? Number(row.latitude) : null,
+        longitude: row.longitude != null ? Number(row.longitude) : null,
         customer: {company_name: row.company_name, tel: row.customer_tel},
         items: [],
       };
