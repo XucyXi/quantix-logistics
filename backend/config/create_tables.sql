@@ -81,6 +81,8 @@ CREATE TABLE IF NOT EXISTS ORDERS (
     ordered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     order_finished TIMESTAMP NULL,
     total_price DECIMAL(10,2) DEFAULT 0.00,
+    latitude DECIMAL(10,8) DEFAULT NULL,
+    longitude DECIMAL(10,8) DEFAULT NULL,
     FOREIGN KEY (customer_id) REFERENCES USERS(user_id) ON DELETE CASCADE,
     FOREIGN KEY (driver_id) REFERENCES USERS(user_id) ON DELETE SET NULL,
     INDEX idx_orders_driver_status (driver_id, status),
