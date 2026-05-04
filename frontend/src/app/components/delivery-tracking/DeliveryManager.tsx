@@ -345,6 +345,8 @@ export const DeliveryManager = () => {
             (!!currentOrder && currentOrder.status === 'in_transit') ||
             currentOrder?.status === 'ready_for_pickup'
           }
+          showMarkers={!!currentOrder}
+          orderSelected={!!currentOrder}
           variant="driver"
         />
         {!currentOrder && filteredOrdersList.length > 0 && (

@@ -131,6 +131,7 @@ export const CustomerTrackingView = () => {
           endCoords={[destLat, destLng]}
           showRoute={false}
           variant="customer"
+          orderSelected={!!selectedOrder}
         />
       </div>
     );
