@@ -48,9 +48,9 @@ async function createOrder(customerId, deliveryAddress, notes, items) {
 
     // LUODAAN TILAUS (Vain olemassa olevat sarakkeet)
     const [orderRes] = await connection.query(
-      `INSERT INTO ORDERS (customer_id, delivery_address, notes, total_price, status)
-       VALUES (?, ?, ?, ?, 'pending')`,
-      [customerId, deliveryAddress, notes, totalPrice]
+      `INSERT INTO ORDERS (customer_id, delivery_address, notes, total_price, status, latitude, longitude)
+       VALUES (?, ?, ?, ?, 'pending', ?, ?)`,
+      [customerId, deliveryAddress, notes, totalPrice, lat, lng]
     );
     const orderId = orderRes.insertId;
 
