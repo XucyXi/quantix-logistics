@@ -108,13 +108,17 @@ interface MapProps {
   endCoords: [number, number];
   variant?: 'driver' | 'customer';
   showRoute?: boolean;
+  showMarkers?: boolean;
+  orderSelected?: boolean;
 }
 
 export const Map = ({
   startCoords,
   endCoords,
   showRoute = false,
+  showMarkers,
   variant = 'customer',
+  orderSelected = false,
 }: MapProps) => {
   const [route, setRoute] = useState<[number, number][]>([]);
   const currentRoute = showRoute ? route : [];
@@ -145,6 +149,8 @@ export const Map = ({
     startCoords && startCoords[0] !== 0 ? startCoords : WAREHOUSE_COORDS;
   const watchPoints =
     currentRoute.length > 0 ? currentRoute : [initialCenter, endCoords];
+  const shouldShowMarkers =
+    showMarkers || showRoute || (variant === 'customer' && orderSelected);
 
   return (
     <MapContainer
@@ -159,7 +165,7 @@ export const Map = ({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
-      {startCoords && startCoords[0] !== 0 && (
+      {shouldShowMarkers && startCoords && startCoords[0] !== 0 && (
         <>
           <Marker position={startCoords} icon={driverIcon}>
             <Popup>
