@@ -40,7 +40,7 @@ async function createOrder(customerId, deliveryAddress, notes, items) {
       const coords = await getCoords(deliveryAddress);
       if (coords) {
         lat = coords.lat;
-        lng = coords.lng;
+        lng = coords.lon;
       }
     } catch (err) {
       console.error('Geocoding failed during order creation:', err);
