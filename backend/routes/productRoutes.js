@@ -21,7 +21,6 @@ router.get(
   productsController.getProductsCursor
 );
 
-// Add this somewhere ABOVE router.get('/:id', ...)
 router.get(
   '/category/cursor',
   authMiddleware.authenticate,
@@ -37,6 +36,8 @@ router.get('/test', (req, res) => {
     method: req.method,
   });
 });
+
+router.delete('/:id', authMiddleware.authenticate, roleMiddleware.requireRole('admin'), productsController.deleteProduct);
 
 // Dynamic Routes (Must come last (They just MUST))
 router.put(
