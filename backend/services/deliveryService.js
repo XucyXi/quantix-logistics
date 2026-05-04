@@ -46,14 +46,14 @@ exports.getLatestLocation = async (orderId) => {
 
 exports.getAllActiveLocations = async () => {
   const query = `
-    SELECT 
-      t.order_id, 
-      t.latitude AS driver_lat, 
-      t.longitude AS driver_lng, 
+    SELECT
+      t.order_id,
+      t.latitude AS driver_lat,
+      t.longitude AS driver_lng,
       t.updated_at,
       o.delivery_address,
-      NULL AS dest_lat,
-      NULL AS dest_lng,
+      o.latitude AS dest_lat,
+      o.longitude AS dest_lng,
       o.status,
       o.driver_id
     FROM delivery_tracking t

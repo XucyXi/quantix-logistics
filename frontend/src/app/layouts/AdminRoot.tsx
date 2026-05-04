@@ -17,6 +17,7 @@ import {
   Home,
 } from 'lucide-react';
 import {useAuth} from '../contexts/AuthContext';
+import {ThemeProvider} from '../contexts/ThemeProvider';
 import {ModeToggle} from '../components/layout/ModeToggle.tsx';
 import {adminService} from '../services/adminService';
 
@@ -59,10 +60,25 @@ export function AdminRoot() {
     const fetchNotificationCount = async () => {
       try {
         const data = await adminService.getNotifications();
-        const unreadCount = Number(data?.unreadCount || 0);
-        const announcementCount = Number(data?.announcementCount || 0);
+
+        // Luetaan mitkä ilmoitukset on jo nähty Dashboardissa
+        const seen = JSON.parse(
+          localStorage.getItem('seen_notifications') || '[]'
+        );
+
+        // Lasketaan vain ne, joita EI löydy "nähdyt" -listalta
+        const unseenAlerts = (data?.notifications || []).filter(
+          (n: {notification_id: number}) =>
+            !seen.includes(`notif-${n.notification_id}`)
+        );
+        const unseenAnns = (data?.announcements || []).filter(
+          (a: {announcement_id: number}) =>
+            !seen.includes(`ann-${a.announcement_id}`)
+        );
+
         if (mounted) {
-          setNotificationCount(unreadCount + announcementCount);
+          // Kello näyttää vain uudet/näkemättömät ilmoitukset
+          setNotificationCount(unseenAlerts.length + unseenAnns.length);
         }
       } catch (error) {
         if (mounted) {
@@ -75,9 +91,13 @@ export function AdminRoot() {
     fetchNotificationCount();
     const interval = window.setInterval(fetchNotificationCount, 30000);
 
+    // Päivitetään kello heti nollaan/pienemmäksi, kun Dashboard merkitsee ne luetuksi!
+    window.addEventListener('notifications_seen', fetchNotificationCount);
+
     return () => {
       mounted = false;
       window.clearInterval(interval);
+      window.removeEventListener('notifications_seen', fetchNotificationCount);
     };
   }, []);
 
@@ -102,146 +122,148 @@ export function AdminRoot() {
   };
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground font-sans">
-      {/* Mobile Overlay */}
-      {isMobile && sidebarOpen && (
-        <div
-          onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 bg-black/50 z-40"
-        />
-      )}
+    <ThemeProvider defaultTheme="system" storageKey="quantix-theme-admin">
+      <div className="flex min-h-screen bg-background text-foreground font-sans">
+        {/* Mobile Overlay */}
+        {isMobile && sidebarOpen && (
+          <div
+            onClick={() => setSidebarOpen(false)}
+            className="fixed inset-0 bg-black/50 z-40"
+          />
+        )}
 
-      {/* Sidebar */}
-      <aside
-        className="bg-sidebar border-r border-sidebar-border z-50 flex flex-col shrink-0"
-        style={{
-          width: isMobile ? (sidebarOpen ? 240 : 0) : sidebarOpen ? 240 : 64,
-          transition: 'width 0.3s ease, transform 0.3s ease',
-          position: isMobile ? 'fixed' : 'sticky',
-          top: 0,
-          left: 0,
-          height: '100vh',
-          overflow: 'hidden',
-          transform:
-            isMobile && !sidebarOpen ? 'translateX(-100%)' : 'translateX(0)',
-        }}
-      >
-        <div className="p-4 border-b border-sidebar-border flex items-center justify-between min-h-[64px]">
-          {sidebarOpen && (
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-md bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center shrink-0">
-                <Truck size={15} color="white" />
-              </div>
-              <div>
-                <div className="text-white font-bold text-sm leading-tight">
-                  QUANTIX
+        {/* Sidebar */}
+        <aside
+          className="bg-sidebar border-r border-sidebar-border z-50 flex flex-col shrink-0"
+          style={{
+            width: isMobile ? (sidebarOpen ? 240 : 0) : sidebarOpen ? 240 : 64,
+            transition: 'width 0.3s ease, transform 0.3s ease',
+            position: isMobile ? 'fixed' : 'sticky',
+            top: 0,
+            left: 0,
+            height: '100vh',
+            overflow: 'hidden',
+            transform:
+              isMobile && !sidebarOpen ? 'translateX(-100%)' : 'translateX(0)',
+          }}
+        >
+          <div className="p-4 border-b border-sidebar-border flex items-center justify-between min-h-[64px]">
+            {sidebarOpen && (
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-md bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center shrink-0">
+                  <Truck size={15} color="white" />
                 </div>
-                <div className="text-orange-500 font-semibold text-xs">
-                  YLLÄPITO
+                <div>
+                  <div className="text-white font-bold text-sm leading-tight">
+                    QUANTIX
+                  </div>
+                  <div className="text-orange-500 font-semibold text-xs">
+                    YLLÄPITO
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="w-7 h-7 rounded-md bg-white/10 border-none text-white/70 flex items-center justify-center shrink-0 hover:bg-white/20 transition-colors"
-          >
-            {sidebarOpen ? <X size={14} /> : <Menu size={14} />}
-          </button>
-        </div>
-
-        <nav className="flex-1 p-3 flex flex-col gap-1 overflow-y-auto">
-          {navItems.map(({to, icon: Icon, label}) => {
-            const active = isActive(to);
-            return (
-              <Link
-                key={to}
-                to={to}
-                onClick={closeMobileSidebar}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all whitespace-nowrap overflow-hidden ${
-                  active
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
-                    : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-                }`}
-              >
-                <Icon size={18} className="shrink-0" />
-                {(sidebarOpen || !isMobile) && <span>{label}</span>}
-                {(sidebarOpen || !isMobile) && active && (
-                  <ChevronRight size={14} className="ml-auto" />
-                )}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="p-4 border-t border-sidebar-border">
-          {sidebarOpen && user && (
-            <div className="mb-3">
-              <div className="text-sidebar-foreground font-semibold text-sm whitespace-nowrap overflow-hidden text-ellipsis">
-                {user.name}
-              </div>
-              <div className="text-sidebar-foreground/50 text-xs">
-                Ylläpitäjä
-              </div>
-            </div>
-          )}
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2.5 p-2 rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20 font-medium text-sm w-full transition-colors"
-          >
-            <LogOut size={16} className="shrink-0" />
-            {sidebarOpen && 'Kirjaudu ulos'}
-          </button>
-        </div>
-      </aside>
-
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0 w-full">
-        {/* Top bar */}
-        <header className="bg-card border-b border-border h-16 px-4 flex items-center justify-between shrink-0 transition-colors">
-          <div className="flex items-center gap-4">
-            {isMobile && (
-              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="w-9 h-9 rounded-lg border border-border bg-card text-muted-foreground flex items-center justify-center hover:bg-accent transition-colors"
-              >
-                <Menu size={20} />
-              </button>
             )}
-            <h2 className="m-0 text-foreground font-semibold text-lg">
-              Hallintapaneeli
-            </h2>
-          </div>
-
-          <div className="flex items-center gap-4">
-            {/* Etusivu-nappi Adminille */}
-            <Link
-              to="/"
-              className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5"
-              title="Palaa etusivulle"
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="w-7 h-7 rounded-md bg-white/10 border-none text-white/70 flex items-center justify-center shrink-0 hover:bg-white/20 transition-colors"
             >
-              <Home size={20} />
-            </Link>
-
-            <ModeToggle />
-            <div className="relative cursor-pointer hover:text-primary transition-colors text-muted-foreground">
-              <Bell size={20} />
-              {notificationCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-3.5 h-3.5 px-1 rounded-full bg-primary text-primary-foreground text-[0.6rem] flex items-center justify-center">
-                  {notificationCount > 99 ? '99+' : notificationCount}
-                </span>
-              )}
-            </div>
-            <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm">
-              {user?.name?.[0] ?? 'A'}
-            </div>
+              {sidebarOpen ? <X size={14} /> : <Menu size={14} />}
+            </button>
           </div>
-        </header>
 
-        <main className="flex-1 p-4 lg:p-6 overflow-y-auto">
-          <Outlet />
-        </main>
+          <nav className="flex-1 p-3 flex flex-col gap-1 overflow-y-auto">
+            {navItems.map(({to, icon: Icon, label}) => {
+              const active = isActive(to);
+              return (
+                <Link
+                  key={to}
+                  to={to}
+                  onClick={closeMobileSidebar}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all whitespace-nowrap overflow-hidden ${
+                    active
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
+                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                  }`}
+                >
+                  <Icon size={18} className="shrink-0" />
+                  {(sidebarOpen || !isMobile) && <span>{label}</span>}
+                  {(sidebarOpen || !isMobile) && active && (
+                    <ChevronRight size={14} className="ml-auto" />
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="p-4 border-t border-sidebar-border">
+            {sidebarOpen && user && (
+              <div className="mb-3">
+                <div className="text-sidebar-foreground font-semibold text-sm whitespace-nowrap overflow-hidden text-ellipsis">
+                  {user.name}
+                </div>
+                <div className="text-sidebar-foreground/50 text-xs">
+                  Ylläpitäjä
+                </div>
+              </div>
+            )}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2.5 p-2 rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20 font-medium text-sm w-full transition-colors"
+            >
+              <LogOut size={16} className="shrink-0" />
+              {sidebarOpen && 'Kirjaudu ulos'}
+            </button>
+          </div>
+        </aside>
+
+        {/* Main content */}
+        <div className="flex-1 flex flex-col min-w-0 w-full">
+          {/* Top bar */}
+          <header className="bg-card border-b border-border h-16 px-4 flex items-center justify-between shrink-0 transition-colors">
+            <div className="flex items-center gap-4">
+              {isMobile && (
+                <button
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="w-9 h-9 rounded-lg border border-border bg-card text-muted-foreground flex items-center justify-center hover:bg-accent transition-colors"
+                >
+                  <Menu size={20} />
+                </button>
+              )}
+              <h2 className="m-0 text-foreground font-semibold text-lg">
+                Hallintapaneeli
+              </h2>
+            </div>
+
+            <div className="flex items-center gap-4">
+              {/* Etusivu-nappi Adminille */}
+              <Link
+                to="/"
+                className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5"
+                title="Palaa etusivulle"
+              >
+                <Home size={20} />
+              </Link>
+
+              <ModeToggle />
+              <div className="relative cursor-pointer hover:text-primary transition-colors text-muted-foreground">
+                <Bell size={20} />
+                {notificationCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-3.5 h-3.5 px-1 rounded-full bg-primary text-primary-foreground text-[0.6rem] flex items-center justify-center animate-bounce">
+                    {notificationCount > 99 ? '99+' : notificationCount}
+                  </span>
+                )}
+              </div>
+              <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm">
+                {user?.name?.[0] ?? 'A'}
+              </div>
+            </div>
+          </header>
+
+          <main className="flex-1 p-4 lg:p-6 overflow-y-auto">
+            <Outlet />
+          </main>
+        </div>
       </div>
-    </div>
+    </ThemeProvider>
   );
 }

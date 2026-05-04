@@ -11,6 +11,12 @@ import {
   Clock,
   X,
   Home,
+  Megaphone,
+  MessageSquare,
+  AlignLeft,
+  Calendar,
+  Send,
+  Loader2,
 } from 'lucide-react';
 import {useAuth} from '../contexts/AuthContext';
 import {adminService} from '../services/adminService';
@@ -54,6 +60,9 @@ export function AdminDashboard() {
   const [routes, setRoutes] = useState<RouteOverview[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+
+  const [newItems, setNewItems] = useState<Set<string>>(new Set());
+
   const [announcementForm, setAnnouncementForm] = useState({
     title: '',
     content: '',
@@ -95,14 +104,45 @@ export function AdminDashboard() {
     } finally {
       setIsRefreshing(false);
     }
-  }, [token]); // Riippuu vain tokenista, EI isRefreshing-tilasta
+  }, [token]);
 
-  // 2. Kutsutaan hakua vain, kun sivu ladataan tai token vaihtuu
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  // 3. Manuaalinen päivitys (napin painallus)
+  useEffect(() => {
+    if (alerts.length === 0 && announcements.length === 0) return;
+
+    const seen = JSON.parse(localStorage.getItem('seen_notifications') || '[]');
+    const currentNew = new Set<string>();
+    let hasChanges = false;
+
+    alerts.forEach((a) => {
+      const id = `notif-${a.notification_id}`;
+      if (!seen.includes(id)) {
+        currentNew.add(id);
+        seen.push(id);
+        hasChanges = true;
+      }
+    });
+
+    announcements.forEach((a) => {
+      const id = `ann-${a.announcement_id}`;
+      if (!seen.includes(id)) {
+        currentNew.add(id);
+        seen.push(id);
+        hasChanges = true;
+      }
+    });
+
+    if (hasChanges) {
+      localStorage.setItem('seen_notifications', JSON.stringify(seen));
+      window.dispatchEvent(new Event('notifications_seen'));
+
+      setNewItems((prev) => new Set([...prev, ...currentNew]));
+    }
+  }, [alerts, announcements]);
+
   const handleRefresh = () => {
     fetchDashboardData();
   };
@@ -127,8 +167,6 @@ export function AdminDashboard() {
       });
 
       setAnnouncementForm({title: '', content: '', expires_at: ''});
-
-      // 4. Kutsutaan datahaku uudelleen ilmoituksen luonnin jälkeen
       await fetchDashboardData();
     } catch (error) {
       console.error('Failed to create announcement:', error);
@@ -192,121 +230,202 @@ export function AdminDashboard() {
       </div>
 
       <div className="p-6">
-        <h2 className="text-2xl font-extrabold text-foreground mb-4">
-          Uusi ilmoitus
+        {/* ILMOITUS -LOMAKE */}
+        <h2 className="text-2xl font-extrabold text-foreground mb-4 flex items-center gap-2.5">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Megaphone size={20} className="text-primary" />
+          </div>
+          Julkaise uusi ilmoitus
         </h2>
-        <div className="bg-card border border-border rounded-2xl p-5 mb-8 space-y-3">
-          <input
-            value={announcementForm.title}
-            onChange={(e) =>
-              setAnnouncementForm((prev) => ({...prev, title: e.target.value}))
-            }
-            placeholder="Ilmoituksen otsikko"
-            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-          />
-          <textarea
-            value={announcementForm.content}
-            onChange={(e) =>
-              setAnnouncementForm((prev) => ({
-                ...prev,
-                content: e.target.value,
-              }))
-            }
-            placeholder="Viesti käyttäjille"
-            rows={3}
-            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-          />
-          <div className="flex flex-col md:flex-row md:items-center gap-3">
-            <input
-              type="datetime-local"
-              value={announcementForm.expires_at}
-              onChange={(e) =>
-                setAnnouncementForm((prev) => ({
-                  ...prev,
-                  expires_at: e.target.value,
-                }))
-              }
-              className="rounded-lg border border-input bg-background px-3 py-2 text-sm"
-            />
-            <button
-              onClick={handleCreateAnnouncement}
-              disabled={isSavingAnnouncement || !announcementForm.title.trim()}
-              className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold disabled:opacity-50"
-            >
-              {isSavingAnnouncement ? 'Tallennetaan...' : 'Julkaise ilmoitus'}
-            </button>
+        <div className="bg-card border border-border rounded-2xl p-6 mb-8 shadow-sm relative overflow-hidden">
+          {/* Koristepalkki vasemmassa reunassa */}
+          <div className="absolute top-0 left-0 w-1.5 h-full bg-primary" />
+
+          <div className="flex flex-col gap-4">
+            {/* Otsikko */}
+            <div className="relative group">
+              <MessageSquare
+                size={18}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors"
+              />
+              <input
+                value={announcementForm.title}
+                onChange={(e) =>
+                  setAnnouncementForm((prev) => ({
+                    ...prev,
+                    title: e.target.value,
+                  }))
+                }
+                placeholder="Ilmoituksen otsikko (esim. Järjestelmäpäivitys)"
+                className="w-full rounded-xl border border-input bg-background pl-11 pr-4 py-3 text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium placeholder:font-normal"
+              />
+            </div>
+
+            {/* Sisältö */}
+            <div className="relative group">
+              <AlignLeft
+                size={18}
+                className="absolute left-3.5 top-3.5 text-muted-foreground group-focus-within:text-primary transition-colors"
+              />
+              <textarea
+                value={announcementForm.content}
+                onChange={(e) =>
+                  setAnnouncementForm((prev) => ({
+                    ...prev,
+                    content: e.target.value,
+                  }))
+                }
+                placeholder="Kirjoita viestin sisältö tähän..."
+                rows={3}
+                className="w-full rounded-xl border border-input bg-background pl-11 pr-4 py-3 text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-y min-h-[100px]"
+              />
+            </div>
+
+            {/* Alaosa: Pvm ja Nappi */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2 pt-4 border-t border-border/50">
+              <div className="flex flex-col gap-1.5 w-full sm:w-auto">
+                <label className="text-[0.65rem] font-bold text-muted-foreground uppercase tracking-wider ml-1">
+                  Voimassaolo (valinnainen)
+                </label>
+                <div className="relative group w-full sm:w-auto">
+                  <Calendar
+                    size={16}
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors"
+                  />
+                  <input
+                    type="datetime-local"
+                    value={announcementForm.expires_at}
+                    onChange={(e) =>
+                      setAnnouncementForm((prev) => ({
+                        ...prev,
+                        expires_at: e.target.value,
+                      }))
+                    }
+                    className="w-full sm:w-auto rounded-xl border border-input bg-background pl-10 pr-4 py-2.5 text-sm text-muted-foreground focus:text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={handleCreateAnnouncement}
+                disabled={
+                  isSavingAnnouncement || !announcementForm.title.trim()
+                }
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-bold hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg mt-auto cursor-pointer"
+              >
+                {isSavingAnnouncement ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <Send size={18} />
+                )}
+                {isSavingAnnouncement ? 'Julkaistaan...' : 'Julkaise ilmoitus'}
+              </button>
+            </div>
           </div>
         </div>
 
-        <h2 className="text-2xl font-extrabold text-foreground mb-4 flex items-center gap-2">
-          Huomiota vaativat
-          {alerts.length + announcements.length > 0 && (
-            <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-              {alerts.length + announcements.length}
+        <h2 className="text-2xl font-extrabold text-foreground mb-4 flex items-center gap-3">
+          Ilmoitukset
+          {newItems.size > 0 && (
+            <span className="bg-orange-500 text-white text-xs px-2.5 py-0.5 rounded-full shadow-[0_0_10px_rgba(249,115,22,0.4)] animate-pulse">
+              {newItems.size} uutta
             </span>
           )}
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          {announcements.map((announcement) => (
-            <div
-              key={`announcement-${announcement.announcement_id}`}
-              className="flex items-center gap-5 p-6 rounded-2xl border-2 bg-indigo-50 border-indigo-200 dark:bg-indigo-950/20 dark:border-indigo-900/50"
-            >
-              <AlertTriangle
-                size={36}
-                className="shrink-0 text-indigo-600 dark:text-indigo-500"
-              />
-              <div className="flex-1">
-                <div className="text-foreground font-extrabold text-lg mb-1">
-                  {announcement.title}
-                </div>
-                {announcement.content && (
-                  <div className="text-muted-foreground text-sm mb-1">
-                    {announcement.content}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 max-h-[400px] overflow-y-auto pr-2 rounded-xl">
+          {announcements.map((announcement) => {
+            const isNew = newItems.has(`ann-${announcement.announcement_id}`);
+            return (
+              <div
+                key={`announcement-${announcement.announcement_id}`}
+                className={`flex items-center gap-5 p-6 rounded-2xl border-2 transition-all duration-500 ${
+                  isNew
+                    ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/30 shadow-[0_0_15px_rgba(249,115,22,0.15)]'
+                    : 'border-indigo-200 bg-indigo-50 dark:bg-indigo-950/20 dark:border-indigo-900/50'
+                }`}
+              >
+                <AlertTriangle
+                  size={36}
+                  className={`shrink-0 ${isNew ? 'text-orange-500' : 'text-indigo-600 dark:text-indigo-500'}`}
+                />
+                <div className="flex-1">
+                  <div className="text-foreground font-extrabold text-lg mb-1 flex justify-between items-start">
+                    {announcement.title}
+                    {isNew && (
+                      <span className="text-[0.65rem] uppercase tracking-wider bg-orange-500 text-white px-2 py-0.5 rounded-md">
+                        Uusi
+                      </span>
+                    )}
                   </div>
-                )}
-                <div className="text-muted-foreground text-sm font-semibold">
-                  {new Date(announcement.created_at).toLocaleTimeString(
-                    'fi-FI',
-                    {
+                  {announcement.content && (
+                    <div className="text-muted-foreground text-sm mb-1">
+                      {announcement.content}
+                    </div>
+                  )}
+                  <div className="text-muted-foreground text-sm font-semibold mt-2">
+                    {new Date(announcement.created_at).toLocaleTimeString(
+                      'fi-FI',
+                      {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      }
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {alerts.map((alert) => {
+            const isNew = newItems.has(`notif-${alert.notification_id}`);
+            const baseBgClass =
+              alert.type === 'warning'
+                ? 'bg-amber-50 dark:bg-amber-950/20'
+                : 'bg-blue-50 dark:bg-blue-950/20';
+
+            const baseBorderClass =
+              alert.type === 'warning'
+                ? 'border-amber-200 dark:border-amber-900/50'
+                : 'border-blue-200 dark:border-blue-900/50';
+
+            return (
+              <div
+                key={alert.notification_id}
+                className={`flex items-center gap-5 p-6 rounded-2xl border-2 transition-all duration-500 ${baseBgClass} ${
+                  isNew
+                    ? 'border-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.15)]'
+                    : baseBorderClass
+                }`}
+              >
+                <AlertTriangle
+                  size={36}
+                  className={`shrink-0 ${
+                    isNew
+                      ? 'text-orange-500'
+                      : alert.type === 'warning'
+                        ? 'text-amber-600 dark:text-amber-500'
+                        : 'text-blue-600 dark:text-blue-500'
+                  }`}
+                />
+                <div className="flex-1">
+                  <div className="text-foreground font-extrabold text-lg mb-1 flex justify-between items-start">
+                    {alert.title}
+                    {isNew && (
+                      <span className="text-[0.65rem] uppercase tracking-wider bg-orange-500 text-white px-2 py-0.5 rounded-md">
+                        Uusi
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-muted-foreground text-sm font-semibold mt-2">
+                    {new Date(alert.created_at).toLocaleTimeString('fi-FI', {
                       hour: '2-digit',
                       minute: '2-digit',
-                    }
-                  )}
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-          {alerts.map((alert) => (
-            <div
-              key={alert.notification_id}
-              className={`flex items-center gap-5 p-6 rounded-2xl border-2 ${
-                alert.type === 'warning'
-                  ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/50'
-                  : 'bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-900/50'
-              }`}
-            >
-              <AlertTriangle
-                size={36}
-                className={`shrink-0 ${
-                  alert.type === 'warning'
-                    ? 'text-amber-600 dark:text-amber-500'
-                    : 'text-blue-600 dark:text-blue-500'
-                }`}
-              />
-              <div className="flex-1">
-                <div className="text-foreground font-extrabold text-lg mb-1">
-                  {alert.title}
-                </div>
-                <div className="text-muted-foreground text-sm font-semibold">
-                  {new Date(alert.created_at).toLocaleTimeString('fi-FI', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <h2 className="text-2xl font-extrabold text-foreground mb-4">

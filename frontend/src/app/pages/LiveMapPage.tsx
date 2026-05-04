@@ -10,20 +10,10 @@ import {
 } from 'lucide-react';
 import {useAuth} from '../contexts/AuthContext';
 import {orderService} from '../services/orderService';
-import {AdminMap} from '../components/delivery-tracking/AdminMap';
-
-// Vastaa backendin palauttamaa tietorakennetta
-interface ActiveDelivery {
-  order_id: number;
-  driver_lat: number;
-  driver_lng: number;
-  dest_lat: number;
-  dest_lng: number;
-  delivery_address: string;
-  updated_at: string;
-  status: string;
-  driver_id: number | null;
-}
+import {
+  AdminMap,
+  ActiveDelivery,
+} from '../components/delivery-tracking/AdminMap';
 
 export function LiveMapPage() {
   const {token} = useAuth();
@@ -32,40 +22,47 @@ export function LiveMapPage() {
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(Date.now());
 
-  // Kellon päivitys viiveiden laskentaa varten
+  // Kellon päivitys viiveiden laskentaa varten (ajetaan vain kerran mountatessa)
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 10000);
     return () => clearInterval(timer);
   }, []);
 
-  // Haetaan aktiiviset ajot backendistä
+  // Haetaan aktiiviset ajot backendistä turvallisesti
   useEffect(() => {
     if (!token) return;
+
+    let mounted = true;
 
     const fetchLocations = async () => {
       try {
         const res = await orderService.getAllActiveTracking(token);
-        if (res.success) {
+        if (res.success && mounted) {
           setDeliveries(res.data);
         }
       } catch (err) {
         console.error('Virhe sijaintien haussa', err);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
 
     fetchLocations();
     // Päivitetään tiedot 10 sekunnin välein
     const interval = setInterval(fetchLocations, 10000);
-    return () => clearInterval(interval);
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
   }, [token]);
 
-  // Lasketaan tilastot
-  // Jos päivityksestä on yli 60 sekuntia, oletetaan että kuski on pysähdyksissä/yhteys poikki
-  const activeCount = deliveries.filter(
-    (d) => now - new Date(d.updated_at).getTime() < 60000
-  ).length;
+  // Lasketaan tilastot: Oletetaan että yli 60s ilman päivitystä = viive/pysähdys
+  const activeCount = deliveries.filter((d) => {
+    if (!d.updated_at) return false;
+    return now - new Date(d.updated_at).getTime() < 60000;
+  }).length;
+
   const idleCount = deliveries.length - activeCount;
 
   return (
@@ -88,7 +85,7 @@ export function LiveMapPage() {
         {selectedId !== null && (
           <button
             onClick={() => setSelectedId(null)}
-            className="px-4 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-lg font-bold text-sm transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-lg font-bold text-sm transition-colors flex items-center gap-2 cursor-pointer shadow-sm"
           >
             <MapPin size={16} /> Näytä kaikki
           </button>
@@ -121,7 +118,6 @@ export function LiveMapPage() {
           },
           {
             label: 'Aktiivisia Kuskeja',
-            // Oletetaan tässä, että jokaisella toimituksella on eri kuski (tai filtteröidään uniikit driver_id:t)
             value: new Set(deliveries.map((d) => d.driver_id)).size,
             icon: Activity,
             colorClass: 'text-purple-500',
@@ -195,10 +191,11 @@ export function LiveMapPage() {
 
             <AnimatePresence>
               {deliveries.map((del) => {
-                // Määritellään tila päivitysajan perusteella
-                const secondsSinceUpdate = Math.floor(
-                  (now - new Date(del.updated_at).getTime()) / 1000
-                );
+                const secondsSinceUpdate = del.updated_at
+                  ? Math.floor(
+                      (now - new Date(del.updated_at).getTime()) / 1000
+                    )
+                  : 0;
                 const isDelayed = secondsSinceUpdate > 60;
 
                 return (
@@ -229,7 +226,7 @@ export function LiveMapPage() {
                           </span>
                         </div>
                         <div
-                          className="text-muted-foreground text-xs truncate mt-0.5"
+                          className="text-muted-foreground text-xs truncate mt-0.5 font-medium"
                           title={del.delivery_address}
                         >
                           {del.delivery_address}
@@ -247,7 +244,7 @@ export function LiveMapPage() {
                       >
                         {isDelayed ? 'Viive' : 'Aktiivinen'}
                       </span>
-                      <div className="flex items-center gap-1 text-muted-foreground text-xs font-medium">
+                      <div className="flex items-center gap-1 text-muted-foreground text-xs font-semibold">
                         <Clock size={12} />
                         <span>Päivitetty {secondsSinceUpdate}s sitten</span>
                       </div>

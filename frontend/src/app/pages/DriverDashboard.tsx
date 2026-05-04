@@ -1,6 +1,16 @@
+import {useState, useEffect} from 'react';
 import {motion} from 'motion/react';
-import {Truck, Check, Package, MapPin, Clock, AlertCircle} from 'lucide-react';
+import {
+  Truck,
+  Check,
+  Package,
+  MapPin,
+  Clock,
+  AlertCircle,
+  AlertTriangle,
+} from 'lucide-react';
 import {orderService} from '../services/orderService';
+import {adminService} from '../services/adminService';
 import {useOutletContext} from 'react-router';
 
 // Tyyppimäärittelyt
@@ -28,8 +38,93 @@ interface AssignedOrder {
   items: OrderItem[];
 }
 
+interface Alert {
+  notification_id: number;
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'error';
+  created_at: string;
+}
+
+interface Announcement {
+  announcement_id: number;
+  title: string;
+  content?: string | null;
+  created_at: string;
+  expires_at?: string | null;
+}
+
 export function DriverDashboard() {
   const {orders} = useOutletContext<{orders: AssignedOrder[]}>();
+
+  // Ilmoitustilat
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [newItems, setNewItems] = useState<Set<string>>(new Set());
+
+  // Hae ilmoitukset ja merkitse luetuksi YHDESSÄ ja samassa efektissä!
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchNotifications = async () => {
+      try {
+        // Haetaan data
+        const data = await adminService.getNotifications();
+        const fetchedAlerts: Alert[] = data.notifications || [];
+        const fetchedAnns: Announcement[] = data.announcements || [];
+
+        // Luetaan heti paikallinen historia (mikä on jo nähty)
+        const seen = JSON.parse(
+          localStorage.getItem('seen_notifications_driver') || '[]'
+        );
+        const currentNew = new Set<string>();
+        let hasChanges = false;
+
+        // Tarkistetaan onko joukossa uusia ilmoituksia
+        fetchedAlerts.forEach((a) => {
+          const id = `notif-${a.notification_id}`;
+          if (!seen.includes(id)) {
+            currentNew.add(id);
+            seen.push(id);
+            hasChanges = true;
+          }
+        });
+
+        fetchedAnns.forEach((a) => {
+          const id = `ann-${a.announcement_id}`;
+          if (!seen.includes(id)) {
+            currentNew.add(id);
+            seen.push(id);
+            hasChanges = true;
+          }
+        });
+
+        if (mounted) {
+          // Jos uutta löytyi, päivitetään uudet itemit ja lähetetään eventti kellolle
+          if (hasChanges) {
+            localStorage.setItem(
+              'seen_notifications_driver',
+              JSON.stringify(seen)
+            );
+            window.dispatchEvent(new Event('notifications_seen_driver'));
+            setNewItems((prev) => new Set([...prev, ...currentNew]));
+          }
+
+          // LOPUKSI asetetaan varsinaiset tilat ( kaikki päivittyy yhdessä renderöinnissä siten :) )
+          setAlerts(fetchedAlerts);
+          setAnnouncements(fetchedAnns);
+        }
+      } catch (err) {
+        console.error('Failed to fetch notifications:', err);
+      }
+    };
+
+    fetchNotifications();
+
+    return () => {
+      mounted = false;
+    };
+  }, []); // <-- Tyhjä riippuvuuslista, ajetaan vain kerran!
 
   const handleUpdateStatus = async (orderId: number, status: string) => {
     try {
@@ -42,6 +137,94 @@ export function DriverDashboard() {
 
   return (
     <div style={{padding: '1.5rem'}}>
+      {/* ILMOITUKSET OSIO */}
+      {(announcements.length > 0 || alerts.length > 0) && (
+        <div className="mb-8">
+          <h2 className="text-xl font-extrabold text-[#0f2444] mb-3 flex items-center gap-2">
+            Ilmoitukset
+            {newItems.size > 0 && (
+              <span className="bg-orange-500 text-white text-xs px-2.5 py-0.5 rounded-full shadow-[0_0_10px_rgba(249,115,22,0.4)] animate-pulse">
+                {newItems.size} uutta
+              </span>
+            )}
+          </h2>
+          <div className="flex flex-col gap-3 max-h-[300px] overflow-y-auto pr-2 rounded-xl">
+            {announcements.map((announcement) => {
+              const isNew = newItems.has(`ann-${announcement.announcement_id}`);
+              return (
+                <div
+                  key={`announcement-${announcement.announcement_id}`}
+                  className={`flex items-start gap-4 p-4 rounded-xl border-2 transition-all duration-500 ${
+                    isNew
+                      ? 'border-orange-500 bg-orange-50 shadow-[0_0_15px_rgba(249,115,22,0.15)]'
+                      : 'border-indigo-100 bg-white'
+                  }`}
+                >
+                  <AlertTriangle
+                    size={24}
+                    className={`shrink-0 mt-1 ${isNew ? 'text-orange-500' : 'text-indigo-500'}`}
+                  />
+                  <div className="flex-1">
+                    <div className="text-[#0f2444] font-extrabold text-base mb-1 flex justify-between items-start">
+                      {announcement.title}
+                      {isNew && (
+                        <span className="text-[0.65rem] uppercase tracking-wider bg-orange-500 text-white px-2 py-0.5 rounded-md">
+                          Uusi
+                        </span>
+                      )}
+                    </div>
+                    {announcement.content && (
+                      <div className="text-slate-600 text-sm mb-1 leading-snug">
+                        {announcement.content}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+            {alerts.map((alert) => {
+              const isNew = newItems.has(`notif-${alert.notification_id}`);
+              const baseBorderClass =
+                alert.type === 'warning'
+                  ? 'border-amber-200'
+                  : 'border-blue-200';
+
+              return (
+                <div
+                  key={alert.notification_id}
+                  className={`flex items-start gap-4 p-4 rounded-xl border-2 bg-white transition-all duration-500 ${
+                    isNew
+                      ? 'border-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.15)]'
+                      : baseBorderClass
+                  }`}
+                >
+                  <AlertTriangle
+                    size={24}
+                    className={`shrink-0 mt-1 ${
+                      isNew
+                        ? 'text-orange-500'
+                        : alert.type === 'warning'
+                          ? 'text-amber-500'
+                          : 'text-blue-500'
+                    }`}
+                  />
+                  <div className="flex-1">
+                    <div className="text-[#0f2444] font-extrabold text-base mb-1 flex justify-between items-start">
+                      {alert.title}
+                      {isNew && (
+                        <span className="text-[0.65rem] uppercase tracking-wider bg-orange-500 text-white px-2 py-0.5 rounded-md">
+                          Uusi
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-6">
         <h1
           style={{

@@ -6,6 +6,7 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
+  AlertTriangle,
   Plus,
   Eye,
   MapPin,
@@ -20,13 +21,15 @@ import {
   Loader2,
 } from 'lucide-react';
 import {useAuth} from '../contexts/AuthContext';
-// KORJATTU: Poistettu käyttämätön TrackingData importti
+import {useTheme} from '../contexts/ThemeProvider';
 import {orderService} from '../services/orderService';
+import {adminService} from '../services/adminService';
 import {useToast} from '../contexts/ToastContext';
-import {useNavigate} from 'react-router';
+import {useNavigate, useLocation} from 'react-router';
 import {ChangePasswordCard} from '../components/ChangePasswordCard';
 import {Map} from '../components/delivery-tracking/Map';
 
+// Tyyppimäärittelyt
 interface Order {
   order_id: number;
   status:
@@ -86,6 +89,22 @@ interface FlexibleTrackingData {
     lat?: number;
     lng?: number;
   };
+}
+
+interface Alert {
+  notification_id: number;
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'error';
+  created_at: string;
+}
+
+interface Announcement {
+  announcement_id: number;
+  title: string;
+  content?: string | null;
+  created_at: string;
+  expires_at?: string | null;
 }
 
 function StatCard({
@@ -274,6 +293,7 @@ function OrderCard({
 export function CustomerDashboard() {
   const {user, token} = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const {showToast} = useToast();
 
   const [orders, setOrders] = useState<Order[]>([]);
@@ -281,31 +301,95 @@ export function CustomerDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<'orders' | 'settings'>('orders');
+
+  // Katsotaan onko tultu kellokuvakkeesta (navigoitu state: { tab: 'settings' } kanssa)
+  const initialTab =
+    location.state &&
+    typeof location.state === 'object' &&
+    'tab' in location.state
+      ? (location.state as {tab: 'orders' | 'settings'}).tab
+      : 'orders';
+
+  const [activeTab, setActiveTab] = useState<'orders' | 'settings'>(initialTab);
+
+  // Ilmoitustilat
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [newItems, setNewItems] = useState<Set<string>>(new Set());
 
   const [selectedOrder, setSelectedOrder] = useState<OrderDetails | null>(null);
-  // KORJATTU: Käytetään juuri luotua FlexibleTrackingData -interfacea
   const [trackingData, setTrackingData] = useState<FlexibleTrackingData | null>(
     null
   );
   const [isModalLoading, setIsModalLoading] = useState(false);
 
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    return (
-      document.documentElement.classList.contains('dark') ||
-      localStorage.getItem('theme') === 'dark'
-    );
-  });
+  const {theme, setTheme} = useTheme();
+  const isDarkMode =
+    theme === 'dark' ||
+    (theme === 'system' &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches);
 
+  // Hae ilmoitukset ja merkitse luetuksi
   useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
+    let mounted = true;
+
+    const fetchNotifications = async () => {
+      try {
+        const data = await adminService.getNotifications();
+        const fetchedAlerts: Alert[] = data.notifications || [];
+        const fetchedAnns: Announcement[] = data.announcements || [];
+
+        // Hoidetaan luetuksi merkitseminen vain jos ollaan settings-tabissa!
+        if (activeTab === 'settings') {
+          const seen = JSON.parse(
+            localStorage.getItem('seen_notifications_customer') || '[]'
+          );
+          const currentNew = new Set<string>();
+          let hasChanges = false;
+
+          fetchedAlerts.forEach((a) => {
+            const id = `notif-${a.notification_id}`;
+            if (!seen.includes(id)) {
+              currentNew.add(id);
+              seen.push(id);
+              hasChanges = true;
+            }
+          });
+
+          fetchedAnns.forEach((a) => {
+            const id = `ann-${a.announcement_id}`;
+            if (!seen.includes(id)) {
+              currentNew.add(id);
+              seen.push(id);
+              hasChanges = true;
+            }
+          });
+
+          if (hasChanges && mounted) {
+            localStorage.setItem(
+              'seen_notifications_customer',
+              JSON.stringify(seen)
+            );
+            window.dispatchEvent(new Event('notifications_seen_customer'));
+            setNewItems((prev) => new Set([...prev, ...currentNew]));
+          }
+        }
+
+        if (mounted) {
+          setAlerts(fetchedAlerts);
+          setAnnouncements(fetchedAnns);
+        }
+      } catch (err) {
+        console.error('Failed to fetch notifications:', err);
+      }
+    };
+
+    fetchNotifications();
+
+    return () => {
+      mounted = false;
+    };
+  }, [activeTab]); // Kutsutaan aina kun välilehti vaihtuu!
 
   const getStatCards = () => [
     {
@@ -358,12 +442,14 @@ export function CustomerDashboard() {
           return order.status === filterStatus;
         });
 
-  // 1. Datan haku (Tilaukset & Statistiikka)
+  // Datan haku (Tilaukset & Statistiikka)
   useEffect(() => {
     if (!user || !token) {
       setLoading(false);
       return;
     }
+
+    let mounted = true;
 
     const fetchData = async () => {
       try {
@@ -377,21 +463,30 @@ export function CustomerDashboard() {
           ? ordersRes
           : ordersRes.orders || [];
 
-        setOrders(orderData);
-        setStats(statsRes);
+        if (mounted) {
+          setOrders(orderData);
+          setStats(statsRes);
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Virhe datanhaussa');
+        if (mounted) {
+          setError(err instanceof Error ? err.message : 'Virhe datanhaussa');
+        }
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchData();
     const interval = setInterval(fetchData, 60000);
-    return () => clearInterval(interval);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
   }, [user, token]);
 
-  // 2. Modaalin avaus
+  // Modaalin avaus
   const handleViewOrder = async (orderId: number) => {
     setIsModalLoading(true);
     setTrackingData(null); // Nollataan aiemmat seurantatiedot
@@ -408,12 +503,13 @@ export function CustomerDashboard() {
     }
   };
 
-  // 3. SEURANTADATAN LIVE-PÄIVITYS (Polling)
+  // SEURANTADATAN LIVE-PÄIVITYS (Polling)
   useEffect(() => {
-    // Jos tilaus ei ole auki tai se ei ole matkalla, ei tehdä mitään
     if (!selectedOrder || selectedOrder.status !== 'in_transit' || !token) {
       return;
     }
+
+    let mounted = true;
 
     const fetchTracking = async () => {
       try {
@@ -421,19 +517,20 @@ export function CustomerDashboard() {
           selectedOrder.order_id,
           token
         );
-        // Castataan vastaus suoraan joustavaan muotoon
-        setTrackingData(data as FlexibleTrackingData);
+        if (mounted) {
+          setTrackingData(data as FlexibleTrackingData);
+        }
       } catch (err) {
-        console.warn(
-          'Seurantatiedon haku epäonnistui (odottaa mahdollisesti kuskin sijaintipäivitystä):',
-          err
-        );
+        console.warn('Seurantatiedon haku epäonnistui:', err);
       }
     };
 
     fetchTracking(); // Hae heti
     const interval = setInterval(fetchTracking, 10000); // Päivitä 10s välein
-    return () => clearInterval(interval);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
   }, [selectedOrder, token]);
 
   // KARTAN KOORDINAATTIEN PURKAMINEN JOUSTAVASTI
@@ -456,7 +553,6 @@ export function CustomerDashboard() {
   const hasDriverLocation =
     !isNaN(driverLat) && !isNaN(driverLng) && driverLat !== 0;
 
-  // Jos destinationia ei löydy, käytetään oletuksena 0:aa (Map.tsx hoitaa tämän)
   const destLat = trackingData
     ? Number(trackingData?.destination?.lat || 0)
     : 0;
@@ -465,7 +561,6 @@ export function CustomerDashboard() {
     : 0;
   const hasDestination = !isNaN(destLat) && destLat !== 0;
 
-  // Aika
   const updatedAt =
     trackingData?.driver?.updated_at || trackingData?.updated_at;
 
@@ -485,15 +580,15 @@ export function CustomerDashboard() {
           <div className="flex gap-6">
             <button
               onClick={() => setActiveTab('orders')}
-              className={`pb-4 font-bold transition-all text-base px-2 ${activeTab === 'orders' ? 'text-orange-500 border-b-4 border-orange-500' : 'text-white/60 hover:text-white'}`}
+              className={`pb-4 font-bold transition-all text-base px-2 ${activeTab === 'orders' ? 'text-orange-500 border-b-4 border-orange-500' : 'text-white/60 hover:text-white cursor-pointer'}`}
             >
               Tilaukset
             </button>
             <button
               onClick={() => setActiveTab('settings')}
-              className={`pb-4 font-bold transition-all flex items-center gap-2 text-base px-2 ${activeTab === 'settings' ? 'text-orange-500 border-b-4 border-orange-500' : 'text-white/60 hover:text-white'}`}
+              className={`pb-4 font-bold transition-all flex items-center gap-2 text-base px-2 ${activeTab === 'settings' ? 'text-orange-500 border-b-4 border-orange-500' : 'text-white/60 hover:text-white cursor-pointer'}`}
             >
-              <Settings className="w-4 h-4" /> Asetukset
+              <Settings className="w-4 h-4" /> Asetukset & Ilmoitukset
             </button>
           </div>
         </div>
@@ -601,6 +696,115 @@ export function CustomerDashboard() {
             animate={{opacity: 1, y: 0}}
             className="max-w-3xl mx-auto space-y-6"
           >
+            {/* Oikeasti toimiva Ilmoitukset-osio */}
+            <div className="bg-card border border-border rounded-3xl p-8 shadow-sm">
+              <h2 className="text-xl font-extrabold text-foreground mb-6 flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Bell size={24} className="text-primary" />
+                </div>
+                Tärkeät Ilmoitukset
+                {newItems.size > 0 && (
+                  <span className="bg-orange-500 text-white text-xs px-2.5 py-0.5 rounded-full shadow-[0_0_10px_rgba(249,115,22,0.4)] animate-pulse ml-auto">
+                    {newItems.size} uutta
+                  </span>
+                )}
+              </h2>
+
+              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                {announcements.length === 0 && alerts.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground font-medium bg-muted/20 rounded-2xl border border-border/50">
+                    Ei uusia ilmoituksia tällä hetkellä.
+                  </div>
+                ) : (
+                  <>
+                    {announcements.map((announcement) => {
+                      const isNew = newItems.has(
+                        `ann-${announcement.announcement_id}`
+                      );
+                      return (
+                        <div
+                          key={`announcement-${announcement.announcement_id}`}
+                          className={`flex items-start gap-4 p-5 rounded-2xl border-2 transition-all duration-500 ${
+                            isNew
+                              ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/30 shadow-[0_0_15px_rgba(249,115,22,0.15)]'
+                              : 'border-border bg-card'
+                          }`}
+                        >
+                          <AlertTriangle
+                            size={24}
+                            className={`shrink-0 mt-0.5 ${isNew ? 'text-orange-500' : 'text-primary'}`}
+                          />
+                          <div className="flex-1">
+                            <div className="text-foreground font-extrabold text-base mb-1 flex justify-between items-start">
+                              {announcement.title}
+                              {isNew && (
+                                <span className="text-[0.65rem] uppercase tracking-wider bg-orange-500 text-white px-2 py-0.5 rounded-md">
+                                  Uusi
+                                </span>
+                              )}
+                            </div>
+                            {announcement.content && (
+                              <div className="text-muted-foreground text-sm mb-2 leading-snug">
+                                {announcement.content}
+                              </div>
+                            )}
+                            <div className="text-muted-foreground text-xs font-semibold">
+                              {new Date(
+                                announcement.created_at
+                              ).toLocaleDateString('fi-FI')}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {alerts.map((alert) => {
+                      const isNew = newItems.has(
+                        `notif-${alert.notification_id}`
+                      );
+                      return (
+                        <div
+                          key={alert.notification_id}
+                          className={`flex items-start gap-4 p-5 rounded-2xl border-2 transition-all duration-500 ${
+                            isNew
+                              ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/30 shadow-[0_0_15px_rgba(249,115,22,0.15)]'
+                              : alert.type === 'warning'
+                                ? 'border-amber-200 bg-amber-50 dark:bg-amber-950/20'
+                                : 'border-blue-200 bg-blue-50 dark:bg-blue-950/20'
+                          }`}
+                        >
+                          <AlertTriangle
+                            size={24}
+                            className={`shrink-0 mt-0.5 ${
+                              isNew
+                                ? 'text-orange-500'
+                                : alert.type === 'warning'
+                                  ? 'text-amber-500'
+                                  : 'text-blue-500'
+                            }`}
+                          />
+                          <div className="flex-1">
+                            <div className="text-foreground font-extrabold text-base mb-1 flex justify-between items-start">
+                              {alert.title}
+                              {isNew && (
+                                <span className="text-[0.65rem] uppercase tracking-wider bg-orange-500 text-white px-2 py-0.5 rounded-md">
+                                  Uusi
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-muted-foreground text-xs font-semibold">
+                              {new Date(alert.created_at).toLocaleDateString(
+                                'fi-FI'
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+              </div>
+            </div>
+
             <div className="bg-card border border-border rounded-3xl p-8 shadow-sm transition-all hover:shadow-md">
               <h2 className="text-2xl font-extrabold text-foreground mb-6 flex items-center gap-3">
                 <div className="p-2 bg-primary/10 rounded-lg">
@@ -646,7 +850,7 @@ export function CustomerDashboard() {
 
                 <div className="flex items-center justify-center shrink-0">
                   <button
-                    onClick={() => setIsDarkMode(!isDarkMode)}
+                    onClick={() => setTheme(isDarkMode ? 'light' : 'dark')}
                     aria-label="Vaihda teemaa"
                     className={`relative inline-flex h-9 w-16 cursor-pointer items-center rounded-full transition-colors duration-300 ease-in-out focus:outline-none focus:ring-4 focus:ring-primary/30 ${
                       isDarkMode ? 'bg-primary' : 'bg-slate-300'
@@ -665,49 +869,6 @@ export function CustomerDashboard() {
                     </span>
                   </button>
                 </div>
-              </div>
-            </div>
-
-            <div className="bg-card border border-border rounded-3xl p-8 shadow-sm opacity-60">
-              <h2 className="text-xl font-extrabold text-foreground mb-6 flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <Bell size={24} className="text-primary" />
-                </div>
-                Ilmoitukset (Tulossa)
-              </h2>
-              <div className="space-y-5 bg-muted/20 p-6 rounded-2xl border border-border/50">
-                {[
-                  {
-                    id: 'email',
-                    label: 'Sähköpostitilaus',
-                    desc: 'Saa päivitykset tilauksista sähköpostiin.',
-                  },
-                  {
-                    id: 'marketing',
-                    label: 'Markkinointiviestit',
-                    desc: 'Erikoistarjoukset ja uutiset.',
-                  },
-                ].map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-start justify-between gap-4"
-                  >
-                    <div>
-                      <p className="font-bold text-foreground text-base">
-                        {item.label}
-                      </p>
-                      <p className="text-sm font-medium text-muted-foreground mt-0.5">
-                        {item.desc}
-                      </p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      disabled
-                      defaultChecked
-                      className="w-6 h-6 rounded-md border-border text-primary focus:ring-primary mt-1 cursor-not-allowed"
-                    />
-                  </div>
-                ))}
               </div>
             </div>
           </motion.div>

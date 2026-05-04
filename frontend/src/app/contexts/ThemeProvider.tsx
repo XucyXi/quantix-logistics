@@ -36,10 +36,8 @@ export function ThemeProvider({
   useEffect(() => {
     const root = window.document.documentElement;
 
-    // Poistetaan vanhat luokat aina kun teema vaihtuu
     root.classList.remove('light', 'dark');
 
-    // Jos valinta on "system", katsotaan selaimen/käyttöjärjestelmän asetus
     if (theme === 'system') {
       const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
         .matches
@@ -47,11 +45,13 @@ export function ThemeProvider({
         : 'light';
 
       root.classList.add(systemTheme);
-      return;
+    } else {
+      root.classList.add(theme);
     }
 
-    // Muuten pakotetaan valittu teema (light tai dark)
-    root.classList.add(theme);
+    return () => {
+      root.classList.remove('light', 'dark');
+    };
   }, [theme]);
 
   const value = {

@@ -1,10 +1,12 @@
 import {Outlet, useNavigate, useLocation, Navigate} from 'react-router';
-import {Package, MapPin, User, Home, Navigation} from 'lucide-react';
+import {Package, MapPin, User, Home, Navigation, Bell} from 'lucide-react';
 import {DeliveryTracking, Order} from '../../types/logistics';
 import {useEffect, useState, useRef} from 'react';
 
 import {useAuth} from '../contexts/AuthContext';
+import {ThemeProvider} from '../contexts/ThemeProvider';
 import {orderService} from '../services/orderService';
+import {adminService} from '../services/adminService'; // Tarvitaan ilmoitusten hakuun
 
 export function DriverRoot() {
   const navigate = useNavigate();
@@ -12,6 +14,7 @@ export function DriverRoot() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [deliveries] = useState<DeliveryTracking[]>([]);
   const [isTracking, setIsTracking] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   // Tallennetaan edellisen päivityksen aikaleima
   const lastLocationUpdate = useRef<number>(0);
@@ -24,6 +27,56 @@ export function DriverRoot() {
     {to: '/driver/map', icon: MapPin, label: 'Kartta'},
     {to: '/driver/profile', icon: User, label: 'Profiili'},
   ];
+
+  // ILMOITUSTEN HAKU & LASKURI (Sama logiikka kuin AdminRootissa)
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchNotificationCount = async () => {
+      try {
+        const data = await adminService.getNotifications();
+
+        // Luetaan mitkä ilmoitukset on jo nähty
+        const seen = JSON.parse(
+          localStorage.getItem('seen_notifications_driver') || '[]'
+        );
+
+        // Lasketaan vain ne, joita EI löydy "nähdyt" -listalta
+        const unseenAlerts = (data?.notifications || []).filter(
+          (n: {notification_id: number}) =>
+            !seen.includes(`notif-${n.notification_id}`)
+        );
+        const unseenAnns = (data?.announcements || []).filter(
+          (a: {announcement_id: number}) =>
+            !seen.includes(`ann-${a.announcement_id}`)
+        );
+
+        if (mounted) {
+          setNotificationCount(unseenAlerts.length + unseenAnns.length);
+        }
+      } catch {
+        if (mounted) setNotificationCount(0);
+      }
+    };
+
+    if (user?.role === 'driver') {
+      fetchNotificationCount();
+      const interval = window.setInterval(fetchNotificationCount, 30000);
+      window.addEventListener(
+        'notifications_seen_driver',
+        fetchNotificationCount
+      );
+
+      return () => {
+        mounted = false;
+        window.clearInterval(interval);
+        window.removeEventListener(
+          'notifications_seen_driver',
+          fetchNotificationCount
+        );
+      };
+    }
+  }, [user]);
 
   // Haetaan tilaukset säännöllisesti taustalla
   useEffect(() => {
@@ -57,12 +110,10 @@ export function DriverRoot() {
           (position) => {
             const now = Date.now();
 
-            // Onko kulunut 30 sekuntia (30000 millisekuntia) edellisestä päivityksestä?
             if (now - lastLocationUpdate.current < 30000) {
-              return; // Jos ei, ohitetaan tämä GPS-päivitys kokonaan.
+              return;
             }
 
-            // Päivitetään uusi aikaleima
             lastLocationUpdate.current = now;
 
             const {latitude, longitude} = position.coords;
@@ -126,109 +177,121 @@ export function DriverRoot() {
       : location.pathname.startsWith(path);
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: '100vh',
-        backgroundColor: '#f1f5f9',
-        fontFamily: "'Space Grotesk', sans-serif",
-        paddingBottom: '80px',
-      }}
-    >
-      {/* Pieni globaali GPS-indikaattori yläreunaan, kun ajo on käynnissä */}
-      {isTracking && (
-        <div
-          style={{
-            position: 'fixed',
-            top: '1rem',
-            right: '1rem',
-            zIndex: 100,
-            backgroundColor: '#dcfce7',
-            color: '#15803d',
-            padding: '6px 12px',
-            borderRadius: '9999px',
-            fontSize: '12px',
-            fontWeight: 'bold',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-            border: '1px solid #bbf7d0',
-          }}
-        >
-          <Navigation
-            size={12}
-            className="fill-green-700"
-            style={{
-              animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-            }}
-          />
-          GPS Päällä
-        </div>
-      )}
-
-      {/* Main content */}
-      <main style={{flex: 1, overflow: 'auto'}}>
-        <Outlet context={{orders, deliveries}} />
-      </main>
-
-      {/* Bottom Navigation */}
-      <nav
+    <ThemeProvider defaultTheme="system" storageKey="quantix-theme-driver">
+      <div
         style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          backgroundColor: 'white',
-          borderTop: '1px solid #e2e8f0',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          padding: '0.5rem 0',
-          zIndex: 50,
-          boxShadow: '0 -2px 10px rgba(0,0,0,0.05)',
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: '100vh',
+          backgroundColor: '#f1f5f9',
+          fontFamily: "'Space Grotesk', sans-serif",
+          paddingBottom: '80px',
         }}
       >
-        {navItems.map(({to, icon: Icon, label}) => {
-          const active = isActive(to);
-          return (
-            <button
-              key={to}
-              onClick={() => navigate(to)}
+        {/* Yläpalkki (GPS + Ilmoituskello) */}
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-3">
+          {isTracking && (
+            <div
               style={{
+                backgroundColor: '#dcfce7',
+                color: '#15803d',
+                padding: '6px 12px',
+                borderRadius: '9999px',
+                fontSize: '12px',
+                fontWeight: 'bold',
                 display: 'flex',
-                flexDirection: 'column',
                 alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.25rem',
-                padding: '0.5rem',
-                border: 'none',
-                backgroundColor: 'transparent',
-                color: active ? '#f97316' : '#64748b',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                minHeight: '60px',
+                gap: '6px',
+                boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+                border: '1px solid #bbf7d0',
               }}
             >
-              <Icon size={24} strokeWidth={active ? 2.5 : 2} />
-              <span
-                style={{fontSize: '0.7rem', fontWeight: active ? 700 : 500}}
-              >
-                {label}
-              </span>
-            </button>
-          );
-        })}
-      </nav>
+              <Navigation
+                size={12}
+                className="fill-green-700"
+                style={{
+                  animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                }}
+              />
+              GPS Päällä
+            </div>
+          )}
 
-      <style>
-        {`
+          <button
+            onClick={() => navigate('/driver')}
+            className="relative bg-white w-10 h-10 rounded-full flex items-center justify-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] border border-slate-200 text-slate-600 hover:text-orange-500 cursor-pointer transition-colors"
+          >
+            <Bell size={20} />
+            {notificationCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-orange-500 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white animate-bounce">
+                {notificationCount > 99 ? '99+' : notificationCount}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Main content */}
+        <main style={{flex: 1, overflow: 'auto'}}>
+          <Outlet context={{orders, deliveries}} />
+        </main>
+
+        {/* Bottom Navigation */}
+        <nav
+          style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: 'white',
+            borderTop: '1px solid #e2e8f0',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            padding: '0.5rem 0',
+            zIndex: 50,
+            boxShadow: '0 -2px 10px rgba(0,0,0,0.05)',
+          }}
+        >
+          {navItems.map(({to, icon: Icon, label}) => {
+            const active = isActive(to);
+            return (
+              <button
+                key={to}
+                onClick={() => navigate(to)}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.25rem',
+                  padding: '0.5rem',
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  color: active ? '#f97316' : '#64748b',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  minHeight: '60px',
+                }}
+              >
+                <Icon size={24} strokeWidth={active ? 2.5 : 2} />
+                <span
+                  style={{fontSize: '0.7rem', fontWeight: active ? 700 : 500}}
+                >
+                  {label}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+
+        <style>
+          {`
           @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: .5; }
           }
         `}
-      </style>
-    </div>
+        </style>
+      </div>
+    </ThemeProvider>
   );
 }
