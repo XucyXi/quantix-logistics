@@ -33,6 +33,14 @@ interface Alert {
   created_at: string;
 }
 
+interface Announcement {
+  announcement_id: number;
+  title: string;
+  content?: string | null;
+  created_at: string;
+  expires_at?: string | null;
+}
+
 function UserIcon({routeStatus}: {routeStatus: string}) {
   if (routeStatus === 'in_progress')
     return <Truck size={18} className="text-blue-500" />;
@@ -45,6 +53,13 @@ export function AdminDashboard() {
   const {token} = useAuth();
   const [routes, setRoutes] = useState<RouteOverview[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [announcementForm, setAnnouncementForm] = useState({
+    title: '',
+    content: '',
+    expires_at: '',
+  });
+  const [isSavingAnnouncement, setIsSavingAnnouncement] = useState(false);
   const [stats, setStats] = useState({
     activeDrivers: 0,
     deliveredToday: 0,
@@ -68,6 +83,7 @@ export function AdminDashboard() {
 
         setRoutes(routesData.routes || []);
         setAlerts(notificationsData.notifications || []);
+        setAnnouncements(notificationsData.announcements || []);
 
         setStats({
           activeDrivers: routesData.routes?.length || 0,
@@ -98,6 +114,26 @@ export function AdminDashboard() {
 
   const handleReject = async (driverId: number) => {
     setRoutes((prev) => prev.filter((r) => r.driverId !== driverId));
+  };
+
+  const handleCreateAnnouncement = async () => {
+    if (!announcementForm.title.trim()) return;
+
+    try {
+      setIsSavingAnnouncement(true);
+      await adminService.createAnnouncement({
+        title: announcementForm.title.trim(),
+        content: announcementForm.content.trim() || undefined,
+        expires_at: announcementForm.expires_at || null,
+      });
+
+      setAnnouncementForm({title: '', content: '', expires_at: ''});
+      setIsRefreshing(true);
+    } catch (error) {
+      console.error('Failed to create announcement:', error);
+    } finally {
+      setIsSavingAnnouncement(false);
+    }
   };
 
   return (
@@ -156,15 +192,91 @@ export function AdminDashboard() {
       </div>
 
       <div className="p-6">
+        <h2 className="text-2xl font-extrabold text-foreground mb-4">
+          Uusi ilmoitus
+        </h2>
+        <div className="bg-card border border-border rounded-2xl p-5 mb-8 space-y-3">
+          <input
+            value={announcementForm.title}
+            onChange={(e) =>
+              setAnnouncementForm((prev) => ({...prev, title: e.target.value}))
+            }
+            placeholder="Ilmoituksen otsikko"
+            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+          />
+          <textarea
+            value={announcementForm.content}
+            onChange={(e) =>
+              setAnnouncementForm((prev) => ({
+                ...prev,
+                content: e.target.value,
+              }))
+            }
+            placeholder="Viesti käyttäjille"
+            rows={3}
+            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+          />
+          <div className="flex flex-col md:flex-row md:items-center gap-3">
+            <input
+              type="datetime-local"
+              value={announcementForm.expires_at}
+              onChange={(e) =>
+                setAnnouncementForm((prev) => ({
+                  ...prev,
+                  expires_at: e.target.value,
+                }))
+              }
+              className="rounded-lg border border-input bg-background px-3 py-2 text-sm"
+            />
+            <button
+              onClick={handleCreateAnnouncement}
+              disabled={isSavingAnnouncement || !announcementForm.title.trim()}
+              className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold disabled:opacity-50"
+            >
+              {isSavingAnnouncement ? 'Tallennetaan...' : 'Julkaise ilmoitus'}
+            </button>
+          </div>
+        </div>
+
         <h2 className="text-2xl font-extrabold text-foreground mb-4 flex items-center gap-2">
           Huomiota vaativat
-          {alerts.length > 0 && (
+          {alerts.length + announcements.length > 0 && (
             <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-              {alerts.length}
+              {alerts.length + announcements.length}
             </span>
           )}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          {announcements.map((announcement) => (
+            <div
+              key={`announcement-${announcement.announcement_id}`}
+              className="flex items-center gap-5 p-6 rounded-2xl border-2 bg-indigo-50 border-indigo-200 dark:bg-indigo-950/20 dark:border-indigo-900/50"
+            >
+              <AlertTriangle
+                size={36}
+                className="shrink-0 text-indigo-600 dark:text-indigo-500"
+              />
+              <div className="flex-1">
+                <div className="text-foreground font-extrabold text-lg mb-1">
+                  {announcement.title}
+                </div>
+                {announcement.content && (
+                  <div className="text-muted-foreground text-sm mb-1">
+                    {announcement.content}
+                  </div>
+                )}
+                <div className="text-muted-foreground text-sm font-semibold">
+                  {new Date(announcement.created_at).toLocaleTimeString(
+                    'fi-FI',
+                    {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    }
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
           {/* KORJATTU: Poistettu käyttämätön 'i' parametri */}
           {alerts.map((alert) => (
             <div
