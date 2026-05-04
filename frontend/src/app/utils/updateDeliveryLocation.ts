@@ -4,7 +4,10 @@ export const updateDeliveryLocation = async (
   longitude: number
 ) => {
   try {
-    const token = localStorage.getItem('token');
+    const token =
+      localStorage.getItem('quantix_token') ||
+      localStorage.getItem('accessToken') ||
+      localStorage.getItem('token');
 
     const response = await fetch(`/api/deliveries/${orderId}/location`, {
       method: 'POST',
