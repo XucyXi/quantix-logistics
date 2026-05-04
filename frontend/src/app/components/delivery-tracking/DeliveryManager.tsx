@@ -301,7 +301,7 @@ export const DeliveryManager = () => {
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [selectedOrderId]);
+  }, [selectedOrderId, currentOrder?.status, isSimulatingState]);
 
   if (!orders || orders.length === 0) {
     return <div style={{padding: '2rem'}}>Ladataan karttaa...</div>;

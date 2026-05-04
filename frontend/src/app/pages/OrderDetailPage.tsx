@@ -22,9 +22,16 @@ export function OrderDetailPage() {
   useEffect(() => {
     if (!id || !token) return;
 
+    const orderId = Number(id);
+    if (Number.isNaN(orderId)) {
+      console.error('Invalid order id:', id);
+      setLoading(false);
+      return;
+    }
+
     const fetchOrder = async () => {
       try {
-        const data = await orderService.getOrderById(id, token);
+        const data = await orderService.getOrderById(orderId, token);
         setOrder(data);
       } catch (err) {
         console.error('Failed to fetch order details:', err);

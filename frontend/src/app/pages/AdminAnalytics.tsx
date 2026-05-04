@@ -31,7 +31,7 @@ export function AdminAnalytics() {
 
     const fetchStats = async () => {
       try {
-        const data = await adminService.getAnalytics(token);
+        const data = await adminService.getAnalytics();
         setStats(data.stats);
       } catch (err) {
         console.error('Failed to fetch analytics:', err);
