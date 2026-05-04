@@ -119,12 +119,7 @@ interface OrderListProps {
 
 type TabType = 'active' | 'ready' | 'history' | 'new';
 
-export const OrderList = ({
-  orders,
-  selectedId,
-  onSelect,
-  variant = 'driver',
-}: OrderListProps) => {
+export const OrderList = ({orders, selectedId, onSelect}: OrderListProps) => {
   const [activeTab, setActiveTab] = useState<TabType>('active');
 
   const filteredOrders = orders.filter((order) => {

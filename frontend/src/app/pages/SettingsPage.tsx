@@ -59,7 +59,7 @@ export function SettingsPage() {
     try {
       await api.put('/auth/profile', accountData);
       showToast('Tilitiedot tallennettu onnistuneesti.', 'success');
-    } catch (e) {
+    } catch {
       showToast(
         'Backend ei vahvistanut tilitietojen tallennusta. Tarkista endpoint.',
         'error'
@@ -74,7 +74,7 @@ export function SettingsPage() {
     try {
       await api.put('/admin/settings/system', systemSettings);
       showToast('Järjestelmäasetukset tallennettu.', 'success');
-    } catch (e) {
+    } catch {
       showToast(
         'Backend ei vahvistanut järjestelmäasetuksia. Tarkista endpoint.',
         'error'
@@ -89,7 +89,7 @@ export function SettingsPage() {
     try {
       await api.post('/admin/settings/smtp/test', emailSettings);
       showToast('Yhteys SMTP-palvelimeen onnistui.', 'success');
-    } catch (e) {
+    } catch {
       showToast('SMTP-endpoint puuttuu tai yhteys epäonnistui.', 'error');
     } finally {
       setIsTestingSmtp(false);
@@ -122,7 +122,7 @@ export function SettingsPage() {
       showToast('Salasana vaihdettu onnistuneesti!', 'success');
       setIsPasswordModalOpen(false);
       setPasswordForm({current: '', new: '', confirm: ''});
-    } catch (e) {
+    } catch {
       // Tässä voidaan ottaa kiinni backendin virhe, esim. "Väärä nykyinen salasana"
       showToast(
         'Salasanan vaihto epäonnistui. Tarkista nykyinen salasana.',
@@ -562,11 +562,11 @@ export function SettingsPage() {
         </div>
       )}
 
-      {/* 
+      {/*
         TULEVAISUUTTA VARTEN: SÄHKÖPOSTIN KAUTTA TAPAHTUVAN SALASANAN VAIHDON LOGIIKKA (UNOHTUNUT SALASANA)
-        
+
         const [resetEmail, setResetEmail] = useState('');
-        
+
         const handlePasswordResetSubmit = async (e: React.FormEvent) => {
           e.preventDefault();
           // await api.post('/auth/reset-password', { email: resetEmail });

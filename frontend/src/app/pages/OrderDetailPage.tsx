@@ -3,6 +3,7 @@ import {useParams} from 'react-router-dom';
 import {useAuth} from '../contexts/AuthContext';
 import {orderService} from '../services/orderService';
 import {OrderTrackingMap} from '../components/OrderTrackingMap';
+import {OrderItem} from '../../types/logistics';
 
 interface Order {
   order_id: number;
@@ -10,7 +11,7 @@ interface Order {
   delivery_address: string;
   total_price: number;
   ordered_at: string;
-  items: any[];
+  items: OrderItem[];
 }
 
 export function OrderDetailPage() {
@@ -22,9 +23,16 @@ export function OrderDetailPage() {
   useEffect(() => {
     if (!id || !token) return;
 
+    const orderId = Number(id);
+    if (Number.isNaN(orderId)) {
+      console.error('Invalid order id:', id);
+      setLoading(false);
+      return;
+    }
+
     const fetchOrder = async () => {
       try {
-        const data = await orderService.getOrderById(id, token);
+        const data = await orderService.getOrderById(orderId, token);
         setOrder(data);
       } catch (err) {
         console.error('Failed to fetch order details:', err);

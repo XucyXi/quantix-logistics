@@ -154,7 +154,8 @@ export function ChatBot() {
             <div className="px-4 py-2 bg-blue-50 border-t border-blue-100 flex items-center gap-2">
               <Info size={14} className="text-blue-600" />
               <span className="text-[10px] text-blue-800 uppercase font-bold">
-                Kokeile: "hinta", "toimitus" tai "apua"
+                Kokeile: &quot;hinta&quot;, &quot;toimitus&quot; tai
+                &quot;apua&quot;
               </span>
             </div>
 

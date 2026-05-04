@@ -2,6 +2,13 @@ import {useState, useEffect, ReactNode} from 'react';
 import {useAuth} from '../contexts/AuthContext';
 import {adminService} from '../services/adminService';
 
+interface AnalyticsStats {
+  total_revenue: number | string;
+  total_orders: number;
+  delivered: number;
+  avg_order_value: number | string;
+}
+
 interface StatCardProps {
   label: string;
   value: string | number;
@@ -24,15 +31,15 @@ function StatCard({label, value, icon}: StatCardProps) {
 
 export function AdminAnalytics() {
   const {token} = useAuth();
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<AnalyticsStats | null>(null);
 
   useEffect(() => {
     if (!token) return;
 
     const fetchStats = async () => {
       try {
-        const data = await adminService.getAnalytics(token);
-        setStats(data.stats);
+        const data = await adminService.getAnalytics();
+        setStats(data.stats as AnalyticsStats);
       } catch (err) {
         console.error('Failed to fetch analytics:', err);
       }
