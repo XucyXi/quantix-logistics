@@ -6,16 +6,28 @@ export const adminService = {
     return res.data;
   },
 
+  getOrderAnalytics: async () => {
+    const res = await api.get('/admin/analytics/orders');
+    return res.data;
+  },
+
   getActiveRoutes: async () => {
-    // Backward-compatible fallback while /routes/overview is being implemented.
     try {
       const res = await api.get('/admin/routes/overview');
       return res.data;
     } catch {
-      // Jos ylempi reitti palauttaa virheen, kokeillaan tätä:
+      // Fallback jos overview ei ole vielä implementoitu backendissä
       const fallbackRes = await api.get('/admin/analytics/orders');
       return fallbackRes.data;
     }
+  },
+
+  updateSystemSettings: async (settingsData: {
+    timezone?: string;
+    language?: string;
+  }) => {
+    const res = await api.put('/admin/settings/system', settingsData);
+    return res.data;
   },
 
   getNotifications: async () => {
@@ -24,12 +36,9 @@ export const adminService = {
       return res.data;
     } catch (error: unknown) {
       const axiosError = error as {response?: {status?: number}};
-
-      // Jos reittiä ei löydy (404), palautetaan vain tyhjä taulukko sovelluksen kaatamisen sijaan
       if (axiosError.response && axiosError.response.status === 404) {
         return {notifications: []};
       }
-      // Muissa virheissä (esim. 500 Server Error) heitetään virhe eteenpäin
       throw error;
     }
   },

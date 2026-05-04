@@ -3,7 +3,6 @@ import {motion} from 'motion/react';
 import {
   Users,
   User,
-  Target,
   Award,
   TrendingUp,
   Heart,
@@ -12,41 +11,46 @@ import {
   Globe,
   CheckCircle,
   ArrowRight,
+  Mail,
+  Phone,
+  MapPin,
+  Send,
 } from 'lucide-react';
 import quantixPropaganda from '../../assets/videos/quanitxlogvideo1.mp4';
 import teamImage from '../../assets/images/Meistä.png';
-import tiimiBkg from '../../assets/images/Meistä.png';
 import introVideo from '../../assets/videos/intro.mp4';
 
-const teamImg = teamImage;
 const warehouseImg =
   'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3YXJlaG91c2UlMjBsb2dpc3RpY3N8ZW58MXx8fHwxNzc0MzQwNzc4fDA&ixlib=rb-4.1.0&q=80&w=1080';
-const teamTeamImg = tiimiBkg;
 
 const values = [
   {
     icon: Heart,
     title: 'Asiakaslähtöisyys',
-    desc: 'Asiakkaan tarpeet ovat toimintamme keskiössä. Kuuntelemme, kehitämme ja toimitamme.',
-    color: '#f97316',
+    desc: 'Asiakkaan tarpeet ovat toimintamme keskiössä.',
+    color: 'text-orange-500',
+    bg: 'bg-orange-500/10',
   },
   {
     icon: Zap,
     title: 'Tehokkuus',
-    desc: 'Optimoimme jokaisen prosessin maksimaalisen tehokkuuden ja kustannussäästöjen saavuttamiseksi.',
-    color: '#3b82f6',
+    desc: 'Optimoimme jokaisen prosessin maksimaalisen tehokkuuden saavuttamiseksi.',
+    color: 'text-blue-500',
+    bg: 'bg-blue-500/10',
   },
   {
     icon: Shield,
     title: 'Luotettavuus',
-    desc: 'Lupaamme vain sen, minkä voimme täyttää ja täytämme sen aina ajallaan.',
-    color: '#22c55e',
+    desc: 'Lupaamme vain sen, minkä voimme täyttää ja täytämme sen ajallaan.',
+    color: 'text-green-500',
+    bg: 'bg-green-500/10',
   },
   {
     icon: Globe,
     title: 'Läpinäkyvyys',
     desc: 'Kaikki tieto reaaliajassa. Ei piilokuluja eikä yllätyksiä.',
-    color: '#8b5cf6',
+    color: 'text-purple-500',
+    bg: 'bg-purple-500/10',
   },
 ];
 
@@ -57,13 +61,6 @@ const milestones = [
   {year: '2022', event: 'Laajennuttiin 200+ kauppaan'},
   {year: '2023', event: 'ISO 22000 -sertifiointi saavutettu'},
   {year: '2024', event: '340+ kauppaa, 12 000 toimitusta viikossa'},
-];
-
-const stats = [
-  {value: '340+', label: 'Kauppaa'},
-  {value: '12 000', label: 'Toimitusta/vk'},
-  {value: '99.2%', label: 'Ajallaan'},
-  {value: '5v', label: 'Kokemusta'},
 ];
 
 const team = [
@@ -91,152 +88,47 @@ const team = [
 
 export function AboutPage() {
   return (
-    <div style={{fontFamily: "'Space Grotesk', sans-serif"}}>
+    <div className="font-sans">
       {/* Hero */}
-      <section
-        style={{
-          position: 'relative',
-          minHeight: '60vh',
-          display: 'flex',
-          alignItems: 'center',
-          overflow: 'hidden',
-          backgroundColor: '#0f2444',
-        }}
-      >
+      <section className="relative min-h-[60vh] flex items-center overflow-hidden bg-[#0f2444]">
         <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            backgroundImage: `url(${teamImg})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            opacity: 0.12,
-          }}
+          className="absolute inset-0 bg-cover bg-center opacity-10"
+          style={{backgroundImage: `url(${teamImage})`}}
         />
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background:
-              'linear-gradient(135deg, #0f2444 0%, rgba(15,36,68,0.92) 100%)',
-          }}
-        />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0f2444] to-[#0f2444]/90" />
 
-        <div
-          style={{
-            maxWidth: 1280,
-            margin: '0 auto',
-            padding: '4rem 1.5rem',
-            position: 'relative',
-            zIndex: 2,
-            width: '100%',
-            textAlign: 'center',
-          }}
-        >
+        <div className="max-w-7xl mx-auto px-6 py-20 relative z-10 w-full text-center">
           <motion.div
             initial={{opacity: 0, y: 30}}
             animate={{opacity: 1, y: 0}}
             transition={{duration: 0.7}}
           >
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.375rem 1rem',
-                borderRadius: 30,
-                backgroundColor: 'rgba(249,115,22,0.15)',
-                border: '1px solid rgba(249,115,22,0.3)',
-                marginBottom: '1.5rem',
-              }}
-            >
-              <Users size={16} color="#f97316" />
-              <span
-                style={{color: '#f97316', fontSize: '0.8rem', fontWeight: 600}}
-              >
-                Meistä
-              </span>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-500/15 border border-orange-500/30 mb-6">
+              <Users size={16} className="text-orange-500" />
+              <span className="text-orange-500 text-sm font-bold">Meistä</span>
             </div>
-
-            <h1
-              style={{
-                color: '#ffffff',
-                fontSize: 'clamp(2.5rem, 5vw, 4rem)',
-                fontWeight: 800,
-                lineHeight: 1.15,
-                marginBottom: '1.25rem',
-                letterSpacing: '-0.02em',
-              }}
-            >
+            <h1 className="text-white text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-6 tracking-tight">
               Ruokalogistiikan{' '}
-              <span
-                style={{
-                  background: 'linear-gradient(90deg, #f97316, #fb923c)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
+              <span className="bg-gradient-to-r from-orange-500 to-orange-400 bg-clip-text text-transparent">
                 uudistajat
               </span>
             </h1>
-
-            <p
-              style={{
-                color: 'rgba(255,255,255,0.75)',
-                fontSize: '1.2rem',
-                lineHeight: 1.75,
-                maxWidth: 700,
-                margin: '0 auto 2rem',
-              }}
-            >
+            <p className="text-white/75 text-lg md:text-xl max-w-3xl mx-auto mb-10 leading-relaxed">
               Quantix Logistics syntyi tarpeesta tehdä ruokalogistiikasta
               läpinäkyvää, tehokasta ja reaaliaikaista. Yhdistämme
               jakelukeskukset, kuljettajat ja kaupat yhteen älykkääseen
               järjestelmään.
             </p>
-
-            <div
-              style={{
-                display: 'flex',
-                gap: '1rem',
-                justifyContent: 'center',
-                flexWrap: 'wrap',
-              }}
-            >
+            <div className="flex flex-wrap justify-center gap-4">
               <Link
                 to="/register"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.875rem 2rem',
-                  borderRadius: 10,
-                  backgroundColor: '#f97316',
-                  color: 'white',
-                  textDecoration: 'none',
-                  fontWeight: 700,
-                  fontSize: '1rem',
-                  boxShadow: '0 4px 20px rgba(249,115,22,0.35)',
-                }}
+                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-orange-500 text-white font-bold text-base shadow-lg shadow-orange-500/30 hover:bg-orange-600 transition-all hover:-translate-y-0.5 cursor-pointer"
               >
-                Liity mukaan
-                <ArrowRight size={18} />
+                Liity mukaan <ArrowRight size={18} />
               </Link>
               <Link
                 to="/products"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.875rem 2rem',
-                  borderRadius: 10,
-                  backgroundColor: 'rgba(255,255,255,0.1)',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  color: 'white',
-                  textDecoration: 'none',
-                  fontWeight: 600,
-                  fontSize: '1rem',
-                }}
+                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-white/10 border border-white/20 text-white font-semibold text-base hover:bg-white/20 transition-all cursor-pointer"
               >
                 Tutustu tuotteisiin
               </Link>
@@ -246,421 +138,78 @@ export function AboutPage() {
       </section>
 
       {/* Intro */}
-      <section style={{backgroundColor: 'white', padding: '5rem 1.5rem'}}>
-        <div style={{maxWidth: 1280, margin: '0 auto'}}>
-          <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-12 items-center">
-            <motion.div
-              initial={{opacity: 0, x: -30}}
-              whileInView={{opacity: 1, x: 0}}
-              transition={{duration: 0.7}}
-              viewport={{once: true}}
+      <section className="bg-white py-24 px-6">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+          <motion.div
+            initial={{opacity: 0, x: -30}}
+            whileInView={{opacity: 1, x: 0}}
+            transition={{duration: 0.7}}
+            viewport={{once: true}}
+          >
+            <h2 className="text-[#0f2444] text-3xl md:text-4xl font-extrabold mb-6">
+              Rakennamme ruokalogistiikasta läpinäkyvämpää arkea.
+            </h2>
+            <p className="text-slate-600 text-lg mb-6 leading-relaxed">
+              Quantix Logistics syntyi tarpeesta yhdistää jakelukeskukset,
+              kuljettajat ja kaupat yhteen selkeään näkymään. Tavoitteemme on
+              vähentää epävarmuutta, nopeuttaa päätöksentekoa ja tehdä
+              toimitusketjusta ennakoitava.
+            </p>
+            <ul className="space-y-4 mb-8">
+              {[
+                'Reaaliaikainen seuranta jokaiselle toimitukselle',
+                'Optimoidut reitit ja vähemmän hävikkiä',
+                'Täydellinen läpinäkyvyys koko toimitusketjuun',
+              ].map((item) => (
+                <li
+                  key={item}
+                  className="flex items-start gap-3 text-slate-600 font-medium"
+                >
+                  <CheckCircle size={22} className="text-green-500 shrink-0" />{' '}
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+
+          <motion.div
+            initial={{opacity: 0, x: 30}}
+            whileInView={{opacity: 1, x: 0}}
+            transition={{duration: 0.7}}
+            viewport={{once: true}}
+            className="bg-gradient-to-b from-[#0f2444] to-[#17324f] rounded-3xl p-6 shadow-2xl"
+          >
+            <div className="mb-4">
+              <span className="text-orange-500 text-xs font-extrabold uppercase tracking-widest block mb-1">
+                Introvideo
+              </span>
+              <h3 className="text-white text-xl font-bold">
+                Katso lyhyt esittely
+              </h3>
+            </div>
+            <video
+              controls
+              playsInline
+              preload="metadata"
+              className="w-full aspect-video bg-black rounded-2xl shadow-inner object-cover"
             >
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.375rem 1rem',
-                  borderRadius: 30,
-                  backgroundColor: 'rgba(249,115,22,0.1)',
-                  border: '1px solid rgba(249,115,22,0.2)',
-                  marginBottom: '1rem',
-                }}
-              >
-                <Users size={16} color="#f97316" />
-                <span
-                  style={{
-                    color: '#f97316',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                  }}
-                >
-                  Meistä lyhyesti
-                </span>
-              </div>
-
-              <h2
-                style={{
-                  color: '#0f2444',
-                  fontSize: 'clamp(1.9rem, 3vw, 2.7rem)',
-                  fontWeight: 800,
-                  lineHeight: 1.15,
-                  margin: '0 0 1rem',
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                Rakennamme ruokalogistiikasta läpinäkyvämpää arkea koko
-                ketjulle.
-              </h2>
-
-              <p
-                style={{
-                  color: '#475569',
-                  fontSize: '1.05rem',
-                  lineHeight: 1.8,
-                  margin: '0 0 1rem',
-                }}
-              >
-                Quantix Logistics syntyi tarpeesta yhdistää jakelukeskukset,
-                kuljettajat ja kaupat yhteen selkeään näkymään. Tavoitteemme on
-                vähentää epävarmuutta, nopeuttaa päätöksentekoa ja tehdä
-                toimitusketjusta aidosti ennakoitava.
-              </p>
-
-              <p
-                style={{
-                  color: '#475569',
-                  fontSize: '1.05rem',
-                  lineHeight: 1.8,
-                  margin: 0,
-                }}
-              >
-                Kun tieto kulkee reaaliajassa, myös hävikki, viiveet ja
-                ylimääräinen säätö vähenevät. Siksi rakennamme järjestelmää,
-                jossa jokainen toimitus näkyy, jokainen rooli tietää mitä tehdä
-                ja koko ketju toimii yhtenä kokonaisuutena.
-              </p>
-            </motion.div>
-
-            <motion.div
-              initial={{opacity: 0, x: 30}}
-              whileInView={{opacity: 1, x: 0}}
-              transition={{duration: 0.7, delay: 0.1}}
-              viewport={{once: true}}
-              style={{
-                background:
-                  'linear-gradient(180deg, rgba(15,36,68,0.98) 0%, rgba(23,50,79,0.96) 100%)',
-                borderRadius: 24,
-                padding: '1.5rem',
-                color: 'white',
-                boxShadow: '0 18px 40px rgba(15,36,68,0.22)',
-                border: '1px solid rgba(255,255,255,0.08)',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '1rem',
-                  marginBottom: '1rem',
-                }}
-              >
-                <div>
-                  <div
-                    style={{
-                      color: '#f97316',
-                      fontSize: '0.78rem',
-                      fontWeight: 800,
-                      letterSpacing: '0.08em',
-                      textTransform: 'uppercase',
-                      marginBottom: '0.25rem',
-                    }}
-                  >
-                    Introvideo
-                  </div>
-                  <h3
-                    style={{
-                      margin: 0,
-                      fontSize: '1.15rem',
-                      fontWeight: 800,
-                      color: 'white',
-                    }}
-                  >
-                    Katso lyhyt esittely
-                  </h3>
-                </div>
-
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    padding: '0.45rem 0.8rem',
-                    borderRadius: 999,
-                    backgroundColor: 'rgba(249,115,22,0.14)',
-                    color: '#f97316',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    border: '1px solid rgba(249,115,22,0.25)',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  noin 40 s
-                </div>
-              </div>
-
-              <div
-                style={{
-                  width: '100%',
-                  borderRadius: 20,
-                  backgroundColor: '#000000',
-                  boxShadow: '0 18px 40px rgba(0,0,0,0.28)',
-                  overflow: 'hidden',
-                  aspectRatio: '9 / 14',
-                  minHeight: 360,
-                }}
-              >
-                <video
-                  controls
-                  playsInline
-                  preload="metadata"
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    display: 'block',
-                    objectFit: 'cover',
-                    objectPosition: 'center 38%',
-                  }}
-                >
-                  <source src={introVideo} type="video/mp4" />
-                  Selaimesi ei tue videotoistoa.
-                </video>
-              </div>
-
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-                  gap: '0.75rem',
-                  marginTop: '1rem',
-                }}
-              >
-                {[
-                  {label: 'Reaaliaikainen näkyvyys', value: '24/7'},
-                  {label: 'Yksi yhteinen näkymä', value: 'Koko ketju'},
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    style={{
-                      backgroundColor: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: 14,
-                      padding: '0.95rem 1rem',
-                    }}
-                  >
-                    <div
-                      style={{
-                        color: 'rgba(255,255,255,0.62)',
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        marginBottom: '0.3rem',
-                      }}
-                    >
-                      {item.label}
-                    </div>
-                    <div style={{fontSize: '1rem', fontWeight: 800}}>
-                      {item.value}
-                    </div>
-                  </div>
-                ))}
-                <div
-                  style={{
-                    backgroundColor: 'rgba(249,115,22,0.12)',
-                    border: '1px solid rgba(249,115,22,0.22)',
-                    borderRadius: 14,
-                    padding: '0.95rem 1rem',
-                  }}
-                >
-                  <div
-                    style={{
-                      color: '#f97316',
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      marginBottom: '0.3rem',
-                    }}
-                  >
-                    Käytännössä
-                  </div>
-                  <div style={{fontSize: '1rem', fontWeight: 800}}>
-                    Vähemmän säätöä
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section style={{backgroundColor: '#f8fafc', padding: '3rem 1.5rem'}}>
-        <div style={{maxWidth: 1280, margin: '0 auto'}}>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {stats.map((stat, i) => (
-              <motion.div
-                key={stat.label}
-                initial={{opacity: 0, y: 20}}
-                whileInView={{opacity: 1, y: 0}}
-                transition={{duration: 0.5, delay: i * 0.1}}
-                viewport={{once: true}}
-                style={{
-                  backgroundColor: 'white',
-                  borderRadius: 16,
-                  padding: '2rem 1.5rem',
-                  textAlign: 'center',
-                  boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-                  border: '1px solid #f1f5f9',
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: '2.5rem',
-                    fontWeight: 800,
-                    color: i % 2 === 0 ? '#f97316' : '#0f2444',
-                    lineHeight: 1,
-                    marginBottom: '0.5rem',
-                  }}
-                >
-                  {stat.value}
-                </div>
-                <div
-                  style={{
-                    color: '#64748b',
-                    fontSize: '0.9rem',
-                    fontWeight: 600,
-                  }}
-                >
-                  {stat.label}
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Mission */}
-      <section style={{backgroundColor: 'white', padding: '5rem 1.5rem'}}>
-        <div style={{maxWidth: 1280, margin: '0 auto'}}>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <motion.div
-              initial={{opacity: 0, x: -40}}
-              whileInView={{opacity: 1, x: 0}}
-              transition={{duration: 0.7}}
-              viewport={{once: true}}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  marginBottom: '1.5rem',
-                }}
-              >
-                <div
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 12,
-                    backgroundColor: 'rgba(249,115,22,0.1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Target size={24} color="#f97316" />
-                </div>
-                <h2
-                  style={{
-                    color: '#0f2444',
-                    fontSize: '2rem',
-                    fontWeight: 800,
-                    margin: 0,
-                  }}
-                >
-                  Missiomme
-                </h2>
-              </div>
-              <p
-                style={{
-                  color: '#475569',
-                  fontSize: '1.05rem',
-                  lineHeight: 1.8,
-                  marginBottom: '1.5rem',
-                }}
-              >
-                Tehdä ruokalogistiikasta Suomessa älykkäintä, läpinäkyvintä ja
-                tehokkainta koskaan. Autamme kauppoja, kuljettajia ja
-                jakelukeskuksia toimimaan yhtenä saumattomana kokonaisuutena.
-              </p>
-              <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
-                {[
-                  'Reaaliaikainen seuranta jokaiselle toimitukselle',
-                  'Optimoidut reitit ja vähemmän hävikkiä',
-                  'Täydellinen läpinäkyvyys koko toimitusketjuun',
-                ].map((item) => (
-                  <li
-                    key={item}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: '0.75rem',
-                      marginBottom: '0.875rem',
-                    }}
-                  >
-                    <CheckCircle
-                      size={20}
-                      color="#22c55e"
-                      style={{marginTop: '0.125rem', flexShrink: 0}}
-                    />
-                    <span style={{color: '#64748b', fontSize: '0.95rem'}}>
-                      {item}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
-
-            <motion.div
-              initial={{opacity: 0, x: 40}}
-              whileInView={{opacity: 1, x: 0}}
-              transition={{duration: 0.7}}
-              viewport={{once: true}}
-              style={{
-                borderRadius: 20,
-                overflow: 'hidden',
-                boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
-              }}
-            >
-              <img
-                src={warehouseImg}
-                alt="Quantix warehouse"
-                style={{width: '100%', height: 'auto', display: 'block'}}
-              />
-            </motion.div>
-          </div>
+              <source src={introVideo} type="video/mp4" />
+            </video>
+          </motion.div>
         </div>
       </section>
 
       {/* Values */}
-      <section style={{backgroundColor: '#f8fafc', padding: '5rem 1.5rem'}}>
-        <div style={{maxWidth: 1280, margin: '0 auto'}}>
-          <div style={{textAlign: 'center', marginBottom: '3.5rem'}}>
-            <div
-              style={{
-                display: 'inline-block',
-                backgroundColor: 'rgba(249,115,22,0.1)',
-                color: '#f97316',
-                padding: '0.3rem 1rem',
-                borderRadius: 20,
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                marginBottom: '1rem',
-              }}
-            >
-              ARVOMME
+      <section className="bg-slate-50 py-24 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <div className="inline-block bg-orange-500/10 text-orange-600 px-4 py-1.5 rounded-full text-sm font-bold tracking-wide uppercase mb-4">
+              Arvomme
             </div>
-            <h2
-              style={{
-                color: '#0f2444',
-                fontSize: 'clamp(1.75rem, 3vw, 2.5rem)',
-                fontWeight: 800,
-                marginBottom: '1rem',
-              }}
-            >
+            <h2 className="text-[#0f2444] text-3xl md:text-4xl font-extrabold">
               Periaatteet, jotka ohjaavat toimintaamme
             </h2>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {values.map((v, i) => (
               <motion.div
@@ -669,202 +218,92 @@ export function AboutPage() {
                 whileInView={{opacity: 1, y: 0}}
                 transition={{duration: 0.5, delay: i * 0.1}}
                 viewport={{once: true}}
-                style={{
-                  backgroundColor: 'white',
-                  borderRadius: 16,
-                  padding: '2rem 1.5rem',
-                  boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-                  border: '1px solid #f1f5f9',
-                  textAlign: 'center',
-                }}
+                className="bg-white rounded-2xl p-8 text-center shadow-sm border border-slate-100"
               >
                 <div
-                  style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: '50%',
-                    backgroundColor: `${v.color}15`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 1.25rem',
-                  }}
+                  className={`w-16 h-16 rounded-full mx-auto mb-6 flex items-center justify-center ${v.bg}`}
                 >
-                  <v.icon size={26} color={v.color} />
+                  <v.icon size={28} className={v.color} />
                 </div>
-                <h3
-                  style={{
-                    color: '#0f2444',
-                    marginBottom: '0.75rem',
-                    fontSize: '1.1rem',
-                    fontWeight: 700,
-                  }}
-                >
+                <h3 className="text-[#0f2444] text-xl font-bold mb-3">
                   {v.title}
                 </h3>
-                <p
-                  style={{
-                    color: '#64748b',
-                    fontSize: '0.875rem',
-                    lineHeight: 1.65,
-                    margin: 0,
-                  }}
-                >
-                  {v.desc}
-                </p>
+                <p className="text-slate-500 leading-relaxed">{v.desc}</p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Timeline */}
-      <section style={{backgroundColor: 'white', padding: '5rem 1.5rem'}}>
-        <div style={{maxWidth: 1280, margin: '0 auto'}}>
-          <div style={{textAlign: 'center', marginBottom: '3.5rem'}}>
-            <div
-              style={{
-                display: 'inline-block',
-                backgroundColor: 'rgba(249,115,22,0.1)',
-                color: '#f97316',
-                padding: '0.3rem 1rem',
-                borderRadius: 20,
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                marginBottom: '1rem',
-              }}
-            >
-              TARINAMME
+      {/* Mission & Propoganda */}
+      <section className="bg-white py-24 px-6">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+          <motion.div
+            initial={{opacity: 0, x: -30}}
+            whileInView={{opacity: 1, x: 0}}
+            transition={{duration: 0.7}}
+            viewport={{once: true}}
+          >
+            <div className="inline-block bg-orange-500/10 text-orange-600 px-4 py-1.5 rounded-full text-sm font-bold tracking-wide uppercase mb-4">
+              Missiomme
             </div>
-            <h2
-              style={{
-                color: '#0f2444',
-                fontSize: 'clamp(1.75rem, 3vw, 2.5rem)',
-                fontWeight: 800,
-              }}
-            >
-              Matka tähän päivään
+            <h2 className="text-[#0f2444] text-3xl md:text-4xl font-extrabold mb-6">
+              Yhtä vahva tiimi, yhtä kuin tavoitteemme.
             </h2>
-          </div>
+            <p className="text-slate-600 text-lg mb-6 leading-relaxed">
+              Tehdä ruokalogistiikasta Suomessa älykkäintä, läpinäkyvintä ja
+              tehokkainta koskaan. Autamme kauppoja, kuljettajia ja
+              jakelukeskuksia toimimaan yhtenä saumattomana kokonaisuutena.
+            </p>
+            <div className="grid grid-cols-2 gap-4 mt-8">
+              <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl flex items-center gap-3">
+                <Award className="text-orange-500" />
+                <span className="font-bold text-slate-700">ISO 22000</span>
+              </div>
+              <div className="bg-green-50 border border-green-100 p-4 rounded-xl flex items-center gap-3">
+                <TrendingUp className="text-green-500" />
+                <span className="font-bold text-slate-700">99.2% ajoissa</span>
+              </div>
+            </div>
+          </motion.div>
 
-          <div style={{maxWidth: 800, margin: '0 auto'}}>
-            {milestones.map((m, i) => (
-              <motion.div
-                key={m.year}
-                initial={{opacity: 0, x: -30}}
-                whileInView={{opacity: 1, x: 0}}
-                transition={{duration: 0.5, delay: i * 0.1}}
-                viewport={{once: true}}
-                style={{
-                  display: 'flex',
-                  gap: '1.5rem',
-                  marginBottom: '2rem',
-                  position: 'relative',
-                }}
+          <motion.div
+            initial={{opacity: 0, x: 30}}
+            whileInView={{opacity: 1, x: 0}}
+            transition={{duration: 0.7}}
+            viewport={{once: true}}
+          >
+            <img
+              src={warehouseImg}
+              alt="Warehouse logistics"
+              className="w-full h-auto rounded-3xl shadow-xl object-cover aspect-[4/3] mb-6"
+            />
+
+            <div className="bg-slate-900 rounded-3xl p-4 shadow-xl">
+              <video
+                controls
+                playsInline
+                preload="metadata"
+                className="w-full aspect-video bg-black rounded-2xl object-cover"
               >
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    position: 'relative',
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 16,
-                      height: 16,
-                      borderRadius: '50%',
-                      backgroundColor: '#f97316',
-                      border: '3px solid #fff',
-                      boxShadow: '0 0 0 4px rgba(249,115,22,0.2)',
-                      zIndex: 2,
-                    }}
-                  />
-                  {i !== milestones.length - 1 && (
-                    <div
-                      style={{
-                        width: 2,
-                        flex: 1,
-                        backgroundColor: '#e2e8f0',
-                        marginTop: '0.5rem',
-                      }}
-                    />
-                  )}
-                </div>
-                <div style={{flex: 1, paddingBottom: '1.5rem'}}>
-                  <div
-                    style={{
-                      display: 'inline-block',
-                      backgroundColor: '#0f2444',
-                      color: 'white',
-                      padding: '0.25rem 0.75rem',
-                      borderRadius: 6,
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      marginBottom: '0.5rem',
-                    }}
-                  >
-                    {m.year}
-                  </div>
-                  <p
-                    style={{
-                      color: '#475569',
-                      fontSize: '1rem',
-                      margin: 0,
-                      lineHeight: 1.6,
-                    }}
-                  >
-                    {m.event}
-                  </p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                <source src={quantixPropaganda} type="video/mp4" />
+              </video>
+            </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Team */}
-      <section style={{backgroundColor: '#0f2444', padding: '5rem 1.5rem'}}>
-        <div style={{maxWidth: 1280, margin: '0 auto'}}>
-          <div style={{textAlign: 'center', marginBottom: '3.5rem'}}>
-            <div
-              style={{
-                display: 'inline-block',
-                backgroundColor: 'rgba(249,115,22,0.15)',
-                color: '#f97316',
-                padding: '0.3rem 1rem',
-                borderRadius: 20,
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                marginBottom: '1rem',
-              }}
-            >
-              TIIMIMME
-            </div>
-            <h2
-              style={{
-                color: 'white',
-                fontSize: 'clamp(1.75rem, 3vw, 2.5rem)',
-                fontWeight: 800,
-                marginBottom: '1rem',
-              }}
-            >
+      <section className="bg-slate-50 py-24 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-[#0f2444] text-3xl md:text-4xl font-extrabold mb-4">
               Asiantuntijat toimintasi tueksi
             </h2>
-            <p
-              style={{
-                color: 'rgba(255,255,255,0.7)',
-                fontSize: '1rem',
-                maxWidth: 600,
-                margin: '0 auto',
-              }}
-            >
-              Kokenut tiimimme logistiikasta, teknologiasta ja asiakaspalvelusta
-              varmistaa parhaan mahdollisen palvelun.
+            <p className="text-slate-500 text-lg">
+              Kokenut tiimimme varmistaa parhaan mahdollisen palvelun.
             </p>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {team.map((t, i) => (
               <motion.div
@@ -873,246 +312,161 @@ export function AboutPage() {
                 whileInView={{opacity: 1, y: 0}}
                 transition={{duration: 0.5, delay: i * 0.1}}
                 viewport={{once: true}}
-                style={{
-                  backgroundColor: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 16,
-                  padding: '2rem',
-                  textAlign: 'center',
-                  backdropFilter: 'blur(10px)',
-                }}
+                className="bg-white rounded-2xl p-8 text-center shadow-sm border border-slate-100"
               >
-                <div
-                  style={{
-                    width: 80,
-                    height: 80,
-                    borderRadius: '50%',
-                    backgroundColor: 'rgba(249,115,22,0.2)',
-                    border: '3px solid rgba(249,115,22,0.4)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 1.25rem',
-                  }}
-                >
-                  <User size={36} color="#f97316" />
+                <div className="w-20 h-20 rounded-full mx-auto mb-4 bg-slate-100 flex items-center justify-center border-2 border-slate-200">
+                  <User size={32} className="text-slate-400" />
                 </div>
-                <h3
-                  style={{
-                    color: 'white',
-                    fontWeight: 700,
-                    fontSize: '1.1rem',
-                    marginBottom: '0.5rem',
-                  }}
-                >
+                <h3 className="text-[#0f2444] text-xl font-bold mb-1">
                   {t.name}
                 </h3>
-                <div
-                  style={{
-                    color: '#f97316',
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    marginBottom: '0.75rem',
-                  }}
-                >
+                <div className="text-orange-500 text-sm font-bold uppercase tracking-wider mb-3">
                   {t.role}
                 </div>
-                <p
-                  style={{
-                    color: 'rgba(255,255,255,0.6)',
-                    fontSize: '0.85rem',
-                    margin: 0,
-                  }}
-                >
-                  {t.desc}
-                </p>
+                <p className="text-slate-500">{t.desc}</p>
               </motion.div>
             ))}
           </div>
+        </div>
+      </section>
 
-          <div style={{marginTop: '2rem'}}>
-            <motion.div
-              initial={{opacity: 0, y: 20}}
-              whileInView={{opacity: 1, y: 0}}
-              transition={{duration: 0.7}}
-              viewport={{once: true}}
-              style={{
-                borderRadius: 16,
-                overflow: 'hidden',
-                border: '1px solid rgba(255,255,255,0.1)',
-                boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
-              }}
-            >
-              <video
-                controls
-                playsInline
-                preload="metadata"
-                style={{
-                  width: '100%',
-                  aspectRatio: '16 / 9', // Pitää videon oikeassa muodossa
-                  display: 'block',
-                  objectFit: 'cover', // 'cover' täyttää tilan, 'contain' jättää mustat reunat
-                  objectPosition: 'center 38%', // Alkuperäinen rajauksesi
-                  borderRadius: '12px', // Sopii yhteen alla olevan divin kanssa
-                  boxShadow: '0 20px 40px rgba(0,0,0,0.4)', // Tuo syvyyttä teatteritilaan
-                  backgroundColor: '#000',
-                }}
-              >
-                <source src={quantixPropaganda} type="video/mp4" />
-                Selaimesi ei tue videotoistoa.
-              </video>
-            </motion.div>
-            <motion.div
-              initial={{opacity: 0, y: 20}}
-              whileInView={{opacity: 1, y: 0}}
-              transition={{duration: 0.7, delay: 0.2}}
-              viewport={{once: true}}
-              style={{
-                backgroundColor: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.12)',
-                borderRadius: 12,
-                padding: '1.5rem',
-                marginTop: '1rem',
-                color: 'white',
-              }}
-            >
-              <h3
-                style={{
-                  fontSize: '1.1rem',
-                  fontWeight: 700,
-                  color: '#f97316',
-                  marginTop: 0,
-                  marginBottom: '0.75rem',
-                }}
-              >
-                Yhtä vahva tiimi, yhtä kuin tavoitteemme
-              </h3>
-              <p
-                style={{
-                  color: 'rgba(255,255,255,0.75)',
-                  fontSize: '0.95rem',
-                  lineHeight: 1.7,
-                  margin: 0,
-                  marginBottom: '1rem',
-                }}
-              >
-                Quantix Logisticsin tiimi koostuu ammattilaisista, jotka ovat
-                innostuneita muuttamaan ruokalogistiikkaa paremmaksi. Jokainen
-                tiimin jäsen tuo oman erikoisosaamisensa logistiikasta,
-                teknologiasta, operaatioista ja asiakaspalvelusta. Yhdessä
-                varmistamme, että jokainen kuljetus on turvallinen, tehokas ja
-                ajoissa perille.
-              </p>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                  gap: '0.75rem',
-                  marginTop: '1rem',
-                }}
-              >
-                <div
-                  style={{
-                    backgroundColor: 'rgba(249,115,22,0.15)',
-                    border: '1px solid rgba(249,115,22,0.3)',
-                    borderRadius: 10,
-                    padding: '0.75rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                  }}
-                >
-                  <Award size={16} color="#f97316" />
-                  <span style={{fontSize: '0.85rem'}}>
-                    ISO 22000 -sertifioitu
-                  </span>
+      {/* Timeline */}
+      <section className="bg-white py-24 px-6">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-[#0f2444] text-3xl md:text-4xl font-extrabold">
+              Matka tähän päivään
+            </h2>
+          </div>
+          <div>
+            {milestones.map((m, i) => (
+              <div key={m.year} className="flex gap-6 mb-8 relative">
+                <div className="flex flex-col items-center">
+                  <div className="w-5 h-5 rounded-full bg-orange-500 ring-4 ring-orange-500/20 z-10" />
+                  {i !== milestones.length - 1 && (
+                    <div className="w-0.5 flex-1 bg-slate-200 mt-2" />
+                  )}
                 </div>
-                <div
-                  style={{
-                    backgroundColor: 'rgba(34,197,94,0.15)',
-                    border: '1px solid rgba(34,197,94,0.3)',
-                    borderRadius: 10,
-                    padding: '0.75rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                  }}
-                >
-                  <TrendingUp size={16} color="#22c55e" />
-                  <span style={{fontSize: '0.85rem'}}>99.2% ajoissa</span>
+                <div className="pb-6">
+                  <div className="inline-block bg-[#0f2444] text-white px-3 py-1 rounded-md text-sm font-bold mb-2">
+                    {m.year}
+                  </div>
+                  <p className="text-slate-600 text-lg font-medium m-0">
+                    {m.event}
+                  </p>
                 </div>
               </div>
-            </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Contact */}
+      <section className="bg-slate-50 py-24 px-6 border-t border-slate-200">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
+          <div>
+            <h2 className="text-[#0f2444] text-3xl md:text-4xl font-extrabold mb-6">
+              Kysyttävää? Olemme täällä auttamassa.
+            </h2>
+            <p className="text-slate-600 text-lg mb-10 leading-relaxed">
+              Haluatko kuulla lisää siitä, miten Quantix voi tehostaa yrityksesi
+              ruokalogistiikkaa? Jätä viesti, niin asiantuntijamme on sinuun
+              yhteydessä.
+            </p>
+            <div className="space-y-6">
+              {[
+                {icon: Mail, title: 'Sähköposti', value: 'myynti@quantix.fi'},
+                {icon: Phone, title: 'Puhelin', value: '+358 10 123 4567'},
+                {
+                  icon: MapPin,
+                  title: 'Toimisto',
+                  value: 'Logistiikkakuja 1, 00980 Helsinki',
+                },
+              ].map((info) => (
+                <div key={info.title} className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 flex items-center justify-center shrink-0">
+                    <info.icon size={22} className="text-orange-500" />
+                  </div>
+                  <div>
+                    <div className="text-slate-500 text-sm font-bold uppercase tracking-wider mb-0.5">
+                      {info.title}
+                    </div>
+                    <div className="text-[#0f2444] font-bold text-lg">
+                      {info.value}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-3xl p-8 sm:p-10 shadow-lg border border-slate-100">
+            <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-bold text-[#0f2444] mb-2">
+                    Etunimi
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Matti"
+                    className="w-full p-4 rounded-xl border border-slate-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-[#0f2444] mb-2">
+                    Sukunimi
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Meikäläinen"
+                    className="w-full p-4 rounded-xl border border-slate-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-[#0f2444] mb-2">
+                  Sähköposti
+                </label>
+                <input
+                  type="email"
+                  placeholder="matti@yritys.fi"
+                  className="w-full p-4 rounded-xl border border-slate-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-[#0f2444] mb-2">
+                  Viesti
+                </label>
+                <textarea
+                  rows={4}
+                  placeholder="Miten voimme auttaa?"
+                  className="w-full p-4 rounded-xl border border-slate-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all resize-y"
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full py-4 rounded-xl bg-orange-500 text-white font-bold text-lg hover:bg-orange-600 transition-colors flex items-center justify-center gap-2 shadow-md cursor-pointer"
+              >
+                Lähetä viesti <Send size={20} />
+              </button>
+            </form>
           </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section
-        style={{
-          background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-          padding: '4rem 1.5rem',
-          textAlign: 'center',
-        }}
-      >
-        <div style={{maxWidth: 700, margin: '0 auto'}}>
-          <h2
-            style={{
-              color: 'white',
-              fontSize: 'clamp(1.75rem, 3vw, 2.5rem)',
-              fontWeight: 800,
-              marginBottom: '1rem',
-            }}
-          >
-            Aloita yhteistyö kanssamme
+      <section className="bg-gradient-to-br from-orange-500 to-orange-600 py-24 px-6 text-center">
+        <div className="max-w-2xl mx-auto">
+          <h2 className="text-white text-3xl md:text-5xl font-extrabold mb-6">
+            Valmis aloittamaan?
           </h2>
-          <p
-            style={{
-              color: 'rgba(255,255,255,0.85)',
-              fontSize: '1.05rem',
-              marginBottom: '2rem',
-            }}
-          >
-            Liity satojen kauppojen joukkoon ja koe ero reaaliaikaisessa
-            ruokalogistiikassa.
-          </p>
-          <div
-            style={{
-              display: 'flex',
-              gap: '1rem',
-              justifyContent: 'center',
-              flexWrap: 'wrap',
-            }}
-          >
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mt-10">
             <Link
               to="/register"
-              style={{
-                padding: '0.9rem 2.25rem',
-                borderRadius: 10,
-                backgroundColor: 'white',
-                color: '#ea580c',
-                fontWeight: 700,
-                fontSize: '1rem',
-                textDecoration: 'none',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-              }}
+              className="px-8 py-4 rounded-xl bg-white text-orange-600 font-extrabold text-lg shadow-xl hover:scale-105 transition-transform cursor-pointer"
             >
               Aloita ilmaiseksi
-            </Link>
-            <Link
-              to="/pricing"
-              style={{
-                padding: '0.9rem 2.25rem',
-                borderRadius: 10,
-                backgroundColor: 'rgba(255,255,255,0.15)',
-                border: '2px solid rgba(255,255,255,0.5)',
-                color: 'white',
-                fontWeight: 600,
-                fontSize: '1rem',
-                textDecoration: 'none',
-              }}
-            >
-              Katso hinnat
             </Link>
           </div>
         </div>

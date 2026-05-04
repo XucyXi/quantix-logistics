@@ -1,4 +1,4 @@
-import {useState, useEffect, useMemo} from 'react';
+import {useState, useEffect, useMemo, useCallback} from 'react';
 import {motion, AnimatePresence} from 'motion/react';
 import {
   Search,
@@ -11,6 +11,7 @@ import {
   X,
   AlignLeft,
   Tag,
+  Loader2,
 } from 'lucide-react';
 import {useCart} from '../contexts/CartContext';
 import {useAuth} from '../contexts/AuthContext';
@@ -100,13 +101,10 @@ function LiveClock({catalogUpdatedAt}: {catalogUpdatedAt: Date}) {
 
   return (
     <>
-      <span style={{color: 'rgba(255,255,255,0.82)'}}>({catalogAgeLabel})</span>
+      <span className="text-white/80">({catalogAgeLabel})</span>
       {' · '}
       <span
-        style={{
-          fontVariantNumeric: 'tabular-nums',
-          color: 'rgba(255,255,255,0.88)',
-        }}
+        className="tabular-nums text-white/90"
         title="Paikallinen aika (päivittyy sekunnissa)"
       >
         Nyt {liveClock}
@@ -125,6 +123,12 @@ export function ProductsPage() {
   const [search, setSearch] = useState('');
   const [onlyInStock, setOnlyInStock] = useState(false);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
+
+  // UUSI TILA: Muistaa popupia varten, kuinka monta tuotetta oikeasti lisättiin
+  const [addedQuantities, setAddedQuantities] = useState<
+    Record<string, number>
+  >({});
+
   const [addedIds, setAddedIds] = useState<string[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
@@ -132,18 +136,31 @@ export function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    const fetchProducts = async () => {
+  const [nextCursor, setNextCursor] = useState<number | string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const fetchProducts = useCallback(
+    async (cursor: number | string | null = 0, isLoadMore = false) => {
+      if (cursor === null) return;
+
       try {
-        const rawProducts = await productService.getAllProducts();
+        if (isLoadMore) setLoadingMore(true);
+        else setLoading(true);
+
+        const res = await productService.getAllProducts(cursor, 16);
+
+        const rawProducts = res.products || res.data || res;
+        const fetchedNextCursor =
+          res.nextCursor !== undefined ? res.nextCursor : res.cursor || null;
 
         const mappedProducts: Product[] = rawProducts.map(
-          (p: BackendProduct) => {
+          (
+            p: BackendProduct & {categories?: string[]; category_name?: string}
+          ) => {
             let catArray: string[] = [];
-            if (
-              Array.isArray((p as unknown as {categories: string[]}).categories)
-            ) {
-              catArray = (p as unknown as {categories: string[]}).categories;
+
+            if (Array.isArray(p.categories)) {
+              catArray = p.categories;
             } else if (p.category_name) {
               catArray = [p.category_name];
             }
@@ -159,14 +176,25 @@ export function ProductsPage() {
               pricePerUnit: parseFloat(String(p.base_price || p.price || 0)),
               unit: 'kpl',
               inStock: stockQuantity > 0,
-              stock: stockQuantity, // Tarvitaan rajoitinta varten
+              stock: stockQuantity,
               categories: catArray.filter(Boolean),
               tags: [],
             };
           }
         );
 
-        setProducts(mappedProducts);
+        if (isLoadMore) {
+          setProducts((prev) => {
+            const newProducts = mappedProducts.filter(
+              (mp) => !prev.some((p) => p.id === mp.id)
+            );
+            return [...prev, ...newProducts];
+          });
+        } else {
+          setProducts(mappedProducts);
+        }
+
+        setNextCursor(fetchedNextCursor);
       } catch (err) {
         console.error('Virhe tuotteiden haussa:', err);
         setError(
@@ -174,11 +202,15 @@ export function ProductsPage() {
         );
       } finally {
         setLoading(false);
+        setLoadingMore(false);
       }
-    };
+    },
+    []
+  );
 
-    fetchProducts();
-  }, []);
+  useEffect(() => {
+    fetchProducts(0, false);
+  }, [fetchProducts]);
 
   const dynamicCategories = useMemo(() => {
     const map = new Map<string, CategoryUI>();
@@ -212,14 +244,8 @@ export function ProductsPage() {
   const incrementQuantity = (productId: string, maxStock: number) => {
     setQuantities((prev) => {
       const currentQty = prev[productId] || 0;
-      // Ei anneta nostaa määrää yli varastosaldon
-      if (currentQty >= maxStock) {
-        return prev;
-      }
-      return {
-        ...prev,
-        [productId]: currentQty + 1,
-      };
+      if (currentQty >= maxStock) return prev;
+      return {...prev, [productId]: currentQty + 1};
     });
   };
 
@@ -245,10 +271,15 @@ export function ProductsPage() {
         });
       }
 
+      // Tallennetaan pysyvämmin näyttöä varten paljonko lisättiin
+      setAddedQuantities((prev) => ({...prev, [productId]: qty}));
       setAddedIds((prev) => [...prev, productId]);
+
       setTimeout(() => {
         setAddedIds((prev) => prev.filter((id) => id !== productId));
       }, 2000);
+
+      // Nollataan syöttökenttä välittömästi seuraavaa kertaa varten
       setQuantities((prev) => ({
         ...prev,
         [productId]: 0,
@@ -257,52 +288,19 @@ export function ProductsPage() {
   };
 
   return (
-    <div
-      style={{
-        fontFamily: "'Space Grotesk', sans-serif",
-        backgroundColor: '#f8fafc',
-        minHeight: '100vh',
-      }}
-    >
-      <div
-        style={{
-          background: 'linear-gradient(135deg, #0f2444 0%, #1e3a5f 100%)',
-          padding: '3rem 1.5rem 2rem',
-          color: 'white',
-        }}
-      >
-        <div style={{maxWidth: 1280, margin: '0 auto'}}>
-          <div style={{marginBottom: '0.5rem'}}>
-            <span
-              style={{
-                backgroundColor: 'rgba(249,115,22,0.15)',
-                color: '#f97316',
-                padding: '0.25rem 0.875rem',
-                borderRadius: 20,
-                fontSize: '0.8rem',
-                fontWeight: 600,
-              }}
-            >
-              TUOTELUETTELO
+    <div className="font-sans bg-slate-50 min-h-screen pb-20">
+      {/* Header */}
+      <div className="bg-gradient-to-br from-[#0f2444] to-[#1e3a5f] pt-12 pb-10 px-6 text-white shadow-md">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-2">
+            <span className="inline-block bg-orange-500/15 text-orange-500 px-4 py-1.5 rounded-full text-sm font-bold uppercase tracking-wider">
+              Tuoteluettelo
             </span>
           </div>
-          <h1
-            style={{
-              color: 'white',
-              fontSize: 'clamp(1.75rem, 3vw, 2.5rem)',
-              fontWeight: 800,
-              marginBottom: '0.5rem',
-            }}
-          >
+          <h1 className="text-white text-3xl md:text-5xl font-extrabold mb-3">
             Tukkutuotteet
           </h1>
-          <p
-            style={{
-              color: 'rgba(255,255,255,0.65)',
-              fontSize: '0.9rem',
-              lineHeight: 1.5,
-            }}
-          >
+          <p className="text-white/70 text-sm md:text-base leading-relaxed">
             Päivitetty:{' '}
             {catalogUpdatedAt.toLocaleString('fi-FI', {
               dateStyle: 'short',
@@ -310,670 +308,417 @@ export function ProductsPage() {
             })}{' '}
             <LiveClock catalogUpdatedAt={catalogUpdatedAt} />
             {' · '}
-            {products.length} tuotetta · Live-tilausjärjestelmä
+            {products.length} tuotetta ladattu
           </p>
         </div>
       </div>
 
-      <div style={{maxWidth: 1280, margin: '0 auto', padding: '2rem 1.5rem'}}>
-        {loading && (
-          <div style={{textAlign: 'center', padding: '4rem', color: '#64748b'}}>
-            Ladataan tuotteita tietokannasta...
-          </div>
-        )}
-
+      <div className="max-w-7xl mx-auto py-8 px-6">
         {error && (
-          <div
-            style={{
-              backgroundColor: '#fef2f2',
-              color: '#ef4444',
-              padding: '1rem',
-              borderRadius: '8px',
-              marginBottom: '1rem',
-            }}
-          >
-            <AlertCircle
-              size={20}
-              style={{display: 'inline', marginRight: '0.5rem'}}
-            />
+          <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-xl mb-6 flex items-center gap-2 font-semibold shadow-sm">
+            <AlertCircle size={20} />
             {error}
           </div>
         )}
 
-        {!loading && !error && (
+        <div className="hidden md:flex overflow-x-auto pb-2 mb-6 hide-scrollbar gap-2 min-w-max">
+          <button
+            onClick={() => setActiveCategory('all')}
+            className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all border cursor-pointer ${
+              activeCategory === 'all'
+                ? 'bg-[#0f2444] text-white border-[#0f2444] shadow-md'
+                : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 shadow-sm'
+            }`}
+          >
+            Kaikki tuotteet
+          </button>
+          {dynamicCategories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setActiveCategory(cat.id)}
+              className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all border flex items-center gap-2 cursor-pointer ${
+                activeCategory === cat.id
+                  ? 'bg-[#0f2444] text-white border-[#0f2444] shadow-md'
+                  : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 shadow-sm'
+              }`}
+            >
+              <span className="text-base">{cat.icon}</span>
+              {cat.name}
+            </button>
+          ))}
+        </div>
+
+        <div className="md:hidden mb-6 flex flex-col gap-2">
+          <label
+            htmlFor="product-category"
+            className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1"
+          >
+            Kategoria
+          </label>
+          <select
+            id="product-category"
+            value={activeCategory}
+            onChange={(e) => setActiveCategory(e.target.value)}
+            className="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-white text-[#0f2444] font-bold text-sm shadow-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all cursor-pointer"
+          >
+            <option value="all">Kaikki tuotteet</option>
+            {dynamicCategories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 md:p-5 mb-8 shadow-sm border border-slate-200 flex flex-col md:flex-row gap-5 items-center justify-between">
+          <div className="flex items-center gap-3 w-full md:w-auto flex-1 max-w-lg bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20 transition-all">
+            <Search size={18} className="text-slate-400 shrink-0" />
+            <input
+              type="text"
+              placeholder="Hae ladatuista tuotteista..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="bg-transparent border-none outline-none text-sm text-[#0f2444] font-bold w-full placeholder:text-slate-400 placeholder:font-medium"
+            />
+          </div>
+
+          <div className="flex items-center justify-between w-full md:w-auto gap-6">
+            <label className="flex items-center gap-2.5 cursor-pointer text-sm font-bold text-slate-500 hover:text-[#0f2444] transition-colors select-none group">
+              <input
+                type="checkbox"
+                checked={onlyInStock}
+                onChange={(e) => setOnlyInStock(e.target.checked)}
+                className="w-5 h-5 rounded border-slate-300 text-orange-500 focus:ring-orange-500 cursor-pointer accent-orange-500"
+              />
+              <SlidersHorizontal
+                size={16}
+                className="group-hover:text-orange-500 transition-colors"
+              />
+              Vain saatavilla olevat
+            </label>
+
+            <div className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg whitespace-nowrap border border-slate-200">
+              Näytetään {filtered.length}
+            </div>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-16 text-slate-500 font-bold animate-pulse flex justify-center items-center gap-3">
+            <Loader2 className="animate-spin" /> Ladataan tuotteita...
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-2xl shadow-sm border border-slate-200 text-slate-400 flex flex-col items-center">
+            <AlertCircle size={48} className="mb-4 text-slate-300" />
+            <p className="font-bold text-lg text-slate-500">
+              Ei hakuasi vastaavia tuotteita.
+            </p>
+          </div>
+        ) : (
           <>
-            <div style={{overflowX: 'auto', marginBottom: '1.5rem'}}>
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '0.5rem',
-                  minWidth: 'max-content',
-                }}
-              >
-                <button
-                  onClick={() => setActiveCategory('all')}
-                  style={{
-                    padding: '0.6rem 1.25rem',
-                    borderRadius: 8,
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontFamily: "'Space Grotesk', sans-serif",
-                    fontWeight: 600,
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s',
-                    backgroundColor:
-                      activeCategory === 'all' ? '#0f2444' : 'white',
-                    color: activeCategory === 'all' ? 'white' : '#64748b',
-                    boxShadow:
-                      activeCategory === 'all'
-                        ? '0 4px 12px rgba(15,36,68,0.2)'
-                        : '0 1px 4px rgba(0,0,0,0.06)',
-                  }}
-                >
-                  Kaikki tuotteet
-                </button>
-                {dynamicCategories.map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setActiveCategory(cat.id)}
-                    style={{
-                      padding: '0.6rem 1.25rem',
-                      borderRadius: 8,
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontFamily: "'Space Grotesk', sans-serif",
-                      fontWeight: 600,
-                      fontSize: '0.875rem',
-                      transition: 'all 0.2s',
-                      backgroundColor:
-                        activeCategory === cat.id ? '#0f2444' : 'white',
-                      color: activeCategory === cat.id ? 'white' : '#64748b',
-                      boxShadow:
-                        activeCategory === cat.id
-                          ? '0 4px 12px rgba(15,36,68,0.2)'
-                          : '0 1px 4px rgba(0,0,0,0.06)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.375rem',
-                    }}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 mb-8">
+              {filtered.map((product, i) => {
+                const quantity = quantities[product.id] || 0;
+                const isAdded = addedIds.includes(product.id);
+                const mainCatVisuals = getCategoryVisuals(
+                  product.categories[0] || ''
+                );
+                const isMaxReached = quantity >= product.stock;
+
+                return (
+                  <motion.div
+                    key={product.id}
+                    initial={{opacity: 0, y: 16}}
+                    animate={{opacity: 1, y: 0}}
+                    transition={{duration: 0.35, delay: i * 0.03}}
+                    className={`bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col relative overflow-visible transition-all hover:shadow-md ${
+                      product.inStock ? 'opacity-100' : 'opacity-60'
+                    }`}
                   >
-                    <span>{cat.icon}</span>
-                    {cat.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div
-              style={{
-                marginBottom: '1.5rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.5rem',
-              }}
-            >
-              <label
-                htmlFor="product-category"
-                style={{
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  color: '#64748b',
-                }}
-              >
-                Kategoria
-              </label>
-              <select
-                id="product-category"
-                value={activeCategory}
-                onChange={(e) => setActiveCategory(e.target.value)}
-                style={{
-                  maxWidth: 420,
-                  width: '100%',
-                  padding: '0.65rem 1rem',
-                  borderRadius: 10,
-                  border: '1px solid #e2e8f0',
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  fontSize: '0.9rem',
-                  color: '#0f2444',
-                  backgroundColor: 'white',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                  cursor: 'pointer',
-                }}
-              >
-                <option value="all">Kaikki tuotteet</option>
-                {dynamicCategories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div
-              style={{
-                backgroundColor: 'white',
-                borderRadius: 12,
-                padding: '1rem 1.25rem',
-                marginBottom: '1.5rem',
-                boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '1rem',
-                alignItems: 'center',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  flex: 1,
-                  minWidth: 200,
-                }}
-              >
-                <Search size={16} color="#94a3b8" />
-                <input
-                  type="text"
-                  placeholder="Hae tuotetta, brändiä tai SKU-koodia..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  style={{
-                    border: 'none',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    color: '#374151',
-                    width: '100%',
-                    fontFamily: "'Space Grotesk', sans-serif",
-                  }}
-                />
-              </div>
-              <label
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  color: '#64748b',
-                  userSelect: 'none',
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={onlyInStock}
-                  onChange={(e) => setOnlyInStock(e.target.checked)}
-                  style={{accentColor: '#f97316', width: 16, height: 16}}
-                />
-                <SlidersHorizontal size={14} />
-                Vain saatavilla olevat
-              </label>
-              <div
-                style={{
-                  fontSize: '0.8rem',
-                  color: '#94a3b8',
-                  marginLeft: 'auto',
-                }}
-              >
-                {filtered.length} tuotetta
-              </div>
-            </div>
-
-            {filtered.length === 0 ? (
-              <div
-                style={{
-                  textAlign: 'center',
-                  padding: '3rem',
-                  backgroundColor: 'white',
-                  borderRadius: 16,
-                  color: '#94a3b8',
-                }}
-              >
-                <AlertCircle
-                  size={40}
-                  style={{marginBottom: '0.75rem', margin: '0 auto'}}
-                />
-                <p>Ei hakuasi vastaavia tuotteita.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {filtered.map((product, i) => {
-                  const quantity = quantities[product.id] || 0;
-                  const isAdded = addedIds.includes(product.id);
-                  const mainCatVisuals = getCategoryVisuals(
-                    product.categories[0] || ''
-                  );
-
-                  // OLLAANKO MAKSIMISSA?
-                  const isMaxReached = quantity >= product.stock;
-
-                  return (
-                    <motion.div
-                      key={product.id}
-                      initial={{opacity: 0, y: 16}}
-                      animate={{opacity: 1, y: 0}}
-                      transition={{duration: 0.35, delay: i * 0.03}}
-                      style={{
-                        backgroundColor: 'white',
-                        borderRadius: 12,
-                        overflow: 'visible',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                        border: '1px solid #f1f5f9',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        position: 'relative',
-                        opacity: product.inStock ? 1 : 0.6,
-                      }}
+                    <div
+                      onClick={() => setSelectedProduct(product)}
+                      className="w-full h-40 flex items-center justify-center bg-slate-50 text-6xl rounded-t-2xl relative cursor-pointer group transition-colors hover:bg-slate-100"
                     >
-                      <div
+                      {mainCatVisuals.icon}
+                      <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm px-2.5 py-1 rounded-lg text-xs font-bold text-slate-700 border border-slate-200 shadow-sm">
+                        Varastossa: {product.stock}
+                      </div>
+                    </div>
+
+                    <div className="p-5 flex flex-col flex-1">
+                      <h3
+                        className="text-[#0f2444] font-extrabold text-sm leading-snug mb-3 min-h-[2.6rem] hover:text-orange-500 transition-colors cursor-pointer line-clamp-2"
                         onClick={() => setSelectedProduct(product)}
-                        style={{cursor: 'pointer'}}
-                        className="group"
                       >
-                        <div
-                          style={{
-                            width: '100%',
-                            height: 160,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            backgroundColor: '#f8fafc',
-                            fontSize: '4rem',
-                            borderTopLeftRadius: 12,
-                            borderTopRightRadius: 12,
-                            position: 'relative',
-                          }}
-                        >
-                          {mainCatVisuals.icon}
-                          {/* Näytetään varastosaldo visuaalisesti */}
-                          <div className="absolute top-3 right-3 bg-white/90 px-2 py-1 rounded-md text-xs font-bold text-slate-700 border border-slate-200 shadow-sm">
-                            Varastossa: {product.stock}
-                          </div>
-                        </div>
+                        {product.name}
+                      </h3>
 
-                        <div
-                          style={{
-                            padding: '1rem',
-                            display: 'flex',
-                            flexDirection: 'column',
-                          }}
-                        >
-                          <h3
-                            style={{
-                              color: '#0f2444',
-                              fontWeight: 600,
-                              fontSize: '0.9rem',
-                              margin: 0,
-                              marginBottom: '0.5rem',
-                              lineHeight: 1.3,
-                              minHeight: '2.6rem',
-                            }}
-                            className="group-hover:text-primary transition-colors"
+                      <div className="flex flex-wrap gap-1.5 mb-4">
+                        {product.categories.slice(0, 2).map((catName) => (
+                          <span
+                            key={catName}
+                            className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md text-[0.7rem] font-bold border border-slate-200"
                           >
-                            {product.name}
-                          </h3>
-
-                          <div className="flex flex-wrap gap-1 mb-3">
-                            {product.categories.slice(0, 2).map((catName) => (
-                              <span
-                                key={catName}
-                                className="px-2 py-0.5 bg-accent text-accent-foreground rounded-md text-[0.7rem] font-medium border border-border"
-                              >
-                                {catName}
-                              </span>
-                            ))}
-                            {product.categories.length > 2 && (
-                              <span className="px-2 py-0.5 bg-muted text-muted-foreground rounded-md text-[0.7rem] font-medium">
-                                +{product.categories.length - 2}
-                              </span>
-                            )}
-                          </div>
-
-                          <div style={{marginBottom: '0.5rem'}}>
-                            {isBusinessCustomer ? (
-                              <>
-                                <div
-                                  style={{
-                                    color: '#0f2444',
-                                    fontWeight: 800,
-                                    fontSize: '1.5rem',
-                                    lineHeight: 1,
-                                  }}
-                                >
-                                  {(
-                                    product.pricePerUnit *
-                                    (1 - BUSINESS_DISCOUNT)
-                                  )
-                                    .toFixed(2)
-                                    .replace('.', ',')}{' '}
-                                  €
-                                </div>
-                                <div
-                                  style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.5rem',
-                                    marginTop: '0.2rem',
-                                  }}
-                                >
-                                  <span
-                                    style={{
-                                      color: '#94a3b8',
-                                      fontSize: '0.875rem',
-                                      textDecoration: 'line-through',
-                                    }}
-                                  >
-                                    {product.pricePerUnit
-                                      .toFixed(2)
-                                      .replace('.', ',')}{' '}
-                                    €
-                                  </span>
-                                  <span
-                                    style={{
-                                      backgroundColor: '#ef4444',
-                                      color: 'white',
-                                      fontSize: '0.7rem',
-                                      padding: '0.15rem 0.4rem',
-                                      borderRadius: '4px',
-                                      fontWeight: 600,
-                                    }}
-                                  >
-                                    -15%
-                                  </span>
-                                </div>
-                                <div
-                                  style={{
-                                    color: '#94a3b8',
-                                    fontSize: '0.75rem',
-                                    marginTop: '0.1rem',
-                                  }}
-                                >
-                                  per {product.unit}
-                                </div>
-                              </>
-                            ) : (
-                              <>
-                                <div
-                                  style={{
-                                    color: '#0f2444',
-                                    fontWeight: 800,
-                                    fontSize: '1.5rem',
-                                    lineHeight: 1,
-                                  }}
-                                >
-                                  {product.pricePerUnit
-                                    .toFixed(2)
-                                    .replace('.', ',')}{' '}
-                                  €
-                                </div>
-                                <div
-                                  style={{
-                                    color: '#94a3b8',
-                                    fontSize: '0.75rem',
-                                    marginTop: '0.2rem',
-                                  }}
-                                >
-                                  per {product.unit}
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </div>
+                            {catName}
+                          </span>
+                        ))}
+                        {product.categories.length > 2 && (
+                          <span className="px-2.5 py-1 bg-slate-100 text-slate-500 rounded-md text-[0.7rem] font-bold border border-slate-200">
+                            +{product.categories.length - 2}
+                          </span>
+                        )}
                       </div>
 
-                      <div className="px-4 pb-4 mt-auto">
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            marginBottom: '0.75rem',
-                          }}
-                        >
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              decrementQuantity(product.id);
-                            }}
-                            disabled={!product.inStock || quantity === 0}
-                            style={{
-                              width: 36,
-                              height: 36,
-                              borderRadius: 8,
-                              border: '1px solid #e2e8f0',
-                              backgroundColor: 'white',
-                              cursor:
-                                product.inStock && quantity > 0
-                                  ? 'pointer'
-                                  : 'not-allowed',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              transition: 'all 0.2s',
-                              opacity:
-                                !product.inStock || quantity === 0 ? 0.5 : 1,
-                            }}
-                          >
-                            <Minus size={16} color="#64748b" />
-                          </button>
+                      <div className="mb-2">
+                        {isBusinessCustomer ? (
+                          <>
+                            <div className="text-[#0f2444] font-extrabold text-2xl leading-none">
+                              {(product.pricePerUnit * (1 - BUSINESS_DISCOUNT))
+                                .toFixed(2)
+                                .replace('.', ',')}{' '}
+                              €
+                            </div>
+                            <div className="flex items-center gap-2 mt-1.5">
+                              <span className="text-slate-400 text-sm font-semibold line-through">
+                                {product.pricePerUnit
+                                  .toFixed(2)
+                                  .replace('.', ',')}{' '}
+                                €
+                              </span>
+                              <span className="bg-red-500 text-white text-[0.7rem] px-2 py-0.5 rounded-md font-bold shadow-sm">
+                                -15%
+                              </span>
+                            </div>
+                            <div className="text-slate-400 font-medium text-xs mt-1">
+                              per {product.unit}
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="text-[#0f2444] font-extrabold text-2xl leading-none">
+                              {product.pricePerUnit
+                                .toFixed(2)
+                                .replace('.', ',')}{' '}
+                              €
+                            </div>
+                            <div className="text-slate-400 font-medium text-xs mt-1.5">
+                              per {product.unit}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
 
-                          <div
-                            style={{
-                              flex: 1,
-                              textAlign: 'center',
-                              fontWeight: 600,
-                              fontSize: '0.9rem',
-                              color: isMaxReached ? '#ef4444' : '#0f2444', // Muuttuu punaiseksi jos maksimi
-                            }}
-                          >
-                            {quantity} kpl
-                          </div>
-
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              incrementQuantity(product.id, product.stock); // Välitetään maksimi saldo funktiolle
-                            }}
-                            disabled={!product.inStock || isMaxReached} // Disabloidaan, jos saldo on täynnä
-                            style={{
-                              width: 36,
-                              height: 36,
-                              borderRadius: 8,
-                              border: `1px solid ${isMaxReached ? '#e2e8f0' : '#f97316'}`,
-                              backgroundColor: isMaxReached
-                                ? '#f1f5f9'
-                                : '#f97316',
-                              cursor:
-                                product.inStock && !isMaxReached
-                                  ? 'pointer'
-                                  : 'not-allowed',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              transition: 'all 0.2s',
-                              opacity: !product.inStock ? 0.5 : 1,
-                            }}
-                          >
-                            <Plus
-                              size={16}
-                              color={isMaxReached ? '#94a3b8' : 'white'}
-                            />
-                          </button>
-                        </div>
-
-                        <motion.button
+                    <div className="px-5 pb-5 mt-auto">
+                      <div className="flex items-center gap-2 mb-3">
+                        <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            addToCart(product.id);
+                            decrementQuantity(product.id);
                           }}
                           disabled={!product.inStock || quantity === 0}
-                          whileTap={{scale: 0.95}}
-                          style={{
-                            width: '100%',
-                            padding: '0.75rem',
-                            borderRadius: 10,
-                            border: 'none',
-                            cursor:
-                              product.inStock && quantity > 0
-                                ? 'pointer'
-                                : 'not-allowed',
-                            fontFamily: "'Space Grotesk', sans-serif",
-                            fontWeight: 600,
-                            fontSize: '0.9rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '0.5rem',
-                            transition: 'all 0.2s',
-                            backgroundColor:
-                              !product.inStock || quantity === 0
-                                ? '#e2e8f0'
-                                : isAdded
-                                  ? '#22c55e'
-                                  : '#0f2444',
-                            color:
-                              !product.inStock || quantity === 0
-                                ? '#94a3b8'
-                                : 'white',
-                            position: 'relative',
-                            overflow: 'visible',
-                          }}
+                          className={`w-10 h-10 rounded-xl border-2 flex items-center justify-center transition-colors ${
+                            product.inStock && quantity > 0
+                              ? 'border-slate-200 bg-white text-slate-600 hover:text-orange-500 hover:border-orange-300 cursor-pointer shadow-sm'
+                              : 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed'
+                          }`}
                         >
-                          {isAdded ? (
-                            <>
-                              <Check size={16} />
-                              Lisätty!
-                            </>
-                          ) : (
-                            <>
-                              <ShoppingCart size={16} />
-                              Lisää ostoskoriin
-                            </>
-                          )}
+                          <Minus size={16} />
+                        </button>
 
-                          <AnimatePresence>
-                            {isAdded && (
-                              <motion.div
-                                initial={{scale: 0, opacity: 0}}
-                                animate={{scale: 1, opacity: 1}}
-                                exit={{scale: 0, opacity: 0}}
-                                transition={{
-                                  type: 'spring',
-                                  stiffness: 500,
-                                  damping: 25,
-                                }}
-                                style={{
-                                  position: 'absolute',
-                                  top: -40,
-                                  left: '50%',
-                                  transform: 'translateX(-50%)',
-                                  backgroundColor: '#22c55e',
-                                  color: 'white',
-                                  padding: '0.5rem 1rem',
-                                  borderRadius: 8,
-                                  fontSize: '0.8rem',
-                                  fontWeight: 700,
-                                  boxShadow: '0 4px 12px rgba(34,197,94,0.4)',
-                                  whiteSpace: 'nowrap',
-                                  zIndex: 10,
-                                }}
-                              >
-                                ✓ {quantity} kpl lisätty!
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </motion.button>
+                        <div
+                          className={`flex-1 text-center font-extrabold text-sm ${
+                            isMaxReached ? 'text-red-500' : 'text-[#0f2444]'
+                          }`}
+                        >
+                          {quantity} kpl
+                        </div>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            incrementQuantity(product.id, product.stock);
+                          }}
+                          disabled={!product.inStock || isMaxReached}
+                          className={`w-10 h-10 rounded-xl border-2 flex items-center justify-center transition-colors shadow-sm ${
+                            !product.inStock
+                              ? 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed'
+                              : isMaxReached
+                                ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
+                                : 'border-orange-500 bg-orange-500 text-white hover:bg-orange-600 cursor-pointer'
+                          }`}
+                        >
+                          <Plus size={16} />
+                        </button>
                       </div>
-                    </motion.div>
-                  );
-                })}
+
+                      <motion.button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addToCart(product.id);
+                        }}
+                        disabled={!product.inStock || quantity === 0}
+                        whileTap={
+                          product.inStock && quantity > 0 ? {scale: 0.95} : {}
+                        }
+                        className={`w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all relative overflow-visible shadow-sm ${
+                          !product.inStock || quantity === 0
+                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                            : isAdded
+                              ? 'bg-green-500 text-white cursor-default border border-green-500'
+                              : 'bg-[#0f2444] text-white hover:bg-[#17324f] cursor-pointer border border-[#0f2444] hover:shadow-md'
+                        }`}
+                      >
+                        {isAdded ? (
+                          <>
+                            <Check size={18} />
+                            Lisätty!
+                          </>
+                        ) : (
+                          <>
+                            <ShoppingCart size={18} />
+                            Lisää ostoskoriin
+                          </>
+                        )}
+
+                        <AnimatePresence>
+                          {isAdded && (
+                            <motion.div
+                              initial={{scale: 0, opacity: 0}}
+                              animate={{scale: 1, opacity: 1}}
+                              exit={{scale: 0, opacity: 0}}
+                              transition={{
+                                type: 'spring',
+                                stiffness: 500,
+                                damping: 25,
+                              }}
+                              className="absolute -top-12 left-1/2 -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded-xl text-xs font-extrabold shadow-[0_8px_20px_rgba(34,197,94,0.4)] whitespace-nowrap z-20 border border-green-400"
+                            >
+                              {/* Käytetään tallennettua määrää, jotta näkyy oikea luku vaikka syöttökenttä nollattiin! */}
+                              ✓ {addedQuantities[product.id]} kpl lisätty!
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {nextCursor && (
+              <div className="flex justify-center mt-10">
+                <button
+                  onClick={() => fetchProducts(nextCursor, true)}
+                  disabled={loadingMore}
+                  className="bg-white border-2 border-slate-200 text-[#0f2444] font-extrabold px-8 py-4 rounded-xl shadow-sm hover:border-orange-500 hover:text-orange-500 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                >
+                  {loadingMore ? (
+                    <Loader2 className="animate-spin" size={20} />
+                  ) : (
+                    <Plus size={20} />
+                  )}
+                  {loadingMore ? 'Ladataan...' : 'Lataa lisää tuotteita'}
+                </button>
               </div>
             )}
           </>
         )}
       </div>
 
-      {selectedProduct && (
-        <div
-          className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4 backdrop-blur-sm"
-          onClick={() => setSelectedProduct(null)}
-        >
+      {/* MODAL: PRODUCT DETAILS */}
+      <AnimatePresence>
+        {selectedProduct && (
           <div
-            className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-fadeIn"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4 backdrop-blur-sm animate-in fade-in"
+            onClick={() => setSelectedProduct(null)}
           >
-            <div className="flex justify-between items-start p-5 border-b border-border bg-muted/20">
-              <div>
-                <h3 className="text-xl font-bold text-foreground m-0 mb-1">
-                  {selectedProduct.name}
-                </h3>
-                <span className="text-xs text-muted-foreground font-mono bg-background px-2 py-1 rounded border border-border">
-                  {selectedProduct.sku}
-                </span>
-              </div>
-              <button
-                onClick={() => setSelectedProduct(null)}
-                className="text-muted-foreground hover:text-foreground bg-background rounded-full p-1"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="p-5 flex flex-col gap-5">
-              <div>
-                <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1.5">
-                  <Tag size={16} className="text-primary" /> Kategoriat
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {selectedProduct.categories.length > 0 ? (
-                    selectedProduct.categories.map((catName) => (
-                      <span
-                        key={catName}
-                        className="px-3 py-1 bg-primary/10 text-primary rounded-lg text-sm font-medium border border-primary/20"
-                      >
-                        {catName}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-sm text-muted-foreground italic">
-                      Ei määritetty
-                    </span>
-                  )}
+            <motion.div
+              initial={{scale: 0.95, opacity: 0}}
+              animate={{scale: 1, opacity: 1}}
+              exit={{scale: 0.95, opacity: 0}}
+              className="bg-white border border-slate-200 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-start p-6 border-b border-slate-100 bg-slate-50">
+                <div>
+                  <h3 className="text-xl font-extrabold text-[#0f2444] m-0 mb-2">
+                    {selectedProduct.name}
+                  </h3>
+                  <span className="text-xs font-bold text-slate-500 bg-white px-2.5 py-1 rounded-md border border-slate-200 shadow-sm">
+                    {selectedProduct.sku}
+                  </span>
                 </div>
-              </div>
-
-              <div>
-                <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1.5">
-                  <AlignLeft size={16} className="text-primary" /> Tuotekuvaus
-                </h4>
-                <div className="bg-muted/30 p-3 rounded-xl border border-border">
-                  {selectedProduct.description ? (
-                    <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed m-0">
-                      {selectedProduct.description}
-                    </p>
-                  ) : (
-                    <span className="text-sm text-muted-foreground italic">
-                      Tuotteella ei ole lisättyä kuvausta.
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center py-3 border-t border-border mt-2">
-                <span className="text-sm font-medium text-muted-foreground">
-                  Saatavuus
-                </span>
-                <span
-                  className={`text-sm font-bold px-3 py-1 rounded-full ${selectedProduct.inStock ? 'bg-green-500/10 text-green-600' : 'bg-destructive/10 text-destructive'}`}
+                <button
+                  onClick={() => setSelectedProduct(null)}
+                  className="text-slate-400 hover:text-slate-600 bg-white rounded-full p-2 shadow-sm border border-slate-200 cursor-pointer transition-colors"
                 >
-                  {selectedProduct.inStock
-                    ? `Varastossa (${selectedProduct.stock} kpl)`
-                    : 'Loppu väliaikaisesti'}
-                </span>
+                  <X size={20} />
+                </button>
               </div>
-            </div>
+
+              <div className="p-6 flex flex-col gap-6">
+                <div>
+                  <h4 className="text-sm font-extrabold text-[#0f2444] mb-3 flex items-center gap-2">
+                    <Tag size={16} className="text-orange-500" /> Kategoriat
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedProduct.categories.length > 0 ? (
+                      selectedProduct.categories.map((catName) => (
+                        <span
+                          key={catName}
+                          className="px-3 py-1.5 bg-orange-500/10 text-orange-600 rounded-lg text-sm font-bold border border-orange-500/20"
+                        >
+                          {catName}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-sm text-slate-400 italic font-medium">
+                        Ei määritetty
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-extrabold text-[#0f2444] mb-3 flex items-center gap-2">
+                    <AlignLeft size={16} className="text-orange-500" />{' '}
+                    Tuotekuvaus
+                  </h4>
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    {selectedProduct.description ? (
+                      <p className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed m-0 font-medium">
+                        {selectedProduct.description}
+                      </p>
+                    ) : (
+                      <span className="text-sm text-slate-400 italic font-medium">
+                        Tuotteella ei ole lisättyä kuvausta.
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center pt-4 border-t border-slate-100 mt-2">
+                  <span className="text-sm font-bold text-slate-500">
+                    Saatavuus
+                  </span>
+                  <span
+                    className={`text-sm font-extrabold px-3.5 py-1.5 rounded-lg border shadow-sm ${
+                      selectedProduct.inStock
+                        ? 'bg-green-50 text-green-600 border-green-200'
+                        : 'bg-red-50 text-red-500 border-red-200'
+                    }`}
+                  >
+                    {selectedProduct.inStock
+                      ? `Varastossa (${selectedProduct.stock} kpl)`
+                      : 'Loppu väliaikaisesti'}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   );
 }

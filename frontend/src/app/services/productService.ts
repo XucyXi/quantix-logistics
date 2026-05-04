@@ -1,16 +1,15 @@
 import api from '../lib/api';
 
 export interface BackendProduct {
-  product_id?: string | number;
-  id?: string | number;
+  id?: number | string;
+  product_id?: number | string;
   name: string;
   description?: string;
-  base_price?: string | number;
-  price?: string | number;
-  stock_quantity?: string | number;
-  category_id?: string | number;
-  category_name?: string;
+  base_price?: number | string;
+  price?: number | string;
+  stock_quantity?: number | string;
   categories?: string[];
+  category_name?: string;
 }
 
 export interface Category {
@@ -18,31 +17,42 @@ export interface Category {
   name: string;
 }
 
+export interface ProductInput {
+  name: string;
+  description?: string;
+  price: number;
+  stock: number;
+  categories: string[];
+}
+
 export const productService = {
-  // --- PRODUCTS ---
-  getAllProducts: async () => {
-    const res = await api.get('/products');
-    return Array.isArray(res.data) ? res.data : res.data.products || [];
+  getAllProducts: async (cursor: number | string = 0, limit: number = 24) => {
+    const res = await api.get('/products/cursor', {
+      params: {cursor, limit},
+    });
+    return res.data;
   },
 
-  createProduct: async (productData: unknown) => {
+  getAllCategories: async (): Promise<Category[]> => {
+    const res = await api.get('/categories');
+    return res.data;
+  },
+
+  createProduct: async (productData: ProductInput) => {
     const res = await api.post('/products', productData);
     return res.data;
   },
 
-  updateProduct: async (id: number, productData: unknown) => {
-    const res = await api.put(`/products/${id}`, productData);
+  updateProduct: async (
+    productId: number | string,
+    productData: ProductInput
+  ) => {
+    const res = await api.put(`/products/${productId}`, productData);
     return res.data;
   },
 
-  deleteProduct: async (id: number) => {
-    const res = await api.delete(`/products/${id}`);
-    return res.data;
-  },
-
-  // --- CATEGORIES ---
-  getAllCategories: async () => {
-    const res = await api.get('/categories');
+  deleteProduct: async (productId: number | string) => {
+    const res = await api.delete(`/products/${productId}`);
     return res.data;
   },
 
@@ -51,13 +61,13 @@ export const productService = {
     return res.data;
   },
 
-  updateCategory: async (id: number, name: string) => {
-    const res = await api.put(`/categories/${id}`, {name});
+  updateCategory: async (categoryId: number, name: string) => {
+    const res = await api.put(`/categories/${categoryId}`, {name});
     return res.data;
   },
 
-  deleteCategory: async (id: number) => {
-    const res = await api.delete(`/categories/${id}`);
+  deleteCategory: async (categoryId: number) => {
+    const res = await api.delete(`/categories/${categoryId}`);
     return res.data;
   },
 };

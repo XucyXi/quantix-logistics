@@ -4,9 +4,9 @@ import {Footer} from '../components/layout/Footer';
 
 export function Root() {
   return (
-    <div style={{minHeight: '100vh', display: 'flex', flexDirection: 'column'}}>
+    <div className="min-h-screen flex flex-col bg-background font-sans">
       <Navbar />
-      <main style={{flex: 1}}>
+      <main className="flex-1 flex flex-col">
         <Outlet />
       </main>
       <Footer />

@@ -21,8 +21,22 @@ export interface BackendOrder {
   driver_id: number | null;
 }
 
+export interface CursorResponse {
+  success: boolean;
+  orders: BackendOrder[];
+  nextCursor: number | null;
+}
+
 export const orderService = {
-  // Hakee KAIKKI tilaukset (Admin-oikeus)
+  // --- ADMIN & YLEISET ---
+  getOrdersCursor: async (
+    cursor: number | string = 0,
+    limit: number = 16
+  ): Promise<CursorResponse> => {
+    const res = await api.get(`/orders/cursor?cursor=${cursor}&limit=${limit}`);
+    return res.data;
+  },
+
   getAllOrdersAdmin: async (): Promise<BackendOrder[]> => {
     const res = await api.get('/orders/admin/all');
     return res.data;
@@ -44,18 +58,26 @@ export const orderService = {
     return res.data;
   },
 
-  getCustomerOrders: async (token?: string) => {
-    const config = token ? {headers: {Authorization: `Bearer ${token}`}} : {};
+  // --- ASIAKKAAN FUNKTIOITA ---
+  // PÄIVITETTY: Tukee nyt API-dokumentaation mukaisia filttereitä
+  getCustomerOrders: async (
+    params?: {limit?: number; offset?: number; status?: string},
+    token?: string
+  ) => {
+    const config = token
+      ? {headers: {Authorization: `Bearer ${token}`}, params}
+      : {params};
     const res = await api.get('/orders/customer/all', config);
     return res.data;
   },
+
   getOrderStats: async (token?: string) => {
     const config = token ? {headers: {Authorization: `Bearer ${token}`}} : {};
     const res = await api.get('/orders/customer/stats', config);
     return res.data;
   },
 
-  // Kuskin määrääminen tilaukselle (Admin-oikeus)
+  // --- ADMIN TOIMINNOT ---
   assignDriver: async (orderId: number, driverId: number | null) => {
     const res = await api.put(`/orders/${orderId}/assign`, {
       driver_id: driverId,
@@ -63,13 +85,17 @@ export const orderService = {
     return res.data;
   },
 
-  // Tilauksen peruuttaminen (Admin-oikeus)
   cancelOrder: async (orderId: number) => {
     const res = await api.put(`/orders/${orderId}/cancel`);
     return res.data;
   },
 
-  // Tilauksen tekeminen (Asiakas)
+  getAllDrivers: async () => {
+    const res = await api.get('/orders/admin/drivers');
+    return res.data;
+  },
+
+  // YLEISET TILAUSTOIMINNOT
   createOrder: async (orderData: {
     delivery_address: string;
     notes: string;
@@ -79,7 +105,6 @@ export const orderService = {
     return res.data;
   },
 
-  // Hakee yhden tilauksen kaikki tiedot (mukaan lukien tuoterivit)
   getOrderById: async (orderId: number, token?: string) => {
     const config = token ? {headers: {Authorization: `Bearer ${token}`}} : {};
     const res = await api.get(`/orders/${orderId}`, config);
