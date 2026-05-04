@@ -21,6 +21,12 @@ router.get(
   productsController.getProductsCursor
 );
 
+router.get(
+  '/category/cursor',
+  authMiddleware.authenticate,
+  productsController.getProductsByCategoryCursor
+);
+
 // Moved the test route ABOVE the /:id route so it doesn't get swallowed uppety up - Jere
 router.get('/test', (req, res) => {
   console.log('TEST ROUTE HIT');
@@ -30,6 +36,8 @@ router.get('/test', (req, res) => {
     method: req.method,
   });
 });
+
+router.delete('/:id', authMiddleware.authenticate, roleMiddleware.requireRole('admin'), productsController.deleteProduct);
 
 // Dynamic Routes (Must come last (They just MUST))
 router.put(
@@ -43,13 +51,6 @@ router.get(
   '/:id',
   authMiddleware.authenticate,
   productsController.getProductById
-);
-
-router.delete(
-  '/:id',
-  authMiddleware.authenticate,
-  roleMiddleware.requireRole('admin'),
-  productsController.deleteProduct
 );
 
 module.exports = router;

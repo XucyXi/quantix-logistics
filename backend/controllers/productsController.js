@@ -8,7 +8,7 @@ async function getProducts(req, res) {
   } catch (err) {
     res.status(500).json({error: 'Failed to fetch products'});
   }
-}
+} 
 
 // POST /products
 async function createProduct(req, res) {
@@ -106,13 +106,43 @@ async function getProductsCursor(req, res) {
   try {
     const cursor = req.query.cursor || 0;
     const limit = req.query.limit || 16;
+    const search = req.query.search || null; // Lisätty hakusanan vastaanotto
 
-    const result = await productsService.getProductsCursor(cursor, limit);
+    const result = await productsService.getProductsCursor(cursor, limit, search);
     return res.json({success: true, ...result});
   } catch (error) {
+    console.error('Error fetching products cursor:', error);
     return res.status(500).json({success: false, error: error.message});
   }
 }
+
+// GET /products/category/cursor (UUSI)
+async function getProductsByCategoryCursor(req, res) {
+  try {
+    const cursor = req.query.cursor || 0;
+    const limit = req.query.limit || 24;
+    
+    // Nappaa kategoriat joko 'categories[]' taulukkona tai 'category' stringinä
+    const categories = req.query.categories || req.query.category;
+
+    if (!categories) {
+      return res.status(400).json({ success: false, error: 'Category parameter is required' });
+    }
+
+    const result = await productsService.getProductsByCategoryCursor(categories, cursor, limit);
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('Error fetching products by category cursor:', error);
+    
+    // Nappaa service-kerroksen validointivirheet
+    if (error.message.includes('do not exist') || error.message.includes('required')) {
+      return res.status(400).json({ success: false, error: error.message });
+    }
+
+    return res.status(500).json({ success: false, error: 'Failed to fetch products by category' });
+  }
+}
+
 
 
 // DELETE /products/:id
@@ -146,5 +176,6 @@ module.exports = {
   createProduct,
   updateProduct,
   getProductsCursor,
-  deleteProduct
+  deleteProduct,
+  getProductsByCategoryCursor
 };

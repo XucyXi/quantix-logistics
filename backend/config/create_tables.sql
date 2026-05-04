@@ -104,7 +104,6 @@ CREATE TABLE IF NOT EXISTS ORDER_ITEMS (
 CREATE TABLE IF NOT EXISTS DELIVERY_TRACKING (
     tracking_id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL,
-    -- status ENUM('pending','assigned','in_progress','in_transit','done','stuck') DEFAULT 'pending',
     latitude DECIMAL(10,6) DEFAULT NULL,
     longitude DECIMAL(10,6) DEFAULT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
