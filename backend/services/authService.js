@@ -140,6 +140,8 @@ async function login({email, password}) {
  * @returns {{user_id: number|string, full_name: string|null, email: string, role: string, company_name: string|null, vat_number: string|null}} The user's profile row containing user_id, full_name, email, role, and any associated company_name and vat_number.
  * @throws {Error} If no user with the given ID exists.
  */
+
+/*
 async function getProfile(userId) {
   const [rows] = await pool.query(
     `
@@ -163,6 +165,84 @@ async function getProfile(userId) {
   }
 
   return rows[0];
+}
+
+*/
+
+/**
+ * Unified profile fetcher.
+ * Uses the userId to determine the role and return role-specific data.
+ */
+async function getProfile(userId) {
+  const [rows] = await pool.query(
+    `
+    SELECT
+      u.user_id,
+      u.full_name,
+      u.email,
+      u.role,
+      u.created_at,
+      -- Customer specific
+      cp.company_name,
+      cp.vat_number,
+      cp.address,
+      cp.tel,
+      -- Driver specific
+      dp.vehicle_info,
+      dp.active AS is_active_driver,
+      dp.current_orders
+    FROM USERS u
+    LEFT JOIN CUSTOMER_PROFILES cp ON u.user_id = cp.user_id
+    LEFT JOIN DRIVER_PROFILES dp ON u.user_id = dp.user_id
+    WHERE u.user_id = ?
+    LIMIT 1
+    `,
+    [userId]
+  );
+
+  if (!rows.length) {
+    throw new Error('User not found');
+  }
+
+  const profile = rows[0];
+
+  // Logic to clean the object based on the user's role
+  // This ensures the frontend receives a predictable, clean schema.
+  if (profile.role === 'customer') {
+    return {
+      user_id: profile.user_id,
+      email: profile.email,
+      full_name: profile.full_name,
+      role: profile.role,
+      created_at: profile.created_at,
+      company_name: profile.company_name,
+      vat_number: profile.vat_number,
+      address: profile.address,
+      tel: profile.tel
+    };
+  } 
+  
+  if (profile.role === 'driver') {
+    return {
+      user_id: profile.user_id,
+      email: profile.email,
+      full_name: profile.full_name,
+      role: profile.role,
+      created_at: profile.created_at,
+      vehicle_info: profile.vehicle_info,
+      is_active_driver: Boolean(profile.is_active_driver),
+      current_orders: profile.current_orders || 0
+    };
+  }
+
+  // Fallback for admin or other roles without specific profiles
+  return {
+    user_id: profile.user_id,
+    email: profile.email,
+    full_name: profile.full_name,
+    role: profile.role,
+    created_at: profile.created_at
+  };
 }
 
 async function updateProfile(userId, profile) {
@@ -200,6 +280,37 @@ async function updateProfile(userId, profile) {
   }
 }
 
+async function updateDriverProfile(userId, vehicleInfo) {
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    // Päivitetään ajoneuvotiedot. 
+    // ON DUPLICATE KEY UPDATE varmistaa, että profiili päivittyy vaikka INSERT epäonnistuisi.
+    await connection.query(
+      `
+      INSERT INTO DRIVER_PROFILES (user_id, vehicle_info, active)
+      VALUES (?, ?, TRUE)
+      ON DUPLICATE KEY UPDATE
+        vehicle_info = VALUES(vehicle_info)
+      `,
+      [userId, vehicleInfo || null]
+    );
+
+    await connection.commit();
+    
+    // Palautetaan päivitetty profiili
+    return getProfile(userId);
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
+}
+
+
 async function changePassword(userId, currentPassword, newPassword) {
   if (!newPassword || newPassword.length < 8) {
     throw new Error('New password must be at least 8 characters');
@@ -229,4 +340,5 @@ module.exports = {
   getProfile,
   updateProfile,
   changePassword,
+  updateDriverProfile
 };
