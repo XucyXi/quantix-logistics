@@ -27,6 +27,12 @@ export interface CursorResponse {
   nextCursor: number | null;
 }
 
+export interface TrackingData {
+  status: string;
+  destination: {lat: number; lng: number};
+  driver: {latitude: number; longitude: number; updated_at: string};
+}
+
 export const orderService = {
   // --- ADMIN & YLEISET ---
   getOrdersCursor: async (
@@ -55,6 +61,14 @@ export const orderService = {
 
   updateAvailability: async (active: boolean) => {
     const res = await api.put('/orders/driver/availability', {active});
+    return res.data;
+  },
+
+  updateDeliveryLocation: async (
+    orderId: number,
+    location: {latitude: number; longitude: number}
+  ) => {
+    const res = await api.post(`/deliveries/${orderId}/location`, location);
     return res.data;
   },
 
@@ -108,6 +122,15 @@ export const orderService = {
   getOrderById: async (orderId: number, token?: string) => {
     const config = token ? {headers: {Authorization: `Bearer ${token}`}} : {};
     const res = await api.get(`/orders/${orderId}`, config);
+    return res.data;
+  },
+
+  getTrackingData: async (
+    orderId: number,
+    token?: string
+  ): Promise<TrackingData> => {
+    const config = token ? {headers: {Authorization: `Bearer ${token}`}} : {};
+    const res = await api.get(`/deliveries/${orderId}/status`, config);
     return res.data;
   },
 };

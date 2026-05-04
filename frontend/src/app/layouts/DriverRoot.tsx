@@ -1,17 +1,20 @@
 import {Outlet, useNavigate, useLocation, Navigate} from 'react-router';
-import {Package, MapPin, User, Home} from 'lucide-react';
+import {Package, MapPin, User, Home, Navigation} from 'lucide-react';
 import {DeliveryTracking, Order} from '../../types/logistics';
-import {useEffect, useState} from 'react';
+import {useEffect, useState, useRef} from 'react';
 
 import {useAuth} from '../contexts/AuthContext';
-import api from '../lib/api';
+import {orderService} from '../services/orderService';
 
 export function DriverRoot() {
   const navigate = useNavigate();
   const location = useLocation();
   const [orders, setOrders] = useState<Order[]>([]);
-
   const [deliveries] = useState<DeliveryTracking[]>([]);
+  const [isTracking, setIsTracking] = useState(false);
+
+  // Tallennetaan edellisen päivityksen aikaleima
+  const lastLocationUpdate = useRef<number>(0);
 
   const {user, isLoading} = useAuth();
 
@@ -22,30 +25,81 @@ export function DriverRoot() {
     {to: '/driver/profile', icon: User, label: 'Profiili'},
   ];
 
+  // Haetaan tilaukset säännöllisesti taustalla
   useEffect(() => {
+    if (!user || user.role !== 'driver') return;
+
     const fetchMyDeliveries = async () => {
       try {
-        const {data} = await api.get('/orders/assigned');
-
-        if (Array.isArray(data)) {
-          setOrders(data);
-        } else if (data.success && Array.isArray(data.orders)) {
-          setOrders(data.orders);
-        } else {
-          console.error('Bäkki palautti odottamattoman rakenteen:', data);
-          setOrders([]);
-        }
+        const data = await orderService.getAssignedOrders();
+        setTimeout(() => setOrders(data), 0);
       } catch (err) {
-        console.error('Datan haku epäonnistui:', err);
+        console.error('Datan haku epäonnistui (DriverRoot):', err);
       }
     };
 
-    if (user && user.role === 'driver') {
-      fetchMyDeliveries();
-    }
+    fetchMyDeliveries();
+    const interval = setInterval(fetchMyDeliveries, 5000);
+    return () => clearInterval(interval);
   }, [user]);
 
-  // --- ROUTE GUARD (PORTSARI) Tulee vasta hookkien jälkeen ---
+  // KOKO SOVELLUKSEN LAAJUINEN GPS-SEURANTA
+  useEffect(() => {
+    let watchId: number;
+
+    const activeTransitOrders = orders.filter((o) => o.status === 'in_transit');
+
+    if (activeTransitOrders.length > 0 && user?.role === 'driver') {
+      if ('geolocation' in navigator) {
+        setTimeout(() => setIsTracking(true), 0);
+
+        watchId = navigator.geolocation.watchPosition(
+          (position) => {
+            const now = Date.now();
+
+            // Onko kulunut 30 sekuntia (30000 millisekuntia) edellisestä päivityksestä?
+            if (now - lastLocationUpdate.current < 30000) {
+              return; // Jos ei, ohitetaan tämä GPS-päivitys kokonaan.
+            }
+
+            // Päivitetään uusi aikaleima
+            lastLocationUpdate.current = now;
+
+            const {latitude, longitude} = position.coords;
+
+            activeTransitOrders.forEach((order) => {
+              orderService
+                .updateDeliveryLocation(order.order_id, {latitude, longitude})
+                .catch((err) =>
+                  console.error(
+                    `Sijainnin lähetys epäonnistui tilaukselle ${order.order_id}:`,
+                    err
+                  )
+                );
+            });
+          },
+          (err) => {
+            console.error('Sijainnin hakeminen epäonnistui:', err);
+          },
+          {
+            enableHighAccuracy: true,
+            maximumAge: 10000,
+            timeout: 10000,
+          }
+        );
+      } else {
+        console.warn('Selaimesi ei tue paikannusta.');
+      }
+    } else {
+      setTimeout(() => setIsTracking(false), 0);
+    }
+
+    return () => {
+      if (watchId) navigator.geolocation.clearWatch(watchId);
+    };
+  }, [orders, user]);
+
+  // --- ROUTE GUARD ---
   if (isLoading) {
     return (
       <div
@@ -64,7 +118,7 @@ export function DriverRoot() {
   if (!user || user.role !== 'driver') {
     return <Navigate to="/admin-login" state={{from: location}} replace />;
   }
-  // -----------------------------------------------------------
+  // -------------------
 
   const isActive = (path: string) =>
     path === '/driver'
@@ -82,6 +136,38 @@ export function DriverRoot() {
         paddingBottom: '80px',
       }}
     >
+      {/* Pieni globaali GPS-indikaattori yläreunaan, kun ajo on käynnissä */}
+      {isTracking && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '1rem',
+            right: '1rem',
+            zIndex: 100,
+            backgroundColor: '#dcfce7',
+            color: '#15803d',
+            padding: '6px 12px',
+            borderRadius: '9999px',
+            fontSize: '12px',
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+            border: '1px solid #bbf7d0',
+          }}
+        >
+          <Navigation
+            size={12}
+            className="fill-green-700"
+            style={{
+              animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            }}
+          />
+          GPS Päällä
+        </div>
+      )}
+
       {/* Main content */}
       <main style={{flex: 1, overflow: 'auto'}}>
         <Outlet context={{orders, deliveries}} />
@@ -134,6 +220,15 @@ export function DriverRoot() {
           );
         })}
       </nav>
+
+      <style>
+        {`
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+          }
+        `}
+      </style>
     </div>
   );
 }

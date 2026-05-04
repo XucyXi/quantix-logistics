@@ -20,10 +20,12 @@ import {
   Loader2,
 } from 'lucide-react';
 import {useAuth} from '../contexts/AuthContext';
+// KORJATTU: Poistettu käyttämätön TrackingData importti
 import {orderService} from '../services/orderService';
 import {useToast} from '../contexts/ToastContext';
 import {useNavigate} from 'react-router';
 import {ChangePasswordCard} from '../components/ChangePasswordCard';
+import {Map} from '../components/delivery-tracking/Map';
 
 interface Order {
   order_id: number;
@@ -65,6 +67,25 @@ interface OrderStats {
   average_order_value: number | string;
   delivery_speed_days: number | string;
   success_rate: number | string;
+}
+
+interface FlexibleTrackingData {
+  latitude?: number;
+  longitude?: number;
+  lat?: number;
+  lng?: number;
+  updated_at?: string;
+  driver?: {
+    latitude?: number;
+    longitude?: number;
+    lat?: number;
+    lng?: number;
+    updated_at?: string;
+  };
+  destination?: {
+    lat?: number;
+    lng?: number;
+  };
 }
 
 function StatCard({
@@ -262,11 +283,13 @@ export function CustomerDashboard() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<'orders' | 'settings'>('orders');
 
-  // Modaalin tilat
   const [selectedOrder, setSelectedOrder] = useState<OrderDetails | null>(null);
+  // KORJATTU: Käytetään juuri luotua FlexibleTrackingData -interfacea
+  const [trackingData, setTrackingData] = useState<FlexibleTrackingData | null>(
+    null
+  );
   const [isModalLoading, setIsModalLoading] = useState(false);
 
-  // Teeman tila (Dark mode)
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return (
       document.documentElement.classList.contains('dark') ||
@@ -274,7 +297,6 @@ export function CustomerDashboard() {
     );
   });
 
-  // Teeman vaihto effect
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
@@ -336,6 +358,7 @@ export function CustomerDashboard() {
           return order.status === filterStatus;
         });
 
+  // 1. Datan haku (Tilaukset & Statistiikka)
   useEffect(() => {
     if (!user || !token) {
       setLoading(false);
@@ -368,8 +391,10 @@ export function CustomerDashboard() {
     return () => clearInterval(interval);
   }, [user, token]);
 
+  // 2. Modaalin avaus
   const handleViewOrder = async (orderId: number) => {
     setIsModalLoading(true);
+    setTrackingData(null); // Nollataan aiemmat seurantatiedot
     try {
       const details = await orderService.getOrderById(
         orderId,
@@ -383,9 +408,69 @@ export function CustomerDashboard() {
     }
   };
 
+  // 3. SEURANTADATAN LIVE-PÄIVITYS (Polling)
+  useEffect(() => {
+    // Jos tilaus ei ole auki tai se ei ole matkalla, ei tehdä mitään
+    if (!selectedOrder || selectedOrder.status !== 'in_transit' || !token) {
+      return;
+    }
+
+    const fetchTracking = async () => {
+      try {
+        const data = await orderService.getTrackingData(
+          selectedOrder.order_id,
+          token
+        );
+        // Castataan vastaus suoraan joustavaan muotoon
+        setTrackingData(data as FlexibleTrackingData);
+      } catch (err) {
+        console.warn(
+          'Seurantatiedon haku epäonnistui (odottaa mahdollisesti kuskin sijaintipäivitystä):',
+          err
+        );
+      }
+    };
+
+    fetchTracking(); // Hae heti
+    const interval = setInterval(fetchTracking, 10000); // Päivitä 10s välein
+    return () => clearInterval(interval);
+  }, [selectedOrder, token]);
+
+  // KARTAN KOORDINAATTIEN PURKAMINEN JOUSTAVASTI
+  const driverLat = trackingData
+    ? Number(
+        trackingData?.driver?.latitude ||
+          trackingData?.driver?.lat ||
+          trackingData?.latitude ||
+          trackingData?.lat
+      )
+    : NaN;
+  const driverLng = trackingData
+    ? Number(
+        trackingData?.driver?.longitude ||
+          trackingData?.driver?.lng ||
+          trackingData?.longitude ||
+          trackingData?.lng
+      )
+    : NaN;
+  const hasDriverLocation =
+    !isNaN(driverLat) && !isNaN(driverLng) && driverLat !== 0;
+
+  // Jos destinationia ei löydy, käytetään oletuksena 0:aa (Map.tsx hoitaa tämän)
+  const destLat = trackingData
+    ? Number(trackingData?.destination?.lat || 0)
+    : 0;
+  const destLng = trackingData
+    ? Number(trackingData?.destination?.lng || 0)
+    : 0;
+  const hasDestination = !isNaN(destLat) && destLat !== 0;
+
+  // Aika
+  const updatedAt =
+    trackingData?.driver?.updated_at || trackingData?.updated_at;
+
   return (
     <section className="min-h-screen bg-background font-sans text-foreground transition-colors duration-300 pb-20">
-      {/* Header */}
       <div className="bg-gradient-to-br from-[#0f2444] to-[#1e3a5f] pt-12 pb-2 px-6 shadow-md border-b border-white/10 text-white">
         <div className="max-w-7xl mx-auto">
           <div className="mb-6">
@@ -427,7 +512,6 @@ export function CustomerDashboard() {
 
         {activeTab === 'orders' ? (
           <>
-            {/* Tilastokortit */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-10">
               {getStatCards().map((stat, index) => (
                 <StatCard key={index} {...stat} />
@@ -452,7 +536,6 @@ export function CustomerDashboard() {
                 </button>
               </div>
 
-              {/* Filtterit */}
               <div className="flex gap-2 mb-8 overflow-x-auto pb-2 hide-scrollbar">
                 {[
                   {label: 'Kaikki', value: 'all'},
@@ -513,13 +596,11 @@ export function CustomerDashboard() {
             </div>
           </>
         ) : (
-          /* ASETUKSET VÄLILEHTI */
           <motion.div
             initial={{opacity: 0, y: 10}}
             animate={{opacity: 1, y: 0}}
             className="max-w-3xl mx-auto space-y-6"
           >
-            {/* Käyttäjätiedot -kortti */}
             <div className="bg-card border border-border rounded-3xl p-8 shadow-sm transition-all hover:shadow-md">
               <h2 className="text-2xl font-extrabold text-foreground mb-6 flex items-center gap-3">
                 <div className="p-2 bg-primary/10 rounded-lg">
@@ -547,12 +628,10 @@ export function CustomerDashboard() {
               </div>
             </div>
 
-            {/* Salasana kortti */}
             <div className="bg-card border border-border rounded-3xl shadow-sm transition-all hover:shadow-md overflow-hidden">
               <ChangePasswordCard />
             </div>
 
-            {/* Ulkoasu -kortti */}
             <div className="bg-card border border-border rounded-3xl p-8 shadow-sm transition-all hover:shadow-md">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                 <div>
@@ -589,7 +668,6 @@ export function CustomerDashboard() {
               </div>
             </div>
 
-            {/* Ilmoitusasetukset */}
             <div className="bg-card border border-border rounded-3xl p-8 shadow-sm opacity-60">
               <h2 className="text-xl font-extrabold text-foreground mb-6 flex items-center gap-3">
                 <div className="p-2 bg-primary/10 rounded-lg">
@@ -636,7 +714,7 @@ export function CustomerDashboard() {
         )}
       </div>
 
-      {/* MODAALI: TILAUSKORTTI */}
+      {/* MODAALI: TILAUSKORTTI JA LIVE-KARTTA */}
       <AnimatePresence>
         {(selectedOrder || isModalLoading) && (
           <div
@@ -660,7 +738,7 @@ export function CustomerDashboard() {
               ) : (
                 selectedOrder && (
                   <>
-                    <div className="flex justify-between items-start p-6 border-b border-border bg-muted/20">
+                    <div className="flex justify-between items-start p-6 border-b border-border bg-muted/20 shrink-0">
                       <div>
                         <div className="flex items-center gap-3 mb-2">
                           <h2 className="text-2xl font-extrabold text-foreground m-0">
@@ -690,6 +768,49 @@ export function CustomerDashboard() {
                     </div>
 
                     <div className="p-6 overflow-y-auto flex flex-col gap-6">
+                      {/* --- KARTTA-OSIO --- */}
+                      {selectedOrder.status === 'in_transit' && (
+                        <div className="bg-input-background border border-border rounded-2xl p-5 shadow-sm overflow-hidden flex flex-col">
+                          <h3 className="text-xs font-extrabold text-primary uppercase tracking-widest mb-3 flex items-center gap-2">
+                            <Truck size={16} /> Live-Seuranta
+                          </h3>
+
+                          {hasDriverLocation ? (
+                            <>
+                              <div className="h-[250px] w-full rounded-xl overflow-hidden border border-border relative z-0">
+                                <Map
+                                  startCoords={[driverLat, driverLng]}
+                                  // Jos määränpäätä ei ole tiedossa, estetään Map:ia reitittämästä 0,0 koordinaatteihin asettamalla endCoords samaan paikkaan
+                                  endCoords={
+                                    hasDestination
+                                      ? [destLat, destLng]
+                                      : [driverLat, driverLng]
+                                  }
+                                  variant="customer"
+                                  showRoute={hasDestination}
+                                />
+                              </div>
+                              <p className="text-xs text-muted-foreground text-center mt-3 font-medium flex items-center justify-center gap-1.5">
+                                <Clock size={12} /> Päivitetty:{' '}
+                                {updatedAt
+                                  ? new Date(updatedAt).toLocaleTimeString(
+                                      'fi-FI'
+                                    )
+                                  : 'Nyt'}
+                              </p>
+                            </>
+                          ) : (
+                            <div className="h-[250px] w-full rounded-xl border border-border bg-muted/30 flex items-center justify-center flex-col gap-3">
+                              <Loader2 className="w-8 h-8 animate-spin text-primary/50" />
+                              <span className="text-sm font-bold text-muted-foreground">
+                                Etsitään kuljettajan sijaintia...
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {/* --- KARTTA-OSIO LOPPUU --- */}
+
                       <div className="bg-input-background border border-border rounded-2xl p-5 shadow-sm">
                         <h3 className="text-xs font-extrabold text-primary uppercase tracking-widest mb-3 flex items-center gap-2">
                           <MapPin size={16} /> Toimitusosoite
@@ -741,7 +862,7 @@ export function CustomerDashboard() {
                         </div>
                       </div>
 
-                      <div className="flex justify-between items-center p-6 bg-gradient-to-br from-[#0f2444] to-[#1e3a5f] rounded-2xl mt-2 shadow-lg text-white">
+                      <div className="flex justify-between items-center p-6 bg-gradient-to-br from-[#0f2444] to-[#1e3a5f] rounded-2xl mt-2 shadow-lg text-white shrink-0">
                         <span className="font-bold uppercase tracking-wider text-sm text-white/80">
                           Yhteensä
                         </span>
