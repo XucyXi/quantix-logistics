@@ -66,4 +66,4 @@ export interface DeliveryTracking {
   boxes?: number;
 }
 
-export const WAREHOUSE_COORDS: [number, number] = [60.205, 24.887];
+export const WAREHOUSE_COORDS: [number, number] = [60.1714, 24.9316];
