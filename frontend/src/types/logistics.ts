@@ -14,8 +14,7 @@ export interface Order {
   customer?: {
     company_name: string;
   };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  items?: any[];
+  items?: OrderItem[];
   ordered_at: string;
   scheduled_delivery: string | null;
   total_price: number;
@@ -64,6 +63,15 @@ export interface DeliveryTracking {
   longitude: number;
   updated_at: string;
   boxes?: number;
+}
+
+export interface OrderItem {
+  order_item_id: number;
+  order_id: number;
+  product_id: number;
+  product_name?: string;
+  quantity: number;
+  unit_price: number | string;
 }
 
 export const WAREHOUSE_COORDS: [number, number] = [60.205, 24.887];

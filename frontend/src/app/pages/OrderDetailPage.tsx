@@ -3,6 +3,7 @@ import {useParams} from 'react-router-dom';
 import {useAuth} from '../contexts/AuthContext';
 import {orderService} from '../services/orderService';
 import {OrderTrackingMap} from '../components/OrderTrackingMap';
+import {OrderItem} from '../../types/logistics';
 
 interface Order {
   order_id: number;
@@ -10,7 +11,7 @@ interface Order {
   delivery_address: string;
   total_price: number;
   ordered_at: string;
-  items: any[];
+  items: OrderItem[];
 }
 
 export function OrderDetailPage() {

@@ -8,6 +8,14 @@ import {cn} from './utils';
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = {light: '', dark: '.dark'} as const;
 
+type ChartPayloadItem = {
+  dataKey?: string;
+  name?: string;
+  value?: unknown;
+  color?: string;
+  payload?: Record<string, unknown> & {fill?: string};
+};
+
 export type ChartConfig = {
   [k in string]: {
     label?: React.ReactNode;
@@ -120,21 +128,24 @@ function ChartTooltipContent({
   labelKey,
 }: React.ComponentProps<'div'> & {
   active?: boolean;
-  payload?: any[];
+  payload?: ChartPayloadItem[];
   hideLabel?: boolean;
   hideIndicator?: boolean;
   indicator?: 'line' | 'dot' | 'dashed';
   nameKey?: string;
   labelKey?: string;
   label?: React.ReactNode;
-  labelFormatter?: (value: React.ReactNode, payload: any[]) => React.ReactNode;
+  labelFormatter?: (
+    value: React.ReactNode,
+    payload: ChartPayloadItem[]
+  ) => React.ReactNode;
   labelClassName?: string;
   formatter?: (
-    value: any,
-    name: any,
-    item: any,
+    value: unknown,
+    name: unknown,
+    item: ChartPayloadItem,
     index: number,
-    payload: any
+    payload: ChartPayloadItem['payload'] | undefined
   ) => React.ReactNode;
   color?: string;
 }) {
@@ -194,7 +205,7 @@ function ChartTooltipContent({
         {payload.map((item, index) => {
           const key = `${nameKey || item.name || item.dataKey || 'value'}`;
           const itemConfig = getPayloadConfigFromPayload(config, item, key);
-          const indicatorColor = color || item.payload.fill || item.color;
+          const indicatorColor = color || item.payload?.fill || item.color;
 
           return (
             <div
@@ -244,7 +255,7 @@ function ChartTooltipContent({
                         {itemConfig?.label || item.name}
                       </span>
                     </div>
-                    {item.value && (
+                    {typeof item.value === 'number' && (
                       <span className="text-foreground font-mono font-medium tabular-nums">
                         {item.value.toLocaleString()}
                       </span>
@@ -269,7 +280,7 @@ function ChartLegendContent({
   verticalAlign = 'bottom',
   nameKey,
 }: React.ComponentProps<'div'> & {
-  payload?: any[];
+  payload?: ChartPayloadItem[];
   verticalAlign?: 'top' | 'middle' | 'bottom';
   hideIcon?: boolean;
   nameKey?: string;
@@ -288,13 +299,13 @@ function ChartLegendContent({
         className
       )}
     >
-      {payload.map((item: any) => {
+      {payload.map((item, index) => {
         const key = `${nameKey || item.dataKey || 'value'}`;
         const itemConfig = getPayloadConfigFromPayload(config, item, key);
 
         return (
           <div
-            key={item.value}
+            key={item.dataKey ?? item.name ?? index}
             className={cn(
               '[&>svg]:text-muted-foreground flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3'
             )}
@@ -320,18 +331,14 @@ function ChartLegendContent({
 // Helper to extract item config from a payload.
 function getPayloadConfigFromPayload(
   config: ChartConfig,
-  payload: unknown,
+  payload: ChartPayloadItem | Record<string, unknown>,
   key: string
 ) {
-  if (typeof payload !== 'object' || payload === null) {
-    return undefined;
-  }
-
   const payloadPayload =
     'payload' in payload &&
     typeof payload.payload === 'object' &&
     payload.payload !== null
-      ? payload.payload
+      ? (payload.payload as Record<string, unknown>)
       : undefined;
 
   let configLabelKey: string = key;
