@@ -1,4 +1,4 @@
-import {useState, useEffect, useMemo, useCallback} from 'react';
+import {useState, useEffect, useMemo, useCallback, useRef} from 'react';
 import {motion, AnimatePresence} from 'motion/react';
 import {
   Search,
@@ -18,7 +18,7 @@ import {useAuth} from '../contexts/AuthContext';
 import {productService, BackendProduct} from '../services/productService';
 
 const BUSINESS_DISCOUNT = 0.15;
-const CATALOG_UPDATED = '2026-05-03T08:00:00';
+const CATALOG_UPDATED = '2026-05-04T08:00:00';
 
 export interface Product {
   id: string;
@@ -113,6 +113,17 @@ function LiveClock({catalogUpdatedAt}: {catalogUpdatedAt: Date}) {
   );
 }
 
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+}
+
 export function ProductsPage() {
   const {addItem} = useCart();
   const {user} = useAuth();
@@ -121,14 +132,13 @@ export function ProductsPage() {
 
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [onlyInStock, setOnlyInStock] = useState(false);
-  const [quantities, setQuantities] = useState<Record<string, number>>({});
 
-  // UUSI TILA: Muistaa popupia varten, kuinka monta tuotetta oikeasti lisättiin
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [addedQuantities, setAddedQuantities] = useState<
     Record<string, number>
   >({});
-
   const [addedIds, setAddedIds] = useState<string[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
@@ -139,6 +149,65 @@ export function ProductsPage() {
   const [nextCursor, setNextCursor] = useState<number | string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
 
+  // --- DRAG TO SCROLL LOGIIKKA ALKAA ---
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+  const startX = useRef(0);
+  const scrollLeft = useRef(0);
+  const hasDragged = useRef(false);
+  const [cursorStyle, setCursorStyle] = useState('cursor-grab');
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    isDragging.current = true;
+    hasDragged.current = false;
+    setCursorStyle('cursor-grabbing');
+
+    if (scrollContainerRef.current) {
+      startX.current = e.pageX - scrollContainerRef.current.offsetLeft;
+      scrollLeft.current = scrollContainerRef.current.scrollLeft;
+    }
+  };
+
+  const handleMouseLeave = () => {
+    isDragging.current = false;
+    setCursorStyle('cursor-grab');
+  };
+
+  const handleMouseUp = () => {
+    isDragging.current = false;
+    setCursorStyle('cursor-grab');
+    // Pidetään tieto siitä että juuri raahattiin hengissä pieni hetki, jotta click-event ei laukea vahingossa
+    setTimeout(() => {
+      hasDragged.current = false;
+    }, 50);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging.current || !scrollContainerRef.current) return;
+    e.preventDefault();
+
+    const x = e.pageX - scrollContainerRef.current.offsetLeft;
+    const walk = (x - startX.current) * 1.5; // Liikkumisnopeuden kerroin
+
+    // Jos hiirtä liikutetaan yli 5 pikseliä pohjassa, merkataan se vetämiseksi (ei klikkaukseksi)
+    if (Math.abs(walk) > 5) {
+      hasDragged.current = true;
+    }
+
+    scrollContainerRef.current.scrollLeft = scrollLeft.current - walk;
+  };
+
+  // Funktio, joka estää kategoria-napin painamisen jos käyttäjä halusi vain vetää palkkia
+  const handleCategoryClick = (categoryId: string, e: React.MouseEvent) => {
+    if (hasDragged.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    setActiveCategory(categoryId);
+  };
+  // --- DRAG TO SCROLL LOGIIKKA LOPPUU ---
+
   const fetchProducts = useCallback(
     async (cursor: number | string | null = 0, isLoadMore = false) => {
       if (cursor === null) return;
@@ -147,18 +216,20 @@ export function ProductsPage() {
         if (isLoadMore) setLoadingMore(true);
         else setLoading(true);
 
-        const res = await productService.getAllProducts(cursor, 16);
+        const res = await productService.getAllProducts(cursor, 24);
 
-        const rawProducts = res.products || res.data || res;
+        const rawProducts = res.products || res.data || res.items || [];
         const fetchedNextCursor =
           res.nextCursor !== undefined ? res.nextCursor : res.cursor || null;
 
-        const mappedProducts: Product[] = rawProducts.map(
-          (
-            p: BackendProduct & {categories?: string[]; category_name?: string}
-          ) => {
-            let catArray: string[] = [];
+        type ExtBackendProduct = BackendProduct & {
+          categories?: string[];
+          category_name?: string;
+        };
 
+        const mappedProducts: Product[] = rawProducts.map(
+          (p: ExtBackendProduct) => {
+            let catArray: string[] = [];
             if (Array.isArray(p.categories)) {
               catArray = p.categories;
             } else if (p.category_name) {
@@ -232,11 +303,10 @@ export function ProductsPage() {
     const matchesCat =
       activeCategory === 'all' || p.categories.includes(activeCategory);
     const matchesSearch =
-      !search ||
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.brand.toLowerCase().includes(search.toLowerCase()) ||
-      p.sku.toLowerCase().includes(search.toLowerCase()) ||
-      p.description.toLowerCase().includes(search.toLowerCase());
+      !debouncedSearch ||
+      p.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      p.sku.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      p.description.toLowerCase().includes(debouncedSearch.toLowerCase());
     const matchesStock = !onlyInStock || p.inStock;
     return matchesCat && matchesSearch && matchesStock;
   });
@@ -271,7 +341,6 @@ export function ProductsPage() {
         });
       }
 
-      // Tallennetaan pysyvämmin näyttöä varten paljonko lisättiin
       setAddedQuantities((prev) => ({...prev, [productId]: qty}));
       setAddedIds((prev) => [...prev, productId]);
 
@@ -279,7 +348,6 @@ export function ProductsPage() {
         setAddedIds((prev) => prev.filter((id) => id !== productId));
       }, 2000);
 
-      // Nollataan syöttökenttä välittömästi seuraavaa kertaa varten
       setQuantities((prev) => ({
         ...prev,
         [productId]: 0,
@@ -289,7 +357,6 @@ export function ProductsPage() {
 
   return (
     <div className="font-sans bg-slate-50 min-h-screen pb-20">
-      {/* Header */}
       <div className="bg-gradient-to-br from-[#0f2444] to-[#1e3a5f] pt-12 pb-10 px-6 text-white shadow-md">
         <div className="max-w-7xl mx-auto">
           <div className="mb-2">
@@ -307,8 +374,7 @@ export function ProductsPage() {
               timeStyle: 'medium',
             })}{' '}
             <LiveClock catalogUpdatedAt={catalogUpdatedAt} />
-            {' · '}
-            {products.length} tuotetta ladattu
+            {' · '} {products.length} tuotetta ladattu
           </p>
         </div>
       </div>
@@ -316,36 +382,42 @@ export function ProductsPage() {
       <div className="max-w-7xl mx-auto py-8 px-6">
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-xl mb-6 flex items-center gap-2 font-semibold shadow-sm">
-            <AlertCircle size={20} />
-            {error}
+            <AlertCircle size={20} /> {error}
           </div>
         )}
 
-        <div className="hidden md:flex overflow-x-auto pb-2 mb-6 hide-scrollbar gap-2 min-w-max">
-          <button
-            onClick={() => setActiveCategory('all')}
-            className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all border cursor-pointer ${
-              activeCategory === 'all'
-                ? 'bg-[#0f2444] text-white border-[#0f2444] shadow-md'
-                : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 shadow-sm'
-            }`}
+        {/* 
+          DRAG TO SCROLL CONTAINER 
+          Tähän liitettiin useRef, mouseDown, mouseUp, jne. sekä dynaaminen kursori 
+        */}
+        <div className="hidden md:block w-full overflow-hidden mb-6">
+          <div
+            ref={scrollContainerRef}
+            onMouseDown={handleMouseDown}
+            onMouseLeave={handleMouseLeave}
+            onMouseUp={handleMouseUp}
+            onMouseMove={handleMouseMove}
+            className={`flex overflow-x-auto gap-2 pb-2 select-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${cursorStyle}`}
           >
-            Kaikki tuotteet
-          </button>
-          {dynamicCategories.map((cat) => (
             <button
-              key={cat.id}
-              onClick={() => setActiveCategory(cat.id)}
-              className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all border flex items-center gap-2 cursor-pointer ${
-                activeCategory === cat.id
-                  ? 'bg-[#0f2444] text-white border-[#0f2444] shadow-md'
-                  : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 shadow-sm'
-              }`}
+              onClick={(e) => handleCategoryClick('all', e)}
+              className={`shrink-0 px-5 py-2.5 rounded-xl font-bold text-sm transition-all border ${activeCategory === 'all' ? 'bg-[#0f2444] text-white border-[#0f2444] shadow-md' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 shadow-sm'}`}
             >
-              <span className="text-base">{cat.icon}</span>
-              {cat.name}
+              Kaikki tuotteet
             </button>
-          ))}
+            {dynamicCategories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={(e) => handleCategoryClick(cat.id, e)}
+                className={`shrink-0 px-5 py-2.5 rounded-xl font-bold text-sm transition-all border flex items-center gap-2 whitespace-nowrap ${activeCategory === cat.id ? 'bg-[#0f2444] text-white border-[#0f2444] shadow-md' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 shadow-sm'}`}
+              >
+                <span className="text-base pointer-events-none">
+                  {cat.icon}
+                </span>
+                <span className="pointer-events-none">{cat.name}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="md:hidden mb-6 flex flex-col gap-2">
@@ -381,7 +453,6 @@ export function ProductsPage() {
               className="bg-transparent border-none outline-none text-sm text-[#0f2444] font-bold w-full placeholder:text-slate-400 placeholder:font-medium"
             />
           </div>
-
           <div className="flex items-center justify-between w-full md:w-auto gap-6">
             <label className="flex items-center gap-2.5 cursor-pointer text-sm font-bold text-slate-500 hover:text-[#0f2444] transition-colors select-none group">
               <input
@@ -396,7 +467,6 @@ export function ProductsPage() {
               />
               Vain saatavilla olevat
             </label>
-
             <div className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg whitespace-nowrap border border-slate-200">
               Näytetään {filtered.length}
             </div>
@@ -417,193 +487,176 @@ export function ProductsPage() {
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 mb-8">
-              {filtered.map((product, i) => {
-                const quantity = quantities[product.id] || 0;
-                const isAdded = addedIds.includes(product.id);
-                const mainCatVisuals = getCategoryVisuals(
-                  product.categories[0] || ''
-                );
-                const isMaxReached = quantity >= product.stock;
+              <AnimatePresence>
+                {filtered.map((product, i) => {
+                  const quantity = quantities[product.id] || 0;
+                  const isAdded = addedIds.includes(product.id);
+                  const mainCatVisuals = getCategoryVisuals(
+                    product.categories[0] || ''
+                  );
+                  const isMaxReached = quantity >= product.stock;
 
-                return (
-                  <motion.div
-                    key={product.id}
-                    initial={{opacity: 0, y: 16}}
-                    animate={{opacity: 1, y: 0}}
-                    transition={{duration: 0.35, delay: i * 0.03}}
-                    className={`bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col relative overflow-visible transition-all hover:shadow-md ${
-                      product.inStock ? 'opacity-100' : 'opacity-60'
-                    }`}
-                  >
-                    <div
-                      onClick={() => setSelectedProduct(product)}
-                      className="w-full h-40 flex items-center justify-center bg-slate-50 text-6xl rounded-t-2xl relative cursor-pointer group transition-colors hover:bg-slate-100"
+                  return (
+                    <motion.div
+                      key={product.id}
+                      initial={{opacity: 0, y: 16}}
+                      animate={{opacity: 1, y: 0}}
+                      exit={{opacity: 0, scale: 0.9}}
+                      transition={{duration: 0.35, delay: (i % 24) * 0.03}}
+                      className={`bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col relative overflow-visible transition-all hover:shadow-md ${product.inStock ? 'opacity-100' : 'opacity-60'}`}
                     >
-                      {mainCatVisuals.icon}
-                      <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm px-2.5 py-1 rounded-lg text-xs font-bold text-slate-700 border border-slate-200 shadow-sm">
-                        Varastossa: {product.stock}
-                      </div>
-                    </div>
-
-                    <div className="p-5 flex flex-col flex-1">
-                      <h3
-                        className="text-[#0f2444] font-extrabold text-sm leading-snug mb-3 min-h-[2.6rem] hover:text-orange-500 transition-colors cursor-pointer line-clamp-2"
+                      <div
                         onClick={() => setSelectedProduct(product)}
+                        className="w-full h-40 flex items-center justify-center bg-slate-50 text-6xl rounded-t-2xl relative cursor-pointer group transition-colors hover:bg-slate-100"
                       >
-                        {product.name}
-                      </h3>
-
-                      <div className="flex flex-wrap gap-1.5 mb-4">
-                        {product.categories.slice(0, 2).map((catName) => (
-                          <span
-                            key={catName}
-                            className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md text-[0.7rem] font-bold border border-slate-200"
-                          >
-                            {catName}
-                          </span>
-                        ))}
-                        {product.categories.length > 2 && (
-                          <span className="px-2.5 py-1 bg-slate-100 text-slate-500 rounded-md text-[0.7rem] font-bold border border-slate-200">
-                            +{product.categories.length - 2}
-                          </span>
-                        )}
+                        {mainCatVisuals.icon}
+                        <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm px-2.5 py-1 rounded-lg text-xs font-bold text-slate-700 border border-slate-200 shadow-sm">
+                          Varastossa: {product.stock}
+                        </div>
                       </div>
 
-                      <div className="mb-2">
-                        {isBusinessCustomer ? (
-                          <>
-                            <div className="text-[#0f2444] font-extrabold text-2xl leading-none">
-                              {(product.pricePerUnit * (1 - BUSINESS_DISCOUNT))
-                                .toFixed(2)
-                                .replace('.', ',')}{' '}
-                              €
-                            </div>
-                            <div className="flex items-center gap-2 mt-1.5">
-                              <span className="text-slate-400 text-sm font-semibold line-through">
+                      <div className="p-5 flex flex-col flex-1">
+                        <h3
+                          className="text-[#0f2444] font-extrabold text-sm leading-snug mb-3 min-h-[2.6rem] hover:text-orange-500 transition-colors cursor-pointer line-clamp-2"
+                          onClick={() => setSelectedProduct(product)}
+                        >
+                          {product.name}
+                        </h3>
+
+                        <div className="flex flex-wrap gap-1.5 mb-4">
+                          {product.categories.slice(0, 2).map((catName) => (
+                            <span
+                              key={catName}
+                              className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md text-[0.7rem] font-bold border border-slate-200"
+                            >
+                              {catName}
+                            </span>
+                          ))}
+                          {product.categories.length > 2 && (
+                            <span className="px-2.5 py-1 bg-slate-100 text-slate-500 rounded-md text-[0.7rem] font-bold border border-slate-200">
+                              +{product.categories.length - 2}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="mb-2">
+                          {isBusinessCustomer ? (
+                            <>
+                              <div className="text-[#0f2444] font-extrabold text-2xl leading-none">
+                                {(
+                                  product.pricePerUnit *
+                                  (1 - BUSINESS_DISCOUNT)
+                                )
+                                  .toFixed(2)
+                                  .replace('.', ',')}{' '}
+                                €
+                              </div>
+                              <div className="flex items-center gap-2 mt-1.5">
+                                <span className="text-slate-400 text-sm font-semibold line-through">
+                                  {product.pricePerUnit
+                                    .toFixed(2)
+                                    .replace('.', ',')}{' '}
+                                  €
+                                </span>
+                                <span className="bg-red-500 text-white text-[0.7rem] px-2 py-0.5 rounded-md font-bold shadow-sm">
+                                  -15%
+                                </span>
+                              </div>
+                              <div className="text-slate-400 font-medium text-xs mt-1">
+                                per {product.unit}
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="text-[#0f2444] font-extrabold text-2xl leading-none">
                                 {product.pricePerUnit
                                   .toFixed(2)
                                   .replace('.', ',')}{' '}
                                 €
-                              </span>
-                              <span className="bg-red-500 text-white text-[0.7rem] px-2 py-0.5 rounded-md font-bold shadow-sm">
-                                -15%
-                              </span>
-                            </div>
-                            <div className="text-slate-400 font-medium text-xs mt-1">
-                              per {product.unit}
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="text-[#0f2444] font-extrabold text-2xl leading-none">
-                              {product.pricePerUnit
-                                .toFixed(2)
-                                .replace('.', ',')}{' '}
-                              €
-                            </div>
-                            <div className="text-slate-400 font-medium text-xs mt-1.5">
-                              per {product.unit}
-                            </div>
-                          </>
-                        )}
+                              </div>
+                              <div className="text-slate-400 font-medium text-xs mt-1.5">
+                                per {product.unit}
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="px-5 pb-5 mt-auto">
-                      <div className="flex items-center gap-2 mb-3">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            decrementQuantity(product.id);
-                          }}
-                          disabled={!product.inStock || quantity === 0}
-                          className={`w-10 h-10 rounded-xl border-2 flex items-center justify-center transition-colors ${
-                            product.inStock && quantity > 0
-                              ? 'border-slate-200 bg-white text-slate-600 hover:text-orange-500 hover:border-orange-300 cursor-pointer shadow-sm'
-                              : 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed'
-                          }`}
-                        >
-                          <Minus size={16} />
-                        </button>
+                      <div className="px-5 pb-5 mt-auto">
+                        <div className="flex items-center gap-2 mb-3">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              decrementQuantity(product.id);
+                            }}
+                            disabled={!product.inStock || quantity === 0}
+                            className={`w-10 h-10 rounded-xl border-2 flex items-center justify-center transition-colors ${product.inStock && quantity > 0 ? 'border-slate-200 bg-white text-slate-600 hover:text-orange-500 hover:border-orange-300 cursor-pointer shadow-sm' : 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed'}`}
+                          >
+                            <Minus size={16} />
+                          </button>
 
-                        <div
-                          className={`flex-1 text-center font-extrabold text-sm ${
-                            isMaxReached ? 'text-red-500' : 'text-[#0f2444]'
-                          }`}
-                        >
-                          {quantity} kpl
+                          <div
+                            className={`flex-1 text-center font-extrabold text-sm ${isMaxReached ? 'text-red-500' : 'text-[#0f2444]'}`}
+                          >
+                            {quantity} kpl
+                          </div>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              incrementQuantity(product.id, product.stock);
+                            }}
+                            disabled={!product.inStock || isMaxReached}
+                            className={`w-10 h-10 rounded-xl border-2 flex items-center justify-center transition-colors shadow-sm ${!product.inStock ? 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed' : isMaxReached ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed' : 'border-orange-500 bg-orange-500 text-white hover:bg-orange-600 cursor-pointer'}`}
+                          >
+                            <Plus size={16} />
+                          </button>
                         </div>
 
-                        <button
+                        <motion.button
                           onClick={(e) => {
                             e.stopPropagation();
-                            incrementQuantity(product.id, product.stock);
+                            addToCart(product.id);
                           }}
-                          disabled={!product.inStock || isMaxReached}
-                          className={`w-10 h-10 rounded-xl border-2 flex items-center justify-center transition-colors shadow-sm ${
-                            !product.inStock
-                              ? 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed'
-                              : isMaxReached
-                                ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
-                                : 'border-orange-500 bg-orange-500 text-white hover:bg-orange-600 cursor-pointer'
-                          }`}
+                          disabled={!product.inStock || quantity === 0}
+                          whileTap={
+                            product.inStock && quantity > 0 ? {scale: 0.95} : {}
+                          }
+                          className={`w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all relative overflow-visible shadow-sm ${!product.inStock || quantity === 0 ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200' : isAdded ? 'bg-green-500 text-white cursor-default border border-green-500' : 'bg-[#0f2444] text-white hover:bg-[#17324f] cursor-pointer border border-[#0f2444] hover:shadow-md'}`}
                         >
-                          <Plus size={16} />
-                        </button>
-                      </div>
-
-                      <motion.button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          addToCart(product.id);
-                        }}
-                        disabled={!product.inStock || quantity === 0}
-                        whileTap={
-                          product.inStock && quantity > 0 ? {scale: 0.95} : {}
-                        }
-                        className={`w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all relative overflow-visible shadow-sm ${
-                          !product.inStock || quantity === 0
-                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
-                            : isAdded
-                              ? 'bg-green-500 text-white cursor-default border border-green-500'
-                              : 'bg-[#0f2444] text-white hover:bg-[#17324f] cursor-pointer border border-[#0f2444] hover:shadow-md'
-                        }`}
-                      >
-                        {isAdded ? (
-                          <>
-                            <Check size={18} />
-                            Lisätty!
-                          </>
-                        ) : (
-                          <>
-                            <ShoppingCart size={18} />
-                            Lisää ostoskoriin
-                          </>
-                        )}
-
-                        <AnimatePresence>
-                          {isAdded && (
-                            <motion.div
-                              initial={{scale: 0, opacity: 0}}
-                              animate={{scale: 1, opacity: 1}}
-                              exit={{scale: 0, opacity: 0}}
-                              transition={{
-                                type: 'spring',
-                                stiffness: 500,
-                                damping: 25,
-                              }}
-                              className="absolute -top-12 left-1/2 -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded-xl text-xs font-extrabold shadow-[0_8px_20px_rgba(34,197,94,0.4)] whitespace-nowrap z-20 border border-green-400"
-                            >
-                              {/* Käytetään tallennettua määrää, jotta näkyy oikea luku vaikka syöttökenttä nollattiin! */}
-                              ✓ {addedQuantities[product.id]} kpl lisätty!
-                            </motion.div>
+                          {isAdded ? (
+                            <>
+                              <Check size={18} /> Lisätty!
+                            </>
+                          ) : (
+                            <>
+                              <ShoppingCart size={18} /> Lisää ostoskoriin
+                            </>
                           )}
-                        </AnimatePresence>
-                      </motion.button>
-                    </div>
-                  </motion.div>
-                );
-              })}
+
+                          <AnimatePresence>
+                            {isAdded && (
+                              <motion.div
+                                initial={{scale: 0, opacity: 0}}
+                                animate={{scale: 1, opacity: 1}}
+                                exit={{scale: 0, opacity: 0}}
+                                transition={{
+                                  type: 'spring',
+                                  stiffness: 500,
+                                  damping: 25,
+                                }}
+                                className="absolute -top-12 left-1/2 -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded-xl text-xs font-extrabold shadow-[0_8px_20px_rgba(34,197,94,0.4)] whitespace-nowrap z-20 border border-green-400"
+                              >
+                                ✓ {addedQuantities[product.id]} kpl lisätty!
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
             </div>
 
             {nextCursor && (
