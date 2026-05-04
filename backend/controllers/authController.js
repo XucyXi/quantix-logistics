@@ -40,6 +40,23 @@ async function getProfile(req, res) {
   }
 }
 
+async function updateDriverProfile(req, res) {
+  try {
+    const { vehicleInfo } = req.body;
+    
+    // Kutsutaan palvelua vain vehicleInfo-kentällä
+    const profile = await authService.updateDriverProfile(
+      req.user.user_id,
+      vehicleInfo
+    );
+    
+    res.json({ success: true, profile });
+  } catch (err) {
+    console.error('UPDATE DRIVER PROFILE ERROR:', err);
+    res.status(400).json({ success: false, error: err.message });
+  }
+}
+
 async function updateProfile(req, res) {
   try {
     const profile = await authService.updateProfile(
@@ -103,6 +120,7 @@ module.exports = {
   login,
   getProfile,
   updateProfile,
+  updateDriverProfile,
   changePassword,
-  refresh,
+  refresh
 };

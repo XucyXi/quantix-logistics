@@ -12,6 +12,14 @@ router.put(
   authMiddleware.authenticate,
   authController.updateProfile
 );
+
+// Kuskin profiilipäivitys (Vehicle info)
+router.put(
+  '/profile/driver',
+  authMiddleware.authenticate,
+  authController.updateDriverProfile
+);
+
 router.put(
   '/change-password',
   authMiddleware.authenticate,
