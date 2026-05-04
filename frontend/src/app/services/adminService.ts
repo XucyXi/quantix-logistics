@@ -1,5 +1,13 @@
 import api from '../lib/api';
 
+export interface AdminAnnouncement {
+  announcement_id: number;
+  title: string;
+  content?: string | null;
+  created_at: string;
+  expires_at?: string | null;
+}
+
 export const adminService = {
   getAnalytics: async () => {
     const res = await api.get('/admin/analytics/revenue');
@@ -37,9 +45,18 @@ export const adminService = {
     } catch (error: unknown) {
       const axiosError = error as {response?: {status?: number}};
       if (axiosError.response && axiosError.response.status === 404) {
-        return {notifications: []};
+        return {notifications: [], announcements: [], unreadCount: 0};
       }
       throw error;
     }
+  },
+
+  createAnnouncement: async (announcementData: {
+    title: string;
+    content?: string;
+    expires_at?: string | null;
+  }) => {
+    const res = await api.post('/notifications/announcements', announcementData);
+    return res.data;
   },
 };

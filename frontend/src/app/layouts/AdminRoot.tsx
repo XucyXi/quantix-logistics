@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import {useAuth} from '../contexts/AuthContext';
 import {ModeToggle} from '../components/layout/ModeToggle.tsx';
+import {adminService} from '../services/adminService';
 
 const navItems = [
   {to: '/admin', icon: LayoutDashboard, label: 'Kojelauta'},
@@ -33,6 +34,7 @@ const navItems = [
 export function AdminRoot() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
   const {user, logout} = useAuth();
@@ -49,6 +51,34 @@ export function AdminRoot() {
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchNotificationCount = async () => {
+      try {
+        const data = await adminService.getNotifications();
+        const unreadCount = Number(data?.unreadCount || 0);
+        const announcementCount = Number(data?.announcementCount || 0);
+        if (mounted) {
+          setNotificationCount(unreadCount + announcementCount);
+        }
+      } catch (error) {
+        if (mounted) {
+          setNotificationCount(0);
+        }
+        console.error('Failed to fetch notification count:', error);
+      }
+    };
+
+    fetchNotificationCount();
+    const interval = window.setInterval(fetchNotificationCount, 30000);
+
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+    };
   }, []);
 
   if (!user || user.role !== 'admin') {
@@ -196,9 +226,11 @@ export function AdminRoot() {
             <ModeToggle />
             <div className="relative cursor-pointer hover:text-primary transition-colors text-muted-foreground">
               <Bell size={20} />
-              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-primary text-primary-foreground text-[0.6rem] flex items-center justify-center">
-                3
-              </span>
+              {notificationCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-3.5 h-3.5 px-1 rounded-full bg-primary text-primary-foreground text-[0.6rem] flex items-center justify-center">
+                  {notificationCount > 99 ? '99+' : notificationCount}
+                </span>
+              )}
             </div>
             <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm">
               {user?.name?.[0] ?? 'A'}
