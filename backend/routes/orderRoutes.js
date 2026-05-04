@@ -2,6 +2,7 @@ const express = require('express');
 const orderController = require('../controllers/orderController');
 const authMiddleware = require('../middlewares/authMiddleware');
 const roleMiddleware = require('../middlewares/roleMiddleware');
+const { orderLimiter } = require('../middlewares/rateLimiter');
 
 const router = express.Router();
 
@@ -12,7 +13,7 @@ router.get(
   authMiddleware.authenticate,
   orderController.getOrdersCursor
 );
-router.post('/', authMiddleware.authenticate, orderController.createOrder);
+router.post('/', orderLimiter, authMiddleware.authenticate, orderController.createOrder);
 router.get('/:id', authMiddleware.authenticate, orderController.getOrder);
 
 // --- ASIAKKAAN REITIT ---
