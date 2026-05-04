@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS PRODUCTS (
     stock_quantity INT DEFAULT 0,
     low_stock_threshold INT DEFAULT 5,
     product_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    product_exp DATE,
+    -- POISTETTU: product_exp DATE,
     -- POISTETTU: category_id INT (Siirretty alempaan tauluun)
     INDEX idx_products_stock (stock_quantity) -- KORJATTU: Ylimääräinen puolipiste poistettu
 );
