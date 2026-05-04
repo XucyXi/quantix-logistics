@@ -1,4 +1,4 @@
-import {useState, useEffect} from 'react';
+import {useState, useEffect, useCallback} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {
   Truck,
@@ -68,44 +68,43 @@ export function AdminDashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
+  const fetchDashboardData = useCallback(async () => {
     if (!token) return;
 
-    const fetchData = async () => {
-      try {
-        // KORJATTU: Poistettu 'token' argumenteista
-        const [routesData, notificationsData, analyticsData] =
-          await Promise.all([
-            adminService.getActiveRoutes(),
-            adminService.getNotifications(),
-            adminService.getAnalytics(),
-          ]);
-
-        setRoutes(routesData.routes || []);
-        setAlerts(notificationsData.notifications || []);
-        setAnnouncements(notificationsData.announcements || []);
-
-        setStats({
-          activeDrivers: routesData.routes?.length || 0,
-          deliveredToday: analyticsData.stats?.delivered || 0,
-          issues:
-            routesData.routes?.filter(
-              (r: RouteOverview) => r.status === 'stuck'
-            ).length || 0,
-        });
-      } catch (error) {
-        console.error('Failed to fetch admin data:', error);
-      } finally {
-        setIsRefreshing(false);
-      }
-    };
-
     setIsRefreshing(true);
-    fetchData();
-  }, [token, isRefreshing]);
+    try {
+      const [routesData, notificationsData, analyticsData] = await Promise.all([
+        adminService.getActiveRoutes(),
+        adminService.getNotifications(),
+        adminService.getAnalytics(),
+      ]);
 
+      setRoutes(routesData.routes || []);
+      setAlerts(notificationsData.notifications || []);
+      setAnnouncements(notificationsData.announcements || []);
+
+      setStats({
+        activeDrivers: routesData.routes?.length || 0,
+        deliveredToday: analyticsData.stats?.delivered || 0,
+        issues:
+          routesData.routes?.filter((r: RouteOverview) => r.status === 'stuck')
+            .length || 0,
+      });
+    } catch (error) {
+      console.error('Failed to fetch admin data:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [token]); // Riippuu vain tokenista, EI isRefreshing-tilasta
+
+  // 2. Kutsutaan hakua vain, kun sivu ladataan tai token vaihtuu
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  // 3. Manuaalinen päivitys (napin painallus)
   const handleRefresh = () => {
-    setIsRefreshing(true);
+    fetchDashboardData();
   };
 
   const handleApprove = async (driverId: number) => {
@@ -128,7 +127,9 @@ export function AdminDashboard() {
       });
 
       setAnnouncementForm({title: '', content: '', expires_at: ''});
-      setIsRefreshing(true);
+
+      // 4. Kutsutaan datahaku uudelleen ilmoituksen luonnin jälkeen
+      await fetchDashboardData();
     } catch (error) {
       console.error('Failed to create announcement:', error);
     } finally {
@@ -148,7 +149,6 @@ export function AdminDashboard() {
             </p>
           </div>
 
-          {/* KORJATTU: Lisätty Koti-nappi navigointia varten */}
           <div className="flex gap-2">
             <button
               onClick={() => navigate('/')}
@@ -277,7 +277,6 @@ export function AdminDashboard() {
               </div>
             </div>
           ))}
-          {/* KORJATTU: Poistettu käyttämätön 'i' parametri */}
           {alerts.map((alert) => (
             <div
               key={alert.notification_id}

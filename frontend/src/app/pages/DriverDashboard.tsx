@@ -29,7 +29,6 @@ interface AssignedOrder {
 }
 
 export function DriverDashboard() {
-  // TÄMÄ ON SE JUTTU: Haetaan DriverRootin lataamat tilaukset kontekstin kautta, ei API:sta!
   const {orders} = useOutletContext<{orders: AssignedOrder[]}>();
 
   const handleUpdateStatus = async (orderId: number, status: string) => {
