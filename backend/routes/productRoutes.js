@@ -21,6 +21,13 @@ router.get(
   productsController.getProductsCursor
 );
 
+// Add this somewhere ABOVE router.get('/:id', ...)
+router.get(
+  '/category/cursor',
+  authMiddleware.authenticate,
+  productsController.getProductsByCategoryCursor
+);
+
 // Moved the test route ABOVE the /:id route so it doesn't get swallowed uppety up - Jere
 router.get('/test', (req, res) => {
   console.log('TEST ROUTE HIT');
@@ -43,13 +50,6 @@ router.get(
   '/:id',
   authMiddleware.authenticate,
   productsController.getProductById
-);
-
-router.delete(
-  '/:id',
-  authMiddleware.authenticate,
-  roleMiddleware.requireRole('admin'),
-  productsController.deleteProduct
 );
 
 module.exports = router;

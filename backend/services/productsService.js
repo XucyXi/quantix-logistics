@@ -194,17 +194,19 @@ function normalizeCursor(cursor) {
   return Math.floor(parsed);
 }
 
-// Default is 16, and the maximum is strictly clamped to 16
-function normalizeLimit(limit, defaultLimit = 16, maxLimit = 16) {
+// Default is 24, and the maximum is strictly clamped to 24
+function normalizeLimit(limit, defaultLimit = 24, maxLimit = 24) {
   const parsed = Number(limit);
-  // Default to 16 if the input is invalid, zero, or negative
+  // Default to 24 if the input is invalid, zero, or negative
   if (!Number.isFinite(parsed) || parsed <= 0) return defaultLimit;
-  // Cap the limit to the maxLimit (16)
+  // Cap the limit to the maxLimit (24)
   return Math.min(Math.floor(parsed), maxLimit);
 }
 
+/*
+
 // GET PRODUCTS CURSOR
-async function getProductsCursor(rawCursor = 0, rawLimit = 16) {
+async function getProductsCursor(rawCursor = 0, rawLimit = 16, search = null) {
   const cursor = normalizeCursor(rawCursor);
   const limit = normalizeLimit(rawLimit);
   
@@ -238,6 +240,119 @@ async function getProductsCursor(rawCursor = 0, rawLimit = 16) {
 
   return {data: processedRows, nextCursor};
 }
+*/
+
+// GET PRODUCTS CURSOR (Tukee valinnaista hakusanaa)
+async function getProductsCursor(rawCursor = 0, rawLimit = 24, search = null) {
+  const cursor = normalizeCursor(rawCursor);
+  const limit = normalizeLimit(rawLimit, 24, 24);
+  
+  let query = `
+    SELECT 
+      P.*,
+      GROUP_CONCAT(C.name SEPARATOR ',') AS categories_list
+    FROM PRODUCTS P
+    LEFT JOIN PRODUCT_CATEGORIES PC ON P.product_id = PC.product_id
+    LEFT JOIN CATEGORIES C ON PC.category_id = C.category_id
+    WHERE P.product_id > ? 
+  `;
+  
+  const queryParams = [cursor];
+
+  // Datan suodatus hakusanalla (jos annettu)
+  if (search) {
+    query += ` AND P.name LIKE ? `;
+    queryParams.push(`%${search}%`);
+  }
+
+  query += `
+    GROUP BY P.product_id
+    ORDER BY P.product_id ASC 
+    LIMIT ?
+  `;
+  queryParams.push(limit);
+
+  const [rows] = await pool.query(query, queryParams);
+
+  const processedRows = rows.map((row) => {
+    const catArray = row.categories_list ? row.categories_list.split(',') : [];
+    return {
+      ...row,
+      categories: catArray,
+      category_name: catArray[0] || 'Muut',
+    };
+  });
+
+  const nextCursor =
+    processedRows.length === limit
+      ? processedRows[processedRows.length - 1].product_id
+      : null;
+
+  return { data: processedRows, nextCursor };
+}
+
+// GET PRODUCTS BY CATEGORY CURSOR (Tukee yhtä tai useampaa kategoriaa)
+async function getProductsByCategoryCursor(categories, rawCursor = 0, rawLimit = 24) {
+  const categoryNames = Array.isArray(categories) ? categories : [categories];
+
+  if (!categoryNames || categoryNames.length === 0) {
+    throw new Error("At least one category is required");
+  }
+
+  const cursor = normalizeCursor(rawCursor);
+  const limit = normalizeLimit(rawLimit, 24, 24);
+
+  // 1. Varmistetaan, että kysytyt kategoriat ovat olemassa
+  const [catCheck] = await pool.query(
+    `SELECT category_id FROM CATEGORIES WHERE name IN (?)`,
+    [categoryNames]
+  );
+
+  if (catCheck.length === 0) {
+    return { data: [], nextCursor: null };
+  }
+
+  const categoryIds = catCheck.map((c) => c.category_id);
+
+  // 2. Haetaan tuotteet INNER JOINin avulla
+  // GROUP_CONCAT(DISTINCT ...) estää kategorioiden tuplaantumisen jos tuote osuu useaan hakuun
+  const query = `
+    SELECT 
+      P.*,
+      GROUP_CONCAT(DISTINCT C.name SEPARATOR ',') AS categories_list
+    FROM PRODUCTS P
+    INNER JOIN PRODUCT_CATEGORIES PC_FILTER 
+      ON P.product_id = PC_FILTER.product_id 
+    LEFT JOIN PRODUCT_CATEGORIES PC 
+      ON P.product_id = PC.product_id
+    LEFT JOIN CATEGORIES C 
+      ON PC.category_id = C.category_id
+    WHERE PC_FILTER.category_id IN (?) AND P.product_id > ?
+    GROUP BY P.product_id
+    ORDER BY P.product_id ASC 
+    LIMIT ?
+  `;
+
+  const [rows] = await pool.query(query, [categoryIds, cursor, limit]);
+
+  const processedRows = rows.map((row) => {
+    const catArray = row.categories_list ? row.categories_list.split(',') : [];
+    return {
+      ...row,
+      categories: catArray,
+      category_name: catArray[0] || 'Muut',
+    };
+  });
+
+  const nextCursor =
+    processedRows.length === limit
+      ? processedRows[processedRows.length - 1].product_id
+      : null;
+
+  return { data: processedRows, nextCursor };
+}
+
+
 
 // DELETE PRODUCT (TRANSAKTIO)
 async function deleteProduct(productId) {
@@ -288,5 +403,6 @@ module.exports = {
   createProduct,
   updateProduct,
   getProductsCursor,
-  deleteProduct
+  deleteProduct,
+  getProductsByCategoryCursor
 };
