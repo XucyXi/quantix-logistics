@@ -6,8 +6,8 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-    "email": "asiakas1@quantix.fi",
-    "password": "driver123"
+    "email": "driver@quantix.fi",
+    "password": "driver"
 }
 
 ###

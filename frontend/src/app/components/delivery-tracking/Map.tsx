@@ -145,7 +145,6 @@ export const Map = ({
     startCoords && startCoords[0] !== 0 ? startCoords : WAREHOUSE_COORDS;
   const watchPoints =
     currentRoute.length > 0 ? currentRoute : [initialCenter, endCoords];
-
   return (
     <MapContainer
       center={startCoords}
