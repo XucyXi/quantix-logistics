@@ -58,7 +58,9 @@ async function createUser(req, res) {
     const dbTier = tier ? tier.toLowerCase() : 'starter';
 
     if (dbRole === 'admin') {
-      return res.status(403).json({error: 'Admin-käyttäjiä ei voi luoda tästä käyttöliittymästä'});
+      return res
+        .status(403)
+        .json({error: 'Admin-käyttäjiä ei voi luoda tästä käyttöliittymästä'});
     }
 
     // Salasanan hajautus (Bcrypt)

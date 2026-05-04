@@ -1,4 +1,4 @@
-import {useState, useEffect, FormEvent} from 'react';
+import {useState, useEffect} from 'react';
 import {motion} from 'motion/react';
 import {User, Truck, Package, Clock, LogOut, Power} from 'lucide-react';
 import {useAuth} from '../contexts/AuthContext';
@@ -199,7 +199,8 @@ export function DriverProfilePage() {
                 className="w-full p-3 rounded-2xl bg-input-background border border-border text-foreground focus:ring-2 focus:ring-ring outline-none transition-all"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Tässä voit päivittää ajoneuvon tiedot, jotka näkyvät myös admin-paneelissa.
+                Tässä voit päivittää ajoneuvon tiedot, jotka näkyvät myös
+                admin-paneelissa.
               </p>
             </div>
             <button
