@@ -9,6 +9,7 @@ export interface User {
   lastLogin: string;
   tier: 'Starter' | 'Pro' | 'Enterprise' | null;
   activeOrders: number | null;
+  vehicleInfo?: string | null;
 }
 
 export const userService = {

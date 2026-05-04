@@ -5,7 +5,8 @@ async function getAllUsers() {
     SELECT 
       u.user_id, u.full_name, u.email, u.role, u.last_login,
       c.tier,
-      d.current_orders
+      d.current_orders,
+      d.vehicle_info
     FROM USERS u
     LEFT JOIN CUSTOMER_PROFILES c ON u.user_id = c.user_id
     LEFT JOIN DRIVER_PROFILES d ON u.user_id = d.user_id
@@ -15,12 +16,21 @@ async function getAllUsers() {
   return rows;
 }
 
+async function getUserById(userId) {
+  const [rows] = await pool.query(
+    `SELECT user_id, role FROM USERS WHERE user_id = ? LIMIT 1`,
+    [userId]
+  );
+  return rows[0] || null;
+}
+
 async function createUserTransaction(
   fullName,
   email,
   passwordHash,
   role,
-  tier
+  tier,
+  vehicleInfo
 ) {
   const connection = await pool.getConnection();
   try {
@@ -41,8 +51,8 @@ async function createUserTransaction(
       );
     } else if (role === 'driver') {
       await connection.query(
-        `INSERT INTO DRIVER_PROFILES (user_id, active, current_orders) VALUES (?, ?, ?)`,
-        [userId, true, 0]
+        `INSERT INTO DRIVER_PROFILES (user_id, active, current_orders, vehicle_info) VALUES (?, ?, ?, ?)`,
+        [userId, true, 0, vehicleInfo || null]
       );
     }
 
@@ -62,7 +72,8 @@ async function updateUserTransaction(
   email,
   passwordHash,
   role,
-  tier
+  tier,
+  vehicleInfo
 ) {
   const connection = await pool.getConnection();
   try {
@@ -86,6 +97,18 @@ async function updateUserTransaction(
       return false; // Käyttäjää ei löytynyt
     }
 
+    // Säilytetään olemassa olevien kuljettajien tilauslaskuri, jos mahdollista.
+    let currentOrders = 0;
+    if (role === 'driver') {
+      const [existingDriverRows] = await connection.query(
+        `SELECT current_orders FROM DRIVER_PROFILES WHERE user_id = ? LIMIT 1`,
+        [userId]
+      );
+      if (existingDriverRows.length) {
+        currentOrders = existingDriverRows[0].current_orders;
+      }
+    }
+
     // Helpoin tapa varmistaa eheys: Poistetaan vanhat profiilit ja luodaan uusi.
     await connection.query(`DELETE FROM CUSTOMER_PROFILES WHERE user_id = ?`, [
       userId,
@@ -101,8 +124,8 @@ async function updateUserTransaction(
       );
     } else if (role === 'driver') {
       await connection.query(
-        `INSERT INTO DRIVER_PROFILES (user_id, active, current_orders) VALUES (?, ?, ?)`,
-        [userId, true, 0]
+        `INSERT INTO DRIVER_PROFILES (user_id, active, current_orders, vehicle_info) VALUES (?, ?, ?, ?)`,
+        [userId, true, currentOrders, vehicleInfo || null]
       );
     }
 
@@ -127,6 +150,7 @@ async function deleteUser(userId) {
 
 module.exports = {
   getAllUsers,
+  getUserById,
   createUserTransaction,
   updateUserTransaction,
   deleteUser,

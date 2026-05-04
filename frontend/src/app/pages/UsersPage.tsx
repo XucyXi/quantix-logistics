@@ -36,6 +36,7 @@ export function UsersPage() {
     role: 'Asiakas' as User['role'],
     tier: 'Starter' as 'Starter' | 'Pro' | 'Enterprise',
     password: '', // Lisätty, koska uusi käyttäjä tarvitsee salasanan
+    vehicleInfo: '',
   });
 
   // Haetaan käyttäjät backendistä
@@ -77,6 +78,7 @@ export function UsersPage() {
         role: user.role,
         tier: user.tier || 'Starter',
         password: '', // Salasanaa ei esitetä muokatessa
+        vehicleInfo: user.role === 'Kuljettaja' ? user.vehicleInfo || '' : '',
       });
     } else {
       setEditingUser(null);
@@ -86,6 +88,7 @@ export function UsersPage() {
         role: 'Asiakas',
         tier: 'Starter',
         password: '',
+        vehicleInfo: '',
       });
     }
     setIsModalOpen(true);
@@ -106,6 +109,8 @@ export function UsersPage() {
         email: formData.email,
         role: formData.role,
         tier: formData.role === 'Asiakas' ? formData.tier : null,
+        vehicleInfo:
+          formData.role === 'Kuljettaja' ? formData.vehicleInfo : undefined,
         password: formData.password ? formData.password : undefined,
       };
 
@@ -122,6 +127,10 @@ export function UsersPage() {
                   email: payload.email,
                   role: payload.role,
                   tier: payload.tier as 'Starter' | 'Pro' | 'Enterprise' | null,
+                  vehicleInfo:
+                    payload.role === 'Kuljettaja'
+                      ? payload.vehicleInfo || u.vehicleInfo || ''
+                      : null,
                 }
               : u
           )
@@ -139,6 +148,8 @@ export function UsersPage() {
           tier: formData.role === 'Asiakas' ? formData.tier : null,
           lastLogin: 'Ei koskaan',
           activeOrders: formData.role === 'Kuljettaja' ? 0 : null,
+          vehicleInfo:
+            formData.role === 'Kuljettaja' ? formData.vehicleInfo : null,
         };
         setUsers([...users, newUser]);
       }
@@ -319,22 +330,29 @@ export function UsersPage() {
                 {user.role === 'Asiakas' && user.tier ? (
                   getTierBadge(user.tier)
                 ) : user.role === 'Kuljettaja' ? (
-                  <div className="flex items-center gap-1.5 text-xs font-medium">
-                    <Package
-                      size={14}
-                      className={
-                        user.activeOrders
-                          ? 'text-primary'
-                          : 'text-muted-foreground'
-                      }
-                    />
-                    {user.activeOrders ? (
-                      <span className="text-foreground">
-                        {user.activeOrders} tilausta ajossa
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">Vapaalla</span>
-                    )}
+                  <div className="space-y-1 text-xs">
+                    <div className="flex items-center gap-1.5 font-medium">
+                      <Package
+                        size={14}
+                        className={
+                          user.activeOrders
+                            ? 'text-primary'
+                            : 'text-muted-foreground'
+                        }
+                      />
+                      {user.activeOrders ? (
+                        <span className="text-foreground">
+                          {user.activeOrders} tilausta ajossa
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">Vapaalla</span>
+                      )}
+                    </div>
+                    {user.vehicleInfo ? (
+                      <div className="text-muted-foreground">
+                        Ajoneuvo: {user.vehicleInfo}
+                      </div>
+                    ) : null}
                   </div>
                 ) : (
                   <span className="text-muted-foreground">-</span>
@@ -347,12 +365,14 @@ export function UsersPage() {
 
               <MasterTableCell align="right">
                 <div className="flex items-center justify-end gap-2">
-                  <button
-                    onClick={() => openModal(user)}
-                    className="p-2 text-muted-foreground hover:text-primary bg-transparent rounded-lg hover:bg-muted transition-colors"
-                  >
-                    <Edit size={16} />
-                  </button>
+                  {user.role !== 'Admin' ? (
+                    <button
+                      onClick={() => openModal(user)}
+                      className="p-2 text-muted-foreground hover:text-primary bg-transparent rounded-lg hover:bg-muted transition-colors"
+                    >
+                      <Edit size={16} />
+                    </button>
+                  ) : null}
                   <button
                     onClick={() => handleDelete(user)}
                     className="p-2 text-muted-foreground hover:text-destructive bg-transparent rounded-lg hover:bg-muted transition-colors"
@@ -489,6 +509,29 @@ export function UsersPage() {
                     <option value="Pro">Pro</option>
                     <option value="Enterprise">Enterprise</option>
                   </select>
+                </div>
+              )}
+
+              {formData.role === 'Kuljettaja' && (
+                <div className="animate-fadeIn">
+                  <label className="block text-sm font-medium text-foreground mb-1.5">
+                    Ajoneuvon tiedot
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.vehicleInfo}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        vehicleInfo: e.target.value,
+                      })
+                    }
+                    placeholder="Esim. Mercedes Sprinter (XYZ-123)"
+                    className="w-full p-2.5 rounded-xl bg-input-background border border-border text-foreground focus:ring-2 focus:ring-ring outline-none transition-all"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Tässä voit tallentaa kuljettajan ajoneuvon tiedot.
+                  </p>
                 </div>
               )}
 

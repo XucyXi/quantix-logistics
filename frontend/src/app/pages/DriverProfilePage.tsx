@@ -1,9 +1,10 @@
-import {useState, useEffect} from 'react';
+import {useState, useEffect, FormEvent} from 'react';
 import {motion} from 'motion/react';
 import {User, Truck, Package, Clock, LogOut, Power} from 'lucide-react';
 import {useAuth} from '../contexts/AuthContext';
 import {useNavigate} from 'react-router';
 import {orderService} from '../services/orderService';
+import {authService} from '../services/authService';
 import {ChangePasswordCard} from '../components/ChangePasswordCard';
 
 interface OrderData {
@@ -15,7 +16,25 @@ export function DriverProfilePage() {
   const navigate = useNavigate();
 
   const [isActive, setIsActive] = useState(true);
+  const [vehicleInfo, setVehicleInfo] = useState('');
+  const [vehicleInfoSaving, setVehicleInfoSaving] = useState(false);
   const [stats, setStats] = useState({active: 0, done: 0});
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (user?.role !== 'driver') return;
+
+      try {
+        const {data} = await authService.getProfile();
+        setVehicleInfo(data.profile.vehicle_info || '');
+        setIsActive(Boolean(data.profile.is_active_driver));
+      } catch (e) {
+        console.error('Driver profile load failed:', e);
+      }
+    };
+
+    fetchProfile();
+  }, [user]);
 
   useEffect(() => {
     const fetchMyStats = async () => {
@@ -46,6 +65,21 @@ export function DriverProfilePage() {
       console.error(e);
       setIsActive(!newState);
       alert('Tilan päivitys epäonnistui.');
+    }
+  };
+
+  const saveVehicleInfo = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setVehicleInfoSaving(true);
+
+    try {
+      await authService.updateDriverProfile(vehicleInfo);
+      alert('Ajoneuvotiedot tallennettu.');
+    } catch (e) {
+      console.error('Ajoneuvotietojen tallennus epäonnistui:', e);
+      alert('Ajoneuvotietojen tallennus epäonnistui.');
+    } finally {
+      setVehicleInfoSaving(false);
     }
   };
 
@@ -142,10 +176,44 @@ export function DriverProfilePage() {
           </div>
         </div>
 
+        {/* Ajoneuvotiedot */}
+        <motion.div
+          initial={{opacity: 0, y: 20}}
+          animate={{opacity: 1, y: 0}}
+          transition={{delay: 0.1}}
+          className="bg-card border border-border rounded-3xl p-6 shadow-sm"
+        >
+          <h2 className="text-xl font-bold text-foreground mb-4">
+            Ajoneuvotiedot
+          </h2>
+          <form onSubmit={saveVehicleInfo} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Ajoneuvo
+              </label>
+              <input
+                type="text"
+                value={vehicleInfo}
+                onChange={(e) => setVehicleInfo(e.target.value)}
+                placeholder="Esim. Mercedes Sprinter (XYZ-123)"
+                className="w-full p-3 rounded-2xl bg-input-background border border-border text-foreground focus:ring-2 focus:ring-ring outline-none transition-all"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Tässä voit päivittää ajoneuvon tiedot, jotka näkyvät myös admin-paneelissa.
+              </p>
+            </div>
+            <button
+              type="submit"
+              disabled={vehicleInfoSaving}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-primary text-primary-foreground font-bold hover:opacity-90 transition-all disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {vehicleInfoSaving ? 'Tallennetaan...' : 'Tallenna tiedot'}
+            </button>
+          </form>
+        </motion.div>
+
         {/* Salasanan vaihto */}
         <ChangePasswordCard />
-
-        {/* Logout */}
         <motion.button
           initial={{opacity: 0, y: 20}}
           animate={{opacity: 1, y: 0}}

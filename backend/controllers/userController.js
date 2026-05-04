@@ -36,6 +36,7 @@ async function getUsers(req, res) {
             : 'Starter'
           : null,
       activeOrders: u.role === 'driver' ? u.current_orders || 0 : null,
+      vehicleInfo: u.role === 'driver' ? u.vehicle_info || null : null,
     }));
 
     res.json(formattedUsers);
@@ -47,7 +48,7 @@ async function getUsers(req, res) {
 
 async function createUser(req, res) {
   try {
-    const {name, email, password, role, tier} = req.body;
+    const {name, email, password, role, tier, vehicleInfo} = req.body;
 
     if (!name || !email || !password || !role) {
       return res.status(400).json({error: 'Missing required fields'});
@@ -55,6 +56,10 @@ async function createUser(req, res) {
 
     const dbRole = roleToDB[role] || 'customer';
     const dbTier = tier ? tier.toLowerCase() : 'starter';
+
+    if (dbRole === 'admin') {
+      return res.status(403).json({error: 'Admin-käyttäjiä ei voi luoda tästä käyttöliittymästä'});
+    }
 
     // Salasanan hajautus (Bcrypt)
     const saltRounds = 10;
@@ -65,7 +70,8 @@ async function createUser(req, res) {
       email,
       passwordHash,
       dbRole,
-      dbTier
+      dbTier,
+      vehicleInfo
     );
 
     res
@@ -83,10 +89,23 @@ async function createUser(req, res) {
 async function updateUser(req, res) {
   try {
     const {id} = req.params;
-    const {name, email, password, role, tier} = req.body;
+    const {name, email, password, role, tier, vehicleInfo} = req.body;
 
     const dbRole = roleToDB[role] || 'customer';
     const dbTier = tier ? tier.toLowerCase() : 'starter';
+
+    const existingUser = await userService.getUserById(id);
+    if (!existingUser) {
+      return res.status(404).json({error: 'User not found'});
+    }
+
+    if (existingUser.role === 'admin') {
+      return res.status(403).json({error: 'Admin-käyttäjiä ei voi muokata'});
+    }
+
+    if (dbRole === 'admin') {
+      return res.status(403).json({error: 'Admin-roolia ei voi asettaa tässä'});
+    }
 
     let passwordHash = null;
     if (password) {
@@ -100,7 +119,8 @@ async function updateUser(req, res) {
       email,
       passwordHash,
       dbRole,
-      dbTier
+      dbTier,
+      vehicleInfo
     );
 
     if (!updated) {

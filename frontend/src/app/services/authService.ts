@@ -11,6 +11,11 @@ export const authService = {
     return res.data;
   },
 
+  updateDriverProfile: async (vehicleInfo: string) => {
+    const res = await api.put('/auth/profile/driver', {vehicleInfo});
+    return res.data;
+  },
+
   changePassword: async (currentPassword: string, newPassword: string) => {
     const res = await api.put('/auth/change-password', {
       currentPassword,
