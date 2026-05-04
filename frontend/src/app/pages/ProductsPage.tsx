@@ -209,14 +209,22 @@ export function ProductsPage() {
   // --- DRAG TO SCROLL LOGIIKKA LOPPUU ---
 
   const fetchProducts = useCallback(
-    async (cursor: number | string | null = 0, isLoadMore = false) => {
+    async (
+      cursor: number | string | null = 0,
+      isLoadMore = false,
+      searchQuery = ''
+    ) => {
       if (cursor === null) return;
 
       try {
         if (isLoadMore) setLoadingMore(true);
         else setLoading(true);
 
-        const res = await productService.getAllProducts(cursor, 24);
+        const res = await productService.getAllProducts(
+          cursor,
+          24,
+          searchQuery?.trim() || undefined
+        );
 
         const rawProducts = res.products || res.data || res.items || [];
         const fetchedNextCursor =
@@ -280,8 +288,8 @@ export function ProductsPage() {
   );
 
   useEffect(() => {
-    fetchProducts(0, false);
-  }, [fetchProducts]);
+    fetchProducts(0, false, debouncedSearch);
+  }, [fetchProducts, debouncedSearch]);
 
   const dynamicCategories = useMemo(() => {
     const map = new Map<string, CategoryUI>();
@@ -662,7 +670,9 @@ export function ProductsPage() {
             {nextCursor && (
               <div className="flex justify-center mt-10">
                 <button
-                  onClick={() => fetchProducts(nextCursor, true)}
+                  onClick={() =>
+                    fetchProducts(nextCursor, true, debouncedSearch)
+                  }
                   disabled={loadingMore}
                   className="bg-white border-2 border-slate-200 text-[#0f2444] font-extrabold px-8 py-4 rounded-xl shadow-sm hover:border-orange-500 hover:text-orange-500 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
                 >

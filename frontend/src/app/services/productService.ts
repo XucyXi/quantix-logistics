@@ -26,9 +26,16 @@ export interface ProductInput {
 }
 
 export const productService = {
-  getAllProducts: async (cursor: number | string = 0, limit: number = 24) => {
+  getAllProducts: async (
+    cursor: number | string = 0,
+    limit: number = 24,
+    search?: string
+  ) => {
+    const params: Record<string, unknown> = {cursor, limit};
+    if (search) params.search = search;
+
     const res = await api.get('/products/cursor', {
-      params: {cursor, limit},
+      params,
     });
     return res.data;
   },
