@@ -47,15 +47,15 @@ exports.getMyActiveDeliveries = async (req, res) => {
 };
 
 exports.getTrackingData = async (req, res) => {
-  // KORJATTU: Luetaan "orderId" reitistä, koska router.get('/:orderId/status')
+  // Luetaan "orderId" reitistä, koska router.get('/:orderId/status')
   const {orderId} = req.params;
   const customerId = req.user.user_id;
 
   try {
-    // 1. Haetaan asiakkaan tilaukset
+    // Haetaan asiakkaan tilaukset
     const orders = await orderService.getOrdersByCustomerId(customerId);
 
-    // 2. Etsitään oikea tilaus
+    // Etsitään oikea tilaus
     const currentOrder = orders.find((o) => o.order_id == orderId);
 
     if (!currentOrder) {
@@ -64,15 +64,13 @@ exports.getTrackingData = async (req, res) => {
         .json({error: 'Tilausta ei löydy tai se ei kuulu sinulle'});
     }
 
-    // 3. Haetaan kuskin tuorein sijainti (saattaa palauttaa null, jos kuski ei ole lähettänyt vielä mitään)
+    // Haetaan kuskin tuorein sijainti (saattaa palauttaa null, jos kuski ei ole lähettänyt vielä mitään)
     const driverLocation = await deliveryService.getLatestLocation(orderId);
 
     // Palautetaan data frontendille
     res.json({
       status: currentOrder.status,
       destination: {
-        // HUOM! Olettaa, että orders-taulussasi on oikeasti dest_lat ja dest_lng.
-        // Jos ei ole, nämä palauttavat 0, jolloin kartta piirtää pelkän kuskin sijainnin.
         lat: currentOrder.dest_lat || 0,
         lng: currentOrder.dest_lng || 0,
       },
@@ -81,5 +79,15 @@ exports.getTrackingData = async (req, res) => {
   } catch (error) {
     console.error('Tracking haku kaatui:', error);
     res.status(500).json({error: error.message});
+  }
+};
+
+exports.getAllActiveLocations = async (req, res) => {
+  try {
+    const locations = await deliveryService.getAllActiveLocations();
+    res.json({success: true, data: locations});
+  } catch (error) {
+    console.error('Kaikkien sijaintien haku epäonnistui:', error);
+    res.status(500).json({success: false, message: error.message});
   }
 };

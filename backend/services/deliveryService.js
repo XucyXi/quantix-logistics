@@ -4,7 +4,7 @@ exports.createTrackingPoint = async (orderId, data) => {
   const {latitude, longitude} = data;
 
   try {
-    // 1. Yritetään ensin päivittää olemassa olevaa riviä
+    // Yritetään ensin päivittää olemassa olevaa riviä
     const updateQuery = `
       UPDATE delivery_tracking 
       SET latitude = ?, longitude = ?, updated_at = NOW()
@@ -16,7 +16,7 @@ exports.createTrackingPoint = async (orderId, data) => {
       orderId,
     ]);
 
-    // 2. Jos päivitys ei koskenut yhtään riviä (tilausta ei ole vielä seurannassa), luodaan se
+    // Jos päivitys ei koskenut yhtään riviä (tilausta ei ole vielä seurannassa), luodaan se
     if (updateResult.affectedRows === 0) {
       const insertQuery = `
         INSERT INTO delivery_tracking (order_id, latitude, longitude, updated_at)
@@ -42,4 +42,24 @@ exports.getLatestLocation = async (orderId) => {
     `;
   const [rows] = await db.execute(query, [orderId]);
   return rows[0] || null;
+};
+
+exports.getAllActiveLocations = async () => {
+  const query = `
+    SELECT 
+      t.order_id, 
+      t.latitude AS driver_lat, 
+      t.longitude AS driver_lng, 
+      t.updated_at,
+      o.delivery_address,
+      NULL AS dest_lat,
+      NULL AS dest_lng,
+      o.status,
+      o.driver_id
+    FROM delivery_tracking t
+    JOIN orders o ON t.order_id = o.order_id
+    WHERE o.status = 'in_transit'
+  `;
+  const [rows] = await db.execute(query);
+  return rows;
 };

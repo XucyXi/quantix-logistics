@@ -48,6 +48,13 @@ export const orderService = {
     return res.data;
   },
 
+  // Hakee kaikkien liikkeellä olevien kuskien sijainnit
+  getAllActiveTracking: async (token?: string) => {
+    const config = token ? {headers: {Authorization: `Bearer ${token}`}} : {};
+    const res = await api.get('/deliveries/active', config);
+    return res.data;
+  },
+
   // --- KULJETTAJAN FUNKTIOITA ---
   getAssignedOrders: async () => {
     const res = await api.get('/orders/driver/assigned');
