@@ -1,452 +1,260 @@
-# Quantix Logistics - Completion README
+# Quantix Logistics
 
-This README is an implementation playbook for finishing the project on branch `dev`.
-It is written so developers can pick tasks and code immediately.
+**Digitaalinen kuljetuksen ja tilauksen hallinta** — kokonaisuus, jossa asiakkaat käyvät verkkokaupassa, kuljettajat päivittävät toimituksia ja ylläpito näkee analytiikan. Sovellus on Metropolian **Full Stack -websovelluskehitys** -opintojaksoon tehty full stack -projektina (frontend + REST-API + MySQL).
 
-## Goal
+Projektissa korostuu **läpinäkyvä toimitusketju**: tilausrjet, tilat, karttapohjainen seuranta ja ilmoitusvirta yhdessä järjestelmässä.
 
-Ship a release-ready full-stack app by closing integration gaps between:
-- `frontend` (React + Vite + TypeScript)
-- `backend` (Express + MySQL)
-
-## Current Reality (short)
-
-Top blockers identified in `dev`:
-- Frontend and backend API prefixes are inconsistent (`/api/v1` vs `/api`).
-- Frontend expects endpoints that backend does not expose yet.
-- `backend/routes/adminRoutes.js` exists but is not mounted in `backend/server.js`.
-- Missing route file import target in frontend (`StoresPage`).
-- Mock/stub behavior still exists in auth/checkout/notification flows.
-- No strict release gate scripts (lint/typecheck/test) and no CI workflow.
+<p align="center">
+  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=000" alt="React" />
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=fff" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=fff" alt="Vite" />
+  <img src="https://img.shields.io/badge/Express-5-000?logo=express&logoColor=fff" alt="Express" />
+  <img src="https://img.shields.io/badge/MySQL-8%2B-4479A1?logo=mysql&logoColor=fff" alt="MySQL" />
+</p>
 
 ---
 
-## Priority Plan
+## Sisältö
 
-### Must-have before release
-
-1. Unify API base path and endpoint contracts.
-2. Mount and implement all backend routes used by frontend.
-3. Replace mock auth flow with real API-driven authentication.
-4. Fix missing `StoresPage` route/file mismatch.
-5. Add lint, typecheck, and test scripts; then run them in CI.
-6. Remove stubs from critical business flows (checkout, notifications, settings).
-
-### Should-have
-
-1. Add backend request validation and consistent API error format.
-2. Remove sensitive debug logging.
-3. Add `.env.example` and setup docs.
-4. Strengthen security defaults (no fallback JWT secret).
+- [Tausta ja kohde](#tausta-ja-kohde)
+- [Käyttäjäroolit ja työnkulut](#käyttäjäroolit-ja-työnkulut)
+- [Arkkitehtuuri](#arkkitehtuuri)
+- [Teknologiapino](#teknologiapino)
+- [REST API (moduulit)](#rest-api-moduulit)
+- [Tietomalli](#tietomalli)
+- [Frontend‑rakenne](#frontend‑rakenne)
+- [Turvallisuus](#turvallisuus)
+- [Linkit](#linkit)
+- [Pika-aloitus](#pika-aloitus)
+- [Ympäristömuuttujat](#ympäristömuuttujat)
 
 ---
 
-## Implementation Tasks With Copy-Paste Starter Code
+## Tausta ja kohde
 
-Use these templates as baseline patches. Adapt names/types to your current codebase as needed.
+Projektissa rakennetaan **Quantix Logistics** ‑niminen ratkaisu, jonka käyttötapauksia kuvissa ovat käytännössä:
 
-### 1) Backend: mount `admin` routes in `backend/server.js`
+- ruoka- tai verkkokaupan tilauslogistiikkaan liittyvä **asiakastilaus**, kori ja checkout,
+- kuljettajille osoitetut tilaukset sekä niiden tilan päivitys,
+- kartalla näkyvä **reitti / koordinaattiseuranta**,
+- hallinnolle **analytics-näkymät**, käyttäjät, tuotteet ja kategorioiden hallinta,
 
-If `adminRoutes.js` exists but is not mounted, add:
+Työ pohjautuu reaalimaailman tapaan jaettuihin rajapintoihin: selain‑UI kutsuu yhtä **REST JSON ‑API:a**, joka jakaa lukuoikeudet käyttäjän roolin mukaan. Tämä sopii sekä oppimisolosuhteeseen että jatkokehitykseen samaan codebaseen.
 
-```js
-// backend/server.js
-const adminRoutes = require('./routes/adminRoutes');
-
-// ... existing app.use calls
-app.use('/api/admin', adminRoutes);
-```
-
-Also ensure auth/role middleware is used inside `adminRoutes.js`:
-
-```js
-// backend/routes/adminRoutes.js
-const express = require('express');
-const router = express.Router();
-const authMiddleware = require('../middlewares/authMiddleware');
-const roleMiddleware = require('../middlewares/roleMiddleware');
-const analyticsController = require('../controllers/analyticsController');
-
-router.get(
-  '/analytics/revenue',
-  authMiddleware.authenticate,
-  roleMiddleware.requireRole('admin'),
-  analyticsController.getRevenueStats
-);
-
-router.get(
-  '/analytics/orders',
-  authMiddleware.authenticate,
-  roleMiddleware.requireRole('admin'),
-  analyticsController.getOrderStats
-);
-
-module.exports = router;
-```
+Lähteet teknisille yksityiskohdille repon sisällä: [PROJECT_ANALYTICS.md](PROJECT_ANALYTICS.md) ja [docs/backend/BACKEND_DOCUMENTATION_INDEX.md](docs/backend/BACKEND_DOCUMENTATION_INDEX.md) *(API‑dokumentissa on noin 39 dokumentoitua endpointia; backend‑indeksin päivitys esimerkiksi toukokuussa 2026).*
 
 ---
 
-### 2) Backend: add missing analytics controller
+## Käyttäjäroolit ja työnkulut
 
-```js
-// backend/controllers/analyticsController.js
-const pool = require('../config/db');
+### Roolit
 
-async function getRevenueStats(req, res) {
-  try {
-    const [rows] = await pool.query(`
-      SELECT
-        COALESCE(SUM(total_price), 0) AS total_revenue,
-        COUNT(*) AS total_orders,
-        COALESCE(AVG(total_price), 0) AS avg_order_value,
-        SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END) AS delivered_orders
-      FROM ORDERS
-      WHERE ordered_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-    `);
+| Rooli       | Idea |
+|------------|------|
+| **customer**| Rekisteröityy tai kirjautuu, selaa tuotteita, rakentaa tilauksen ja seuraa omia lähetyksiään. |
+| **driver**  | Näkee osoitetut toimitukset, päivittää tiloja, lähettää sijaintipäivityksiä seurantaan. |
+| **admin**   | Tuotteet ja kategoriat, käyttäjät, tilaukset, analytiikka ja järjestelmäasetukset. |
 
-    return res.json({ success: true, stats: rows[0] });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch revenue stats',
-      error: error.message,
-    });
-  }
-}
+### Tyypillinen polku
 
-async function getOrderStats(req, res) {
-  try {
-    const [rows] = await pool.query(`
-      SELECT status, COUNT(*) AS count
-      FROM ORDERS
-      GROUP BY status
-    `);
+1. Asiakas tallentaa tilauksen (riveineen) → tilaus ja sen rivit **MySQL**‑tauluissa.  
+2. Kuljettaja tai admin voi sitoa tilauksen kuljettajaan; tilat etenevät liiketoimintalogiikan mukaan.  
+3. **DELIVERY_TRACKING** kerää sijaintitietoa; UI piirtää reitin ja markkerit **Leaflet**‑kartalla.  
+4. **Ilmoitusjärjestelmä** täydentää tapahtumavirtaa (lisätään NOTIFICATIONS‑tasolle).  
 
-    return res.json({ success: true, stats: rows });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch order stats',
-      error: error.message,
-    });
-  }
-}
-
-module.exports = {
-  getRevenueStats,
-  getOrderStats,
-};
-```
+Näitä polkuja tarkentavat sekä järjestelmäkaavio PROJECT_ANALYTICS‑dokissa että rajapintakuvaus API‑dokumentaatiossa.
 
 ---
 
-### 3) Backend: add customer orders endpoint with pagination
+## Arkkitehtuuri
 
-```js
-// backend/services/orderService.js
-async function getOrdersByCustomerId(customerId, { limit = 20, offset = 0, status } = {}) {
-  let query = `
-    SELECT o.order_id, o.status, o.delivery_address, o.total_price, o.ordered_at
-    FROM ORDERS o
-    WHERE o.customer_id = ?
-  `;
-  const params = [customerId];
-
-  if (status) {
-    query += ' AND o.status = ?';
-    params.push(status);
-  }
-
-  query += ' ORDER BY o.ordered_at DESC LIMIT ? OFFSET ?';
-  params.push(Number(limit), Number(offset));
-
-  const [rows] = await pool.query(query, params);
-  return rows;
-}
+```
+┌─────────────────────────────────────────────────────┐
+│  Frontend (React, TypeScript, Vite, Tailwind)       │
+│  • StoreRoot · DriverRoot · AdminRoot layouts       │
+│  • Axios → /api                                      │
+└────────────────────────┬────────────────────────────┘
+                         │ HTTPS / JSON
+┌────────────────────────▼────────────────────────────┐
+│  Backend (Express 5 on Node.js)                     │
+│  • JWT middleware + roleMiddleware                   │
+│  • Moduulit: auth, products, orders, deliveries,   │
+│    admin, categories, users, notifications         │
+│  • Globaali rate limit /api‑polulle (GPS endpoint   │
+│    voidaan rajata omalla säännöllä)                │
+└────────────────────────┬────────────────────────────┘
+                         │ mysql2 (promise)
+┌────────────────────────▼────────────────────────────┐
+│  MySQL — taulutus (katso DATABASE_SCHEMA)          │
+│  USERS, PROFILES, PRODUCTS, ORDERS, TRACKING …      │
+└─────────────────────────────────────────────────────┘
 ```
 
-```js
-// backend/controllers/orderController.js
-async function getCustomerOrders(req, res) {
-  try {
-    const customerId = req.user.user_id;
-    const limit = Number(req.query.limit || 20);
-    const offset = Number(req.query.offset || 0);
-    const status = req.query.status || undefined;
-
-    const orders = await orderService.getOrdersByCustomerId(customerId, {
-      limit,
-      offset,
-      status,
-    });
-
-    return res.json({ success: true, orders });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch customer orders',
-      error: error.message,
-    });
-  }
-}
-```
-
-```js
-// backend/routes/orderRoutes.js
-router.get(
-  '/my-orders',
-  authMiddleware.authenticate,
-  roleMiddleware.requireRole('customer'),
-  orderController.getCustomerOrders
-);
-```
+Toimituslogiikasta ja hakemistoista löytyy myös hakemistoanalytiikka: [PROJECT_ANALYTICS.md](PROJECT_ANALYTICS.md) kohdat *Architecture*, *Backend Structure*, *Frontend Structure*.
 
 ---
 
-### 4) Frontend: unify API client base URL (`frontend/src/app/lib/api.ts`)
+## Teknologiapino
 
-Pick one standard (recommended: `/api`) and use it everywhere.
+Versiot kirjattu kunkin hakemiston **`package.json`**‑tiedostoon (semver‑range `^`; täsmällinen lukema `package-lock.json`issa).
 
-```ts
-// frontend/src/app/lib/api.ts
-import axios from 'axios';
+### Frontend (`frontend/`)
 
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
-  timeout: 15000,
-});
+| Alue | Teknologia |
+|------|-------------|
+| UI | React **19**, TypeScript **6**, Vite **8** |
+| Tyyli | Tailwind CSS **4** (`@tailwindcss/vite`) |
+| Reititys | React Router **7** |
+| HTTP | Axios **1.15** |
+| Kartat | Leaflet **1.9**, react-leaflet **5-rc**, MapLibre GL **5.24** |
+| Komponentit | Radix UI, lukuisat primitiivit (dialog, sidebar, tabs, …) |
+| Dataviz / animointi | Recharts **3.8**, Motion **12** |
+| Muut | react-hook-form, lucide-react, sonner |
 
-api.interceptors.request.use((config) => {
-  const token =
-    localStorage.getItem('accessToken') ||
-    localStorage.getItem('token') ||
-    localStorage.getItem('quantix_token');
+### Backend (`backend/`)
 
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-export default api;
-```
-
-Add matching env in frontend:
-
-```env
-# frontend/.env.example
-VITE_API_BASE_URL=http://localhost:3000/api
-```
+| Alue | Teknologia |
+|------|-------------|
+| Ajonaikainen | Node.js |
+| Palvelin | Express **5.2** |
+| Tietokanta | **mysql2** **3.20** (pool / promise) |
+| Auth | **jsonwebtoken**, **bcrypt** |
+| Muut | **cors**, **dotenv**, **express-rate-limit**, **nodemon** (kehitys) |
 
 ---
 
-### 5) Frontend: remove mock auth and call real backend
+## REST API (moduulit)
 
-```ts
-// frontend/src/app/contexts/AuthContext.tsx (example service usage)
-import api from '../lib/api';
+Palvelin [mounttaa](backend/server.js) seuraavat polut **`/api`‑juureen** ‑tyyppisesti (tarkan polun löydät linkitetyistä reittitiedostoista):
 
-async function login(email: string, password: string) {
-  const { data } = await api.post('/auth/login', { email, password });
-  localStorage.setItem('accessToken', data.token);
-  setUser(data.user);
-}
+| Polku | Sisältö (tiivistettynä dokumentaatiosta) |
+|-------|------------------------------------------|
+| `/api/auth` | Rekisteröinti, kirjautuminen, refresh, profiili, salasanan vaihto |
+| `/api/products` | Tuotelistaukset (myös cursoreilla), CRUD‑hallinta adminille |
+| `/api/orders` | Tilaukset asiakkaalle, kuljettajalle sekä hallinnan kokonaisuudet ja tilamuutokset |
+| `/api/deliveries` | Kuljetuksen tilan lukeminen ja kuljettajan sijaintipäivitykset |
+| `/api/admin` | Tulos‑ ja tilastografiikat, järjestelmä-/SMTP‑asetukset |
+| `/api/categories` | Tuotekategorioiden listaus ja ylläpito |
+| `/api/users` | Käyttäjähallinta (admin) |
+| `/api/notifications` | Käyttäjäkohtaiset ilmoitukset |
 
-async function register(payload: {
-  name: string;
-  email: string;
-  password: string;
-}) {
-  await api.post('/auth/register', payload);
-}
-```
-
-Remove hardcoded mock users/tokens after real auth is working.
+**Kattava viite** (pyynnöt, vastaukset, roolit): [docs/backend/API_DOCUMENTATION.md](docs/backend/API_DOCUMENTATION.md)  
+**Pikataulukko**: [docs/backend/API_QUICK_REFERENCE.md](docs/backend/API_QUICK_REFERENCE.md)  
+**Testiesimerkit** (Postman/VS Code REST): [docs/backend/API_TESTING_GUIDE.md](docs/backend/API_TESTING_GUIDE.md) ja `backend/REST-CLIENT-TESTS/`.
 
 ---
 
-### 6) Frontend: fix missing `StoresPage`
+## Tietomalli
 
-If route exists in `frontend/src/app/routes.tsx`, create the file:
+Dokumentoidussa skeemassa on **11 päätaulua / näkymää**, esimerkiksi:
 
-```tsx
-// frontend/src/app/pages/StoresPage.tsx
-export default function StoresPage() {
-  return (
-    <section className="p-6">
-      <h1 className="text-2xl font-semibold">Stores</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        TODO: Implement real store listing and details.
-      </p>
-    </section>
-  );
-}
-```
+`USERS`, `CUSTOMER_PROFILES`, `DRIVER_PROFILES`, `PRODUCTS`, `CATEGORIES`, `PRODUCT_CATEGORIES`, `ORDERS`, `ORDER_ITEMS`, `DELIVERY_TRACKING`, `ANNOUNCEMENTS`, `NOTIFICATIONS`.
 
-If you do not need this route, remove the import and route entry instead.
+ER‑suhteet, enum‑arvot ja esimerkkikyselyt: **[docs/backend/DATABASE_SCHEMA.md](docs/backend/DATABASE_SCHEMA.md)**.
 
 ---
 
-### 7) Backend: replace notification stub
+## Frontend‑rakenne
 
-```js
-// backend/services/notificationService.js
-async function sendOrderNotification({ userId, message, channel = 'email' }) {
-  // TODO: integrate real provider (SendGrid/Twilio/etc.)
-  // Keep interface stable so controller code does not change later.
-  console.info('[notification]', { userId, channel, message });
-  return { success: true };
-}
+- **Kontekstit**: kirjautuminen (`AuthContext`), ostoskori, teema (`ThemeProvider`), toast‑palaute.
+- **Layoutit**: erikseen kaupan (`StoreRoot`), kuljettajan (`DriverRoot`) ja hallinnan (`AdminRoot`) navigaatiolle.
+- **Sivut**: mm. landing, kaupan tuotteet, kassa, asiakkaan dashboard, kuljettajan kartta ja tilaukset, admin‑dashboard ja analytiikka (katso `frontend/src/app/pages/` ja `routes.tsx`).
+- **Komponentit**: jaettu `components/` (layout, delivery-tracking, UI‑kirjasto `ui/`).
 
-module.exports = { sendOrderNotification };
-```
-
-Use this in order status update flow:
-
-```js
-await notificationService.sendOrderNotification({
-  userId: customerId,
-  message: `Order ${orderId} status changed to ${newStatus}`,
-});
-```
+Tarkempi hakemisto: [PROJECT_ANALYTICS.md](PROJECT_ANALYTICS.md) *(Frontend Structure)*.
 
 ---
 
-## Release Gate Scripts (add now)
+## Turvallisuus
 
-### `frontend/package.json`
+- **JWT** Bearer‑tokenissa; backend validoi ja kiinnittää `req.user`:iin middlewaressa.
+- **Roolipohjainen käyttöoikeus** (`customer` / `driver` / `admin`) route‑tasolla.
+- **CORS** rajattu `ALLOWED_ORIGINS`‑muuttujalla (oletuksena localhost‑Vite).
+- **Globaali pyyntörajoitin** `/api`‑poluilla (`express-rate-limit`); GPS‑polkuja voidaan jättää kevyemmälle rajalle palvelimen konfiguraatiossa.
 
-```json
-{
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "lint": "eslint . --ext ts,tsx --max-warnings 0",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run"
-  }
-}
-```
+Tokenin säilytys selaimessa dokumentoidaan käyttämään **`quantix_token`**‑avainta (katso backend‑indeksi).
 
-### `backend/package.json`
+---
 
-```json
-{
-  "scripts": {
-    "start": "node server.js",
-    "db:init": "node config/init.js",
-    "lint": "eslint .",
-    "test": "jest --runInBand"
-  }
-}
-```
+## Linkit
 
-If test/lint deps are not installed yet, add them first:
+| Kuvaus | Osoite |
+|--------|--------|
+| GitHub‑repo | [github.com/XucyXi/web-project](https://github.com/XucyXi/web-project) |
+| Dokumentaatio‑indeksi | [BACKEND_DOCUMENTATION_INDEX.md](docs/backend/BACKEND_DOCUMENTATION_INDEX.md) |
+| Kokonaisanalytiikka | [PROJECT_ANALYTICS.md](PROJECT_ANALYTICS.md) |
+| **Frontend (julkaisu)** | *lisää URL, kun frontend on deployattu* |
+| **Backend / API (julkaisu)** | *lisää julkinen API‑URL* |
+
+**Lähikehitys**
+
+| Palvelu | URL |
+|---------|-----|
+| Vite dev | [http://localhost:5173](http://localhost:5173) |
+| Express | [http://localhost:3000](http://localhost:3000) |
+| API‑juuri | [http://localhost:3000/api](http://localhost:3000/api) |
+
+**Kartoissa hyödennetyt palvelut**
+
+- [OpenStreetMap](https://www.openstreetmap.org/copyright) (karttatiilet)  
+- [OSRM](https://router.project-osrm.org/) (esimerkkireititys)  
+- [Nominatim](https://nominatim.org/) (geokoodaus `backend/utils/geocoder.js`:ssä)  
+
+---
+
+## Pika-aloitus
 
 ```bash
-# frontend
-npm i -D vitest @testing-library/react @testing-library/jest-dom eslint
+# 1) Asenna molemmat npm-projektit (juuri)
+npm run install:all
 
-# backend
-npm i -D jest supertest eslint
-```
-
----
-
-## CI Starter (GitHub Actions)
-
-Create `.github/workflows/ci.yml`:
-
-```yaml
-name: CI
-
-on:
-  pull_request:
-  push:
-    branches: [main, dev]
-
-jobs:
-  frontend:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm run build
-
-  backend:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: backend/package-lock.json
-      - run: npm ci
-      - run: npm run lint
-      - run: npm test -- --passWithNoTests
-```
-
----
-
-## Definition of Done (DoD)
-
-Project is ready when all are true:
-- [ ] Frontend login/register/order pages work against real backend data.
-- [ ] No mock auth/order data in critical user flows.
-- [ ] All required backend endpoints exist and return consistent JSON format.
-- [ ] `npm run build` succeeds for frontend.
-- [ ] Backend starts without fallback secrets and without startup errors.
-- [ ] Lint/typecheck/test commands pass in local and CI.
-- [ ] `.env.example` exists for frontend and backend.
-- [ ] No critical 4xx/5xx errors in browser network logs during core flows.
-
----
-
-## Suggested Execution Order (1 sprint)
-
-1. API contract unification (`/api` strategy).
-2. Backend endpoint completion and route mounting.
-3. Frontend auth and order flows switched from mock to real API.
-4. Fix compile blockers (`StoresPage` route mismatch).
-5. Add test/lint/typecheck scripts and CI.
-6. Final end-to-end smoke test and bugfix pass.
-
----
-
-## Quick Start Commands
-
-```bash
-# backend
+# 2) Backend: luo .env (DB, JWT, portti, ALLOWED_ORIGINS — ks. alla)
 cd backend
-npm install
 npm run db:init
 npm start
-```
 
-```bash
-# frontend
+# 3) Frontend (uusi terminaali)
 cd frontend
-npm install
 npm run dev
 ```
 
-Then verify:
-- API health/login works from frontend
-- customer order list loads
-- admin analytics loads
-- no console/network critical errors
+**Laatu ennen pushia (juuri)**
+
+```bash
+npm run verify    # typecheck + frontend build + backend syntaksitarkistus
+```
+
+---
+
+## Ympäristömuuttujat
+
+- **Backend**: tietokantayhteys, `JWT_SECRET`, `PORT`, `ALLOWED_ORIGINS` (pilkuilla erotettu lista sallituista origineista). Älä commitoi `.env`‑tiedostoa (`.gitignore` kattaa sen).
+- **Frontend**: `VITE_API_BASE_URL` ohjaa Axiosin kantapolun tuotantoon; kehityksessä [Vite proxy](frontend/vite.config.ts) voi ohjata `/api` → `localhost:3000`.
+
+Tarkemmat kentät ja esimerkit: [API_TESTING_GUIDE.md](docs/backend/API_TESTING_GUIDE.md) ja [BACKEND_DOCUMENTATION_INDEX.md](docs/backend/BACKEND_DOCUMENTATION_INDEX.md).
+
+---
+
+## Repun hakemisto
+
+```
+web-project/
+├── frontend/              # React + Vite
+├── backend/               # Express + MySQL
+├── docs/backend/          # API- ja tietokantadokumentaatio
+├── PROJECT_ANALYTICS.md   # Syvällinen rakenne- ja riippuvuusanalyysi
+├── package.json           # Juuriscriptit (install:all, build, verify)
+└── README.md              # Tämä tiedosto
+```
+
+---
+
+## Kehityshaarat
+
+Sovellusta kehitetään tyypillisesti **`dev`‑haarassa**; **`main`** toimii vakautettuna vertailupisteenä. README kuvaa repossa olevan toteutuksen; yksityiskohtaiset integraatiorungot voivat elää aktiivisimmassa haarassa.
+
+---
+
+## Lisenssi ja tekijät
+
+Opiskelijaprojekti Metropolia AMK. Contributoorit: [GitHub contributors](https://github.com/XucyXi/web-project/graphs/contributors).
