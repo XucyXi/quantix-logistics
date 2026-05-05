@@ -1,70 +1,7 @@
-/*import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Popup,
-  Polyline,
-  ZoomControl,
-} from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import {useEffect, useState} from 'react';
-import {fetchRoute} from '../../utils/osrmApi.ts';
-import {RouteWatcher} from './RouteWatcher.tsx';
-
-interface MapProps {
-  startCoords: [number, number]; // lat, lng
-  endCoords: [number, number]; // lat, lng
-}
-
-export const Map = ({startCoords, endCoords}: MapProps) => {
-  const [route, setRoute] = useState<[number, number][]>([]);
-
-  useEffect(() => {
-    if (!startCoords || !endCoords) return;
-    const getRoute = async () => {
-      try {
-        const coords = await fetchRoute(startCoords, endCoords);
-        setRoute(coords);
-      } catch (error) {
-        console.error('error in Map components getRoute', error);
-      }
-    };
-    getRoute();
-  }, [startCoords, endCoords]);
-
-  return (
-    <MapContainer
-      center={startCoords}
-      zoom={8}
-      style={{height: '60vh', width: '100%', touchAction: 'none'}}
-      zoomControl={false}
-    >
-      <ZoomControl position="bottomright" />
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-
-      <Marker position={startCoords}>
-        <Popup>Lähtöpiste</Popup>
-      </Marker>
-
-      <Marker position={endCoords}>
-        <Popup>Kohde</Popup>
-      </Marker>
-
-      <Polyline
-        positions={route}
-        color="red"
-        dashArray="5, 10"
-        weight={5}
-        opacity={0.7}
-      />
-      <RouteWatcher coords={route} />
-    </MapContainer>
-  );
-};
-*/
+/**
+ * @fileoverview Generic Map Component.
+ * Reusable map component used by drivers and customers to view routes and locations.
+ */
 
 import {
   MapContainer,
@@ -130,11 +67,9 @@ export const Map = ({
 
       try {
         const coords = await fetchRoute(startCoords, endCoords);
-        if (active) {
-          setRoute(coords);
-        }
+        if (active) setRoute(coords);
       } catch (error) {
-        console.error('error in Map components getRoute', error);
+        console.error('Error fetching route in Map component', error);
         setRoute([]);
       }
     };
@@ -176,12 +111,12 @@ export const Map = ({
               {variant === 'driver' ? 'Sinun sijaintisi' : 'Kuljettaja'}
             </Popup>
           </Marker>
-
           <Marker position={endCoords}>
             <Popup>Määränpää</Popup>
           </Marker>
         </>
       )}
+
       {showRoute && route.length > 0 && (
         <Polyline
           positions={route}

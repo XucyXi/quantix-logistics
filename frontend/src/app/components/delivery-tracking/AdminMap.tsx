@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Admin Map Component.
+ * Renders an interactive map displaying all active drivers, their destinations, and calculated routes.
+ */
+
 import {useEffect, useRef, useState} from 'react';
 import {
   MapContainer,
@@ -13,7 +18,6 @@ import {fetchRoute} from '../../utils/osrmApi';
 import {RouteWatcher} from './RouteWatcher';
 import {useTheme} from '../../contexts/ThemeProvider';
 
-// Kuskin ikoni, sama kuin Map.tsx:ssä
 const driverIcon = L.divIcon({
   html: `
     <div style="
@@ -39,7 +43,6 @@ export interface ActiveDelivery {
   order_id: number;
   driver_lat: number;
   driver_lng: number;
-  // Asiakkaan antama osoite koordinaatteina
   dest_lat?: number;
   dest_lng?: number;
   delivery_address: string;
@@ -48,7 +51,14 @@ export interface ActiveDelivery {
   driver_id?: number | null;
 }
 
-// Apukomponentti kartan tarkentamiseen (Fiksumpi zoom)
+/**
+ * Intelligent utility component that handles dynamic map zooming and panning.
+ *
+ * Behaviors:
+ * 1. Fits bounds between driver and destination when a new order is selected.
+ * 2. Smoothly pans to follow the driver if the same order remains selected (polling updates).
+ * 3. Fits bounds to show all active drivers if no specific order is selected.
+ */
 function MapFitter({
   deliveries,
   selectedId,
@@ -69,13 +79,11 @@ function MapFitter({
       ? deliveries.find((d) => d.order_id === selectedId)
       : null;
 
-    // Jos reitti on saatavilla, älä zoomaa itseäsi - RouteWatcher hoitaa sen
-    if (route && route.length > 0) {
-      return;
-    }
+    // Delegate zooming to RouteWatcher if a valid route is being rendered
+    if (route && route.length > 0) return;
 
-    // Skenaario 1: Käyttäjä vaihtoi valittua tilausta TAI painoi "Näytä kaikki"
     if (prevSelectedId.current !== selectedId) {
+      // Scenario 1: Selection changed, or user clicked "Show All"
       prevSelectedId.current = selectedId;
 
       const targetLat = Number(selected?.dest_lat);
@@ -84,20 +92,17 @@ function MapFitter({
         !isNaN(targetLat) && !isNaN(targetLng) && targetLat !== 0;
 
       if (selected && hasTarget) {
-        // Zoomataan kuskin ja määränpään väliin
         const bounds = L.latLngBounds([
           [Number(selected.driver_lat), Number(selected.driver_lng)],
           [targetLat, targetLng],
         ]);
         map.fitBounds(bounds, {padding: [50, 50]});
       } else if (selected && selected.driver_lat && selected.driver_lng) {
-        // Vain kuskin sijainti tiedossa
         map.setView(
           [Number(selected.driver_lat), Number(selected.driver_lng)],
           14
         );
       } else if (!selectedId) {
-        // Näytetään kaikki kuskit kerralla
         const validCoords = deliveries
           .filter((d) => d.driver_lat && d.driver_lng)
           .map(
@@ -110,16 +115,13 @@ function MapFitter({
           map.fitBounds(bounds, {padding: [50, 50], maxZoom: 14});
         }
       }
-    }
-    // Skenaario 2: Datan polling (10s välein) kun tilaus ON valittuna
-    else if (selectedId && selected && selected.driver_lat) {
-      // Paneroidaan pehmeästi kuskin mukana ilman pakkozoomausta
+    } else if (selectedId && selected && selected.driver_lat) {
+      // Scenario 2: Data polling update; pan smoothly to new driver location
       map.panTo([Number(selected.driver_lat), Number(selected.driver_lng)], {
         animate: true,
       });
-    }
-    // Skenaario 3: Aivan ensimmäinen renderöinti
-    else if (isInitialRender.current && !selectedId) {
+    } else if (isInitialRender.current && !selectedId) {
+      // Scenario 3: Initial render; fit all drivers into view
       const validCoords = deliveries
         .filter((d) => d.driver_lat && d.driver_lng)
         .map(
@@ -168,7 +170,6 @@ export function AdminMap({
       } else {
         mediaQuery.addListener(listener);
       }
-
       return () => {
         if (typeof mediaQuery.removeEventListener === 'function') {
           mediaQuery.removeEventListener('change', listener);
@@ -179,7 +180,7 @@ export function AdminMap({
     }
   }, [theme]);
 
-  // Hae reitti kun valittu toimitus vaihtuu
+  // Fetch route geometry when the selected order changes
   useEffect(() => {
     let active = true;
 
@@ -210,14 +211,10 @@ export function AdminMap({
         ];
         const endCoords: [number, number] = [targetLat, targetLng];
         const coords = await fetchRoute(startCoords, endCoords);
-        if (active) {
-          setRoute(coords);
-        }
+        if (active) setRoute(coords);
       } catch (error) {
         console.error('Reitin haku epäonnistui:', error);
-        if (active) {
-          setRoute([]);
-        }
+        if (active) setRoute([]);
       }
     };
 
@@ -227,7 +224,7 @@ export function AdminMap({
       active = false;
     };
   }, [deliveries, selectedId]);
-  // Keskitetään Suomeen aluksi, jos ei dataa
+
   const defaultCenter: [number, number] = [60.205, 24.887];
 
   const tileUrl = isDarkMode
@@ -251,11 +248,9 @@ export function AdminMap({
         selectedId={selectedId}
         route={route}
       />
-
       {route.length > 0 && <RouteWatcher coords={route} />}
 
       {deliveries.map((del) => {
-        // Jos kuskilla ei ole validia sijaintia, ei piirretä tyhjää
         if (!del.driver_lat || !del.driver_lng) return null;
 
         const isSelected = selectedId === del.order_id;
@@ -271,10 +266,6 @@ export function AdminMap({
 
         return (
           <div key={`container-${del.order_id}`}>
-            {/* 
-              TÄMÄ ON SE PR:N KORJAUS:
-              Key sisältää nyt koordinaatit, jotta Leaflet tajuaa päivittää Markerin paikan! 
-            */}
             <Marker
               key={`driver-${del.order_id}-${dLat}-${dLng}`}
               position={[dLat, dLng]}
@@ -288,7 +279,6 @@ export function AdminMap({
               </Popup>
             </Marker>
 
-            {/* Piirretään reitti ja kohde VAIN valitulle toimitukselle, jos kohde on olemassa */}
             {isSelected && hasTarget && (
               <>
                 <Marker
@@ -298,7 +288,6 @@ export function AdminMap({
                   <Popup>Määränpää: {del.delivery_address}</Popup>
                 </Marker>
 
-                {/* Käytä oikeaa reittiä jos saatavilla, muuten suora viiva */}
                 {route.length > 0 ? (
                   <Polyline
                     positions={route}

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview API Client.
+ * Configures a global Axios instance with request/response interceptors
+ * for automatic JWT attachment and token refreshing.
+ */
+
 import axios from 'axios';
 
 const api = axios.create({
@@ -5,69 +11,61 @@ const api = axios.create({
   timeout: 15000,
 });
 
-// (REQUEST INTERCEPTOR) Lisätään token jokaiseen lähtevään pyyntöön
+/**
+ * Helper to retrieve the current auth token from local storage.
+ */
+const getToken = () =>
+  localStorage.getItem('quantix_token') ||
+  localStorage.getItem('accessToken') ||
+  localStorage.getItem('token');
+
+// (REQUEST INTERCEPTOR) Attach token to every outgoing request
 api.interceptors.request.use(
   (config) => {
-    // Haetaan ensisijaisesti dokumentaation mukaista quantix_tokenia
-    const token =
-      localStorage.getItem('quantix_token') ||
-      localStorage.getItem('accessToken') ||
-      localStorage.getItem('token');
-
+    const token = getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// (RESPONSE INTERCEPTOR) Siepataan virheet ja yritetään refresh-tokenia
+// (RESPONSE INTERCEPTOR) Catch 401 errors and attempt token refresh
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // Jos virhe on 401 (Unauthorized) ja emme ole vielä yrittäneet uudelleen
+    // If error is 401 (Unauthorized) and we haven't retried yet
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
       try {
-        const token =
-          localStorage.getItem('quantix_token') ||
-          localStorage.getItem('accessToken') ||
-          localStorage.getItem('token');
+        const token = getToken();
 
-        // Pyydetään uusi token backendistä. Käytetään puhdasta axiosia, ettei loopata.
+        // Use a raw axios instance to prevent infinite interceptor loops
         const refreshResponse = await axios.post(
           `${api.defaults.baseURL}/auth/refresh`,
           {},
-          {
-            headers: {Authorization: `Bearer ${token}`},
-          }
+          {headers: {Authorization: `Bearer ${token}`}}
         );
 
         if (refreshResponse.data.success && refreshResponse.data.token) {
           const newToken = refreshResponse.data.token;
 
-          // Tallennetaan uusi token (ensisijaisesti quantix_token)
+          // Save new token
           localStorage.setItem('quantix_token', newToken);
           localStorage.setItem('accessToken', newToken);
           localStorage.setItem('token', newToken);
 
-          // Päivitetään alkuperäiseen pyyntöön uusi token
+          // Update the original request's header and retry it
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
-
-          // Yritetään alkuperäistä pyyntöä uudelleen
           return api(originalRequest);
         }
       } catch (refreshError) {
-        // Jos myös refresh epäonnistuu, siivotaan jäljet ja ohjataan ulos
-        console.error(
-          'Auto-refresh epäonnistui, kirjaudutaan ulos.',
-          refreshError
-        );
+        // If auto-refresh fails, clean up and redirect to login
+        console.error('Auto-refresh failed, logging out.', refreshError);
         localStorage.removeItem('quantix_user');
         localStorage.removeItem('quantix_token');
         localStorage.removeItem('accessToken');

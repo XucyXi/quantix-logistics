@@ -1,8 +1,13 @@
+/**
+ * @fileoverview User Service.
+ * Handles API communications for user account management (Admin functionality).
+ */
+
 import api from '../lib/api';
 
 export interface User {
-  id: string; // Tulee olemaan esim. 'U-001' (yhdistetään ID:stä)
-  original_id: number; // Tietokannan oikea user_id
+  id: string; // Formatted ID for UI, e.g., 'U-001'
+  original_id: number; // Actual database user_id
   name: string;
   email: string;
   role: 'Asiakas' | 'Kuljettaja' | 'Varasto' | 'Admin';
@@ -14,7 +19,7 @@ export interface User {
 
 export const userService = {
   /**
-   * Hakee kaikki käyttäjät ja heidän profiilitietonsa backendistä
+   * Retrieves all users and their associated profile data.
    */
   getAllUsers: async (): Promise<User[]> => {
     const response = await api.get('/users');
@@ -22,8 +27,8 @@ export const userService = {
   },
 
   /**
-   * Luo uuden käyttäjän
-   * Huom! Adminia ei voi luoda tätä kautta turvallisuussyistä.
+   * Creates a new user.
+   * Note: Creation of 'Admin' users is restricted via the backend for security.
    */
   createUser: async (userData: Partial<User>) => {
     const response = await api.post('/users', userData);
@@ -31,7 +36,7 @@ export const userService = {
   },
 
   /**
-   * Päivittää olemassa olevan käyttäjän tiedot
+   * Updates an existing user's details and role.
    */
   updateUser: async (userId: number, userData: Partial<User>) => {
     const response = await api.put(`/users/${userId}`, userData);
@@ -39,7 +44,7 @@ export const userService = {
   },
 
   /**
-   * Poistaa käyttäjän
+   * Deletes a user from the system.
    */
   deleteUser: async (userId: number) => {
     const response = await api.delete(`/users/${userId}`);

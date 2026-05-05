@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Authentication Context.
+ * Manages global user state, session tokens, and authentication actions (login/logout/refresh).
+ */
+
 import React, {
   createContext,
   useContext,
@@ -19,6 +24,9 @@ export interface User {
   company?: string;
 }
 
+/**
+ * Utility function to check if a user belongs to the business tier.
+ */
 export function isBusinessCustomer(user: User | null): boolean {
   return user?.tier === 'business';
 }
@@ -63,7 +71,6 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('token');
 
-    // Palataan landing pagelle
     window.location.href = '/';
   }, []);
 
@@ -74,7 +81,7 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
         localStorage.getItem('token') ||
         localStorage.getItem('quantix_token');
 
-      // Ajetaan refresh vain, jos meillä on oikeasti token JA käyttäjä
+      // Refresh token only if a session is actively present
       if (currentToken && user) {
         try {
           const {data} = await api.post(
@@ -101,7 +108,7 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
     };
 
     verifySession();
-  }, [logout, user]); // Lisättiin logout tänne riippuvuudeksi
+  }, [logout, user]);
 
   const login = async (
     email: string,
@@ -112,6 +119,7 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
       const {data} = await api.post('/auth/login', {email, password});
       const resolvedRole = data.role as UserRole;
 
+      // Prevent login if the requested role doesn't match the user's actual role
       if (role && resolvedRole !== role) {
         return false;
       }
@@ -131,6 +139,7 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
       localStorage.setItem('accessToken', tokenValue);
       localStorage.setItem('token', tokenValue);
       localStorage.setItem('quantix_token', tokenValue);
+
       return true;
     } catch (error) {
       console.error('Login failed:', error);
@@ -147,6 +156,10 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
   );
 }
 
+/**
+ * Custom hook to consume the AuthContext.
+ * Must be used within an <AuthProvider>.
+ */
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');

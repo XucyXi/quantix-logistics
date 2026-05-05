@@ -1,10 +1,21 @@
-const db = require('../config/db');
+/**
+ * @fileoverview Delivery Tracking Service.
+ * Handles the creation and retrieval of GPS tracking points for active deliveries.
+ */
 
-exports.createTrackingPoint = async (orderId, data) => {
+import db from '../config/db.js';
+
+/**
+ * Creates or updates a GPS tracking point for an active order.
+ *
+ * @param {number|string} orderId - The ID of the order being tracked.
+ * @param {Object} data - Contains latitude and longitude.
+ * @returns {Promise<{success: boolean}>}
+ */
+export const createTrackingPoint = async (orderId, data) => {
   const {latitude, longitude} = data;
 
   try {
-    // Yritetään ensin päivittää olemassa olevaa riviä
     const updateQuery = `
       UPDATE delivery_tracking 
       SET latitude = ?, longitude = ?, updated_at = NOW()
@@ -16,7 +27,6 @@ exports.createTrackingPoint = async (orderId, data) => {
       orderId,
     ]);
 
-    // Jos päivitys ei koskenut yhtään riviä (tilausta ei ole vielä seurannassa), luodaan se
     if (updateResult.affectedRows === 0) {
       const insertQuery = `
         INSERT INTO delivery_tracking (order_id, latitude, longitude, updated_at)
@@ -32,19 +42,31 @@ exports.createTrackingPoint = async (orderId, data) => {
   }
 };
 
-exports.getLatestLocation = async (orderId) => {
+/**
+ * Retrieves the most recent GPS location for a specific order.
+ *
+ * @param {number|string} orderId - The order ID.
+ * @returns {Promise<Object|null>} The latest coordinates and timestamp, or null.
+ */
+export const getLatestLocation = async (orderId) => {
   const query = `
-        SELECT latitude as lat, longitude as lng, updated_at
-        FROM delivery_tracking
-        WHERE order_id = ?
-        ORDER BY updated_at DESC
-        LIMIT 1
-    `;
+    SELECT latitude as lat, longitude as lng, updated_at
+    FROM delivery_tracking
+    WHERE order_id = ?
+    ORDER BY updated_at DESC
+    LIMIT 1
+  `;
   const [rows] = await db.execute(query, [orderId]);
   return rows[0] || null;
 };
 
-exports.getAllActiveLocations = async () => {
+/**
+ * Retrieves all active driver locations (for orders currently 'in_transit').
+ * Used primarily for the admin live map.
+ *
+ * @returns {Promise<Array>} List of active tracking points with destination details.
+ */
+export const getAllActiveLocations = async () => {
   const query = `
     SELECT
       t.order_id,

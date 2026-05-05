@@ -1,6 +1,18 @@
-const pool = require('../config/db');
+/**
+ * @fileoverview Analytics Controller.
+ * Handles data aggregation for revenue, orders, and business metrics.
+ */
 
-async function getRevenueStats(req, res) {
+import pool from '../config/db.js';
+
+/**
+ * Retrieves revenue statistics for the last 30 days.
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ * @returns {Promise<void>} JSON response with total revenue, order counts, and averages.
+ */
+export async function getRevenueStats(req, res) {
   try {
     const query = `
       SELECT
@@ -15,12 +27,20 @@ async function getRevenueStats(req, res) {
 
     res.json({success: true, stats: statsResult[0]});
   } catch (error) {
-    console.error('Error getting revenue stats:', error.message);
-    res.status(500).json({error: error.message});
+    res
+      .status(500)
+      .json({success: false, error: 'Failed to fetch revenue stats'});
   }
 }
 
-async function getOrderStats(req, res) {
+/**
+ * Retrieves order counts grouped by their current status.
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ * @returns {Promise<void>} JSON response with an array of statuses and their counts.
+ */
+export async function getOrderStats(req, res) {
   try {
     const [rows] = await pool.query(`
       SELECT status, COUNT(*) as count
@@ -33,12 +53,6 @@ async function getOrderStats(req, res) {
     return res.status(500).json({
       success: false,
       message: 'Failed to fetch order stats',
-      error: error.message,
     });
   }
 }
-
-module.exports = {
-  getRevenueStats,
-  getOrderStats,
-};

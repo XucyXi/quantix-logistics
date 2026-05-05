@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Toast Notification Context.
+ * Provides a globally accessible method to trigger animated, temporary UI notifications.
+ */
+
 import React, {createContext, useContext, useState, ReactNode} from 'react';
 import {motion, AnimatePresence} from 'motion/react';
 import {CheckCircle, AlertTriangle} from 'lucide-react';
@@ -10,12 +15,14 @@ interface ToastContextType {
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
-// Luodaan Provider-komponentti, joka käärii sovelluksen
 export function ToastProvider({children}: {children: ReactNode}) {
   const [toast, setToast] = useState<{message: string; type: ToastType} | null>(
     null
   );
 
+  /**
+   * Displays a toast notification that automatically dismisses after 3 seconds.
+   */
   const showToast = (message: string, type: ToastType = 'success') => {
     setToast({message, type});
     setTimeout(() => {
@@ -27,7 +34,6 @@ export function ToastProvider({children}: {children: ReactNode}) {
     <ToastContext.Provider value={{showToast}}>
       {children}
 
-      {/* TÄMÄ RENDERÖIDÄÄN KOKO SOVELLUKSEN PÄÄLLÄ */}
       <AnimatePresence>
         {toast && (
           <motion.div
@@ -53,11 +59,14 @@ export function ToastProvider({children}: {children: ReactNode}) {
   );
 }
 
-// Custom hook, jotta contextin käyttö on helpompaa
+/**
+ * Custom hook to consume the ToastContext.
+ * Must be used within a <ToastProvider>.
+ */
 export function useToast() {
   const context = useContext(ToastContext);
   if (context === undefined) {
-    throw new Error('useToast pitää käyttää ToastProviderin sisällä');
+    throw new Error('useToast must be used within a ToastProvider');
   }
   return context;
 }

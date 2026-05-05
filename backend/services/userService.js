@@ -1,6 +1,14 @@
-const pool = require('../config/db');
+/**
+ * @fileoverview User Service.
+ * Manages user accounts, hashing logic separation, and profile creation via transactions.
+ */
 
-async function getAllUsers() {
+import pool from '../config/db.js';
+
+/**
+ * Retrieves all users alongside their role-specific profiles.
+ */
+export async function getAllUsers() {
   const query = `
     SELECT 
       u.user_id, u.full_name, u.email, u.role, u.last_login,
@@ -16,7 +24,10 @@ async function getAllUsers() {
   return rows;
 }
 
-async function getUserById(userId) {
+/**
+ * Verifies if a user exists and returns their base role.
+ */
+export async function getUserById(userId) {
   const [rows] = await pool.query(
     `SELECT user_id, role FROM USERS WHERE user_id = ? LIMIT 1`,
     [userId]
@@ -24,7 +35,10 @@ async function getUserById(userId) {
   return rows[0] || null;
 }
 
-async function createUserTransaction(
+/**
+ * Creates a base user and their corresponding role-specific profile (Driver/Customer) safely.
+ */
+export async function createUserTransaction(
   fullName,
   email,
   passwordHash,
@@ -36,14 +50,12 @@ async function createUserTransaction(
   try {
     await connection.beginTransaction();
 
-    // 1. Luodaan peruskäyttäjä
     const [userRes] = await connection.query(
       `INSERT INTO USERS (full_name, email, password_hash, role) VALUES (?, ?, ?, ?)`,
       [fullName, email, passwordHash, role]
     );
     const userId = userRes.insertId;
 
-    // 2. Luodaan profiili roolin mukaan
     if (role === 'customer') {
       await connection.query(
         `INSERT INTO CUSTOMER_PROFILES (user_id, tier, status) VALUES (?, ?, 'active')`,
@@ -66,7 +78,10 @@ async function createUserTransaction(
   }
 }
 
-async function updateUserTransaction(
+/**
+ * Updates a user and handles switching between driver and customer profiles if the role changes.
+ */
+export async function updateUserTransaction(
   userId,
   fullName,
   email,
@@ -79,7 +94,6 @@ async function updateUserTransaction(
   try {
     await connection.beginTransaction();
 
-    // Päivitetään peruskäyttäjä
     let userQuery = `UPDATE USERS SET full_name = ?, email = ?, role = ?`;
     let userParams = [fullName, email, role];
 
@@ -94,22 +108,19 @@ async function updateUserTransaction(
 
     if (userRes.affectedRows === 0) {
       await connection.rollback();
-      return false; // Käyttäjää ei löytynyt
+      return false;
     }
 
-    // Säilytetään olemassa olevien kuljettajien tilauslaskuri, jos mahdollista.
     let currentOrders = 0;
     if (role === 'driver') {
       const [existingDriverRows] = await connection.query(
         `SELECT current_orders FROM DRIVER_PROFILES WHERE user_id = ? LIMIT 1`,
         [userId]
       );
-      if (existingDriverRows.length) {
+      if (existingDriverRows.length)
         currentOrders = existingDriverRows[0].current_orders;
-      }
     }
 
-    // Helpoin tapa varmistaa eheys: Poistetaan vanhat profiilit ja luodaan uusi.
     await connection.query(`DELETE FROM CUSTOMER_PROFILES WHERE user_id = ?`, [
       userId,
     ]);
@@ -139,19 +150,12 @@ async function updateUserTransaction(
   }
 }
 
-async function deleteUser(userId) {
-  // Koska tietokannassa on ON DELETE CASCADE sääntö asettamasi luontiskriptin perusteella,
-  // USERS-taulusta poistaminen tuhoaa lennosta myös CUSTOMER ja DRIVER profiilit! Aivan kuin taikaa.
+/**
+ * Deletes a user. Assumes ON DELETE CASCADE is active in the database for profile tables.
+ */
+export async function deleteUser(userId) {
   const [result] = await pool.query(`DELETE FROM USERS WHERE user_id = ?`, [
     userId,
   ]);
   return result.affectedRows > 0;
 }
-
-module.exports = {
-  getAllUsers,
-  getUserById,
-  createUserTransaction,
-  updateUserTransaction,
-  deleteUser,
-};

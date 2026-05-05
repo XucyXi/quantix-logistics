@@ -1,7 +1,18 @@
-const db = require('../config/db');
-const notificationService = require('../services/notificationService');
+/**
+ * @fileoverview Notification Controller.
+ * Handles system announcements and targeted user notifications.
+ */
 
-async function getNotifications(req, res) {
+import db from '../config/db.js';
+import * as notificationService from '../services/notificationService.js';
+
+/**
+ * Retrieves notifications and active announcements for the authenticated user.
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ */
+export async function getNotifications(req, res) {
   try {
     const userId = req.user.user_id;
     const limit = Number.parseInt(req.query.limit, 10) || 20;
@@ -33,7 +44,13 @@ async function getNotifications(req, res) {
   }
 }
 
-async function createAnnouncement(req, res) {
+/**
+ * Creates a system-wide announcement (Admin functionality).
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ */
+export async function createAnnouncement(req, res) {
   try {
     const {title, content, expires_at} = req.body;
     const normalizedExpiresAt =
@@ -72,7 +89,13 @@ async function createAnnouncement(req, res) {
   }
 }
 
-async function markNotificationAsRead(req, res) {
+/**
+ * Marks a specific user notification as read.
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ */
+export async function markNotificationAsRead(req, res) {
   try {
     const notificationId = Number.parseInt(req.params.id, 10);
     const userId = req.user.user_id;
@@ -81,6 +104,7 @@ async function markNotificationAsRead(req, res) {
       return res.status(400).json({error: 'Invalid notification id'});
     }
 
+    // Verify ownership before updating
     const [ownedNotification] = await db.query(
       `SELECT notification_id FROM NOTIFICATIONS
        WHERE notification_id = ? AND user_id = ?
@@ -99,9 +123,3 @@ async function markNotificationAsRead(req, res) {
     return res.status(500).json({error: 'Failed to update notification'});
   }
 }
-
-module.exports = {
-  getNotifications,
-  createAnnouncement,
-  markNotificationAsRead,
-};

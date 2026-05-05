@@ -1,23 +1,31 @@
-const express = require('express');
-const authMiddleware = require('../middlewares/authMiddleware');
-const roleMiddleware = require('../middlewares/roleMiddleware');
-const notificationController = require('../controllers/notificationController');
+/**
+ * @fileoverview Notification routes.
+ * Handles fetching, creating, and marking notifications/announcements as read.
+ */
+
+import express from 'express';
+import {authenticate} from '../middlewares/authMiddleware.js';
+import {requireRole} from '../middlewares/roleMiddleware.js';
+import * as notificationController from '../controllers/notificationController.js';
 
 const router = express.Router();
 
-router.get('/', authMiddleware.authenticate, notificationController.getNotifications);
+// Fetch notifications for the authenticated user
+router.get('/', authenticate, notificationController.getNotifications);
 
+// Create a system-wide announcement (Admin only)
 router.post(
   '/announcements',
-  authMiddleware.authenticate,
-  roleMiddleware.requireRole('admin'),
+  authenticate,
+  requireRole('admin'),
   notificationController.createAnnouncement
 );
 
+// Mark a specific notification as read
 router.patch(
   '/:id/read',
-  authMiddleware.authenticate,
+  authenticate,
   notificationController.markNotificationAsRead
 );
 
-module.exports = router;
+export default router;

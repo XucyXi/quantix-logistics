@@ -1,6 +1,17 @@
-const db = require('../config/db');
+/**
+ * @fileoverview Admin Service.
+ * Provides specialized database queries for the admin dashboard,
+ * including route overviews, system notifications, and core analytics.
+ */
 
-exports.getRoutesOverview = async () => {
+import db from '../config/db.js';
+
+/**
+ * Retrieves an aggregated overview of active drivers and their current deliveries.
+ *
+ * @returns {Promise<Array>} Array of driver route objects.
+ */
+export async function getRoutesOverview() {
   const query = `
     SELECT 
       u.user_id AS driverId,
@@ -19,7 +30,6 @@ exports.getRoutesOverview = async () => {
 
   const [rows] = await db.execute(query);
 
-  // Muotoillaan data suoraan täällä
   return rows.map((r) => ({
     driverId: r.driverId,
     driverName: r.driverName || 'Tuntematon Kuski',
@@ -29,9 +39,14 @@ exports.getRoutesOverview = async () => {
     status: r.stuckCount > 0 ? 'stuck' : 'in_progress',
     area: 'Pääkaupunkiseutu',
   }));
-};
+}
 
-exports.getSystemNotifications = async () => {
+/**
+ * Retrieves the latest system announcements and high-priority alerts.
+ *
+ * @returns {Promise<{announcements: Array, alerts: Array}>}
+ */
+export async function getSystemNotifications() {
   const [announcements] = await db.execute(`
     SELECT announcement_id, title, content, created_at, expires_at 
     FROM ANNOUNCEMENTS 
@@ -46,9 +61,14 @@ exports.getSystemNotifications = async () => {
   `);
 
   return {announcements, alerts};
-};
+}
 
-exports.getBasicAnalytics = async () => {
+/**
+ * Retrieves basic top-level analytics (e.g., total orders delivered today).
+ *
+ * @returns {Promise<{delivered: number}>}
+ */
+export async function getBasicAnalytics() {
   const [rows] = await db.execute(`
     SELECT COUNT(*) as deliveredToday 
     FROM ORDERS 
@@ -58,4 +78,4 @@ exports.getBasicAnalytics = async () => {
   return {
     delivered: rows[0].deliveredToday || 0,
   };
-};
+}

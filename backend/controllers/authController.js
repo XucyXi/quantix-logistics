@@ -1,7 +1,20 @@
-const authService = require('../services/authService.js');
-const jwt = require('jsonwebtoken'); // To verify and issue the new token
+/**
+ * @fileoverview Authentication Controller.
+ * Handles HTTP requests related to user authentication, registration, and profile management.
+ * Delegates business logic to the authService.
+ */
 
-async function register(req, res) {
+import authService from '../services/authService.js';
+import jwt from 'jsonwebtoken';
+
+/**
+ * Registers a new user (Customer or Driver) in the system.
+ *
+ * @param {import('express').Request} req - Express request object containing email, password, role, and extra data in the body.
+ * @param {import('express').Response} res - Express response object.
+ * @returns {Promise<void>} Sends a 201 status with user data and token on success, or a 400 status on error.
+ */
+export async function register(req, res) {
   try {
     const {email, password, role, ...extraData} = req.body;
 
@@ -14,15 +27,18 @@ async function register(req, res) {
 
     res.status(201).json(result);
   } catch (err) {
-    console.error('REGISTER CONTROLLER ERROR:', err);
-
-    res.status(400).json({
-      error: err.message || 'Registration failed',
-    });
+    res.status(400).json({error: err.message || 'Registration failed'});
   }
 }
 
-async function login(req, res) {
+/**
+ * Authenticates a user and generates a JWT.
+ *
+ * @param {import('express').Request} req - Express request object containing email and password.
+ * @param {import('express').Response} res - Express response object.
+ * @returns {Promise<void>} Sends user data and token on success, or a 400 status on authentication failure.
+ */
+export async function login(req, res) {
   try {
     const result = await authService.login(req.body);
     res.json(result);
@@ -31,7 +47,14 @@ async function login(req, res) {
   }
 }
 
-async function getProfile(req, res) {
+/**
+ * Retrieves the profile information for the currently authenticated user.
+ *
+ * @param {import('express').Request} req - Express request object containing the authenticated user's ID.
+ * @param {import('express').Response} res - Express response object.
+ * @returns {Promise<void>} Sends the user's profile data on success.
+ */
+export async function getProfile(req, res) {
   try {
     const profile = await authService.getProfile(req.user.user_id);
     res.json({success: true, profile});
@@ -40,24 +63,35 @@ async function getProfile(req, res) {
   }
 }
 
-async function updateDriverProfile(req, res) {
+/**
+ * Updates driver-specific profile information (e.g., vehicle details).
+ *
+ * @param {import('express').Request} req - Express request object containing vehicleInfo.
+ * @param {import('express').Response} res - Express response object.
+ * @returns {Promise<void>} Sends the updated profile on success.
+ */
+export async function updateDriverProfile(req, res) {
   try {
-    const { vehicleInfo } = req.body;
-    
-    // Kutsutaan palvelua vain vehicleInfo-kentällä
+    const {vehicleInfo} = req.body;
     const profile = await authService.updateDriverProfile(
       req.user.user_id,
       vehicleInfo
     );
-    
-    res.json({ success: true, profile });
+
+    res.json({success: true, profile});
   } catch (err) {
-    console.error('UPDATE DRIVER PROFILE ERROR:', err);
-    res.status(400).json({ success: false, error: err.message });
+    res.status(400).json({success: false, error: err.message});
   }
 }
 
-async function updateProfile(req, res) {
+/**
+ * Updates general profile information for a user.
+ *
+ * @param {import('express').Request} req - Express request object containing updated profile fields.
+ * @param {import('express').Response} res - Express response object.
+ * @returns {Promise<void>} Sends the updated profile on success.
+ */
+export async function updateProfile(req, res) {
   try {
     const profile = await authService.updateProfile(
       req.user.user_id,
@@ -69,7 +103,14 @@ async function updateProfile(req, res) {
   }
 }
 
-async function changePassword(req, res) {
+/**
+ * Changes the authenticated user's password.
+ *
+ * @param {import('express').Request} req - Express request object containing currentPassword and newPassword.
+ * @param {import('express').Response} res - Express response object.
+ * @returns {Promise<void>} Sends a success confirmation, or a 400 status if verification fails.
+ */
+export async function changePassword(req, res) {
   try {
     const {currentPassword, newPassword} = req.body || {};
     await authService.changePassword(
@@ -83,22 +124,33 @@ async function changePassword(req, res) {
   }
 }
 
-async function refresh(req, res) {
+/**
+ * Generates a fresh JWT for an authenticated user, extending their session.
+ * Allows refreshing an expired token, provided the token signature is still valid.
+ *
+ * @param {import('express').Request} req - Express request object containing the existing JWT in the Authorization header.
+ * @param {import('express').Response} res - Express response object.
+ * @returns {Promise<void>} Sends a new JWT on success, or a 401/403 status if the token is missing or invalid.
+ */
+export async function refresh(req, res) {
   try {
     const authHeader = req.headers.authorization;
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res
         .status(401)
-        .json({success: false, message: 'No token provided'});
+        .json({success: false, message: 'No token provided or malformed'});
     }
 
     const token = authHeader.split(' ')[1];
-    const secret = process.env.JWT_SECRET || 'fallback_secret';
+    const secret = process.env.JWT_SECRET;
 
-    // Verifies the token (ignoreExpiration is true so we can refresh a token that just expired)
+    if (!secret) {
+      throw new Error('JWT_SECRET is missing from server configuration');
+    }
+
     const decoded = jwt.verify(token, secret, {ignoreExpiration: true});
 
-    // Generates a fresh token with a new lifespan (e.g., 24 hours)
     const newToken = jwt.sign(
       {user_id: decoded.user_id, role: decoded.role},
       secret,
@@ -109,18 +161,8 @@ async function refresh(req, res) {
   } catch (error) {
     return res.status(403).json({
       success: false,
-      message: 'Invalid or missing token',
+      message: 'Invalid token',
       error: error.message,
     });
   }
 }
-
-module.exports = {
-  register,
-  login,
-  getProfile,
-  updateProfile,
-  updateDriverProfile,
-  changePassword,
-  refresh
-};

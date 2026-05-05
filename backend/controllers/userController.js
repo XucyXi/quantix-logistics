@@ -1,12 +1,17 @@
-const userService = require('../services/userService');
-const bcrypt = require('bcrypt');
+/**
+ * @fileoverview User Controller.
+ * Handles user management (CRUD) for the admin interface.
+ */
 
-// Sanakirja frontendin (Suomi) ja tietokannan (Englanti) roolien välille
+import * as userService from '../services/userService.js';
+import bcrypt from 'bcrypt';
+
+// Dictionary mapping frontend roles (Finnish) to database enums (English)
 const roleToDB = {
   Asiakas: 'customer',
   Kuljettaja: 'driver',
   Admin: 'admin',
-  Varasto: 'admin', // Huom: DB:ssä ei ollut 'warehouse' roolia, joten mapataan adminiksi (tai voit päivittää DB:n ENUMia)
+  Varasto: 'admin',
 };
 
 const dbToRole = {
@@ -15,11 +20,10 @@ const dbToRole = {
   admin: 'Admin',
 };
 
-async function getUsers(req, res) {
+export async function getUsers(req, res) {
   try {
     const rawUsers = await userService.getAllUsers();
 
-    // Muotoillaan data tismalleen sellaiseksi kuin frontendin UsersPage.tsx odottaa
     const formattedUsers = rawUsers.map((u) => ({
       original_id: u.user_id,
       id: `U-${u.user_id.toString().padStart(3, '0')}`,
@@ -41,12 +45,11 @@ async function getUsers(req, res) {
 
     res.json(formattedUsers);
   } catch (err) {
-    console.error('Error fetching users:', err);
     res.status(500).json({error: 'Failed to fetch users'});
   }
 }
 
-async function createUser(req, res) {
+export async function createUser(req, res) {
   try {
     const {name, email, password, role, tier, vehicleInfo} = req.body;
 
@@ -63,7 +66,6 @@ async function createUser(req, res) {
         .json({error: 'Admin-käyttäjiä ei voi luoda tästä käyttöliittymästä'});
     }
 
-    // Salasanan hajautus (Bcrypt)
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
@@ -83,12 +85,11 @@ async function createUser(req, res) {
     if (err.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({error: 'Email already exists'});
     }
-    console.error('Error creating user:', err);
     res.status(500).json({error: 'Failed to create user'});
   }
 }
 
-async function updateUser(req, res) {
+export async function updateUser(req, res) {
   try {
     const {id} = req.params;
     const {name, email, password, role, tier, vehicleInfo} = req.body;
@@ -134,12 +135,11 @@ async function updateUser(req, res) {
     if (err.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({error: 'Email already exists'});
     }
-    console.error('Error updating user:', err);
     res.status(500).json({error: 'Failed to update user'});
   }
 }
 
-async function deleteUser(req, res) {
+export async function deleteUser(req, res) {
   try {
     const {id} = req.params;
     const deleted = await userService.deleteUser(id);
@@ -150,17 +150,8 @@ async function deleteUser(req, res) {
 
     res.json({message: 'User deleted successfully'});
   } catch (err) {
-    // Jos käyttäjällä on tilauksia (foreign key constraint), tietokanta voi estää poiston riippuen rakenteesta.
-    console.error('Error deleting user:', err);
     res
       .status(500)
       .json({error: 'Failed to delete user. Check active orders.'});
   }
 }
-
-module.exports = {
-  getUsers,
-  createUser,
-  updateUser,
-  deleteUser,
-};

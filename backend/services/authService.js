@@ -1,6 +1,6 @@
-const pool = require('../config/db');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+import pool from '../config/db.js';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -334,7 +334,7 @@ async function changePassword(userId, currentPassword, newPassword) {
   return {success: true};
 }
 
-module.exports = {
+export default {
   register,
   login,
   getProfile,

@@ -1,4 +1,9 @@
-async function updateSystemSettings(req, res) {
+/**
+ * @fileoverview Settings Controller.
+ * Handles system configuration and SMTP test functionality for the admin panel.
+ */
+
+export async function updateSystemSettings(req, res) {
   const {timezone, language} = req.body || {};
 
   return res.json({
@@ -10,7 +15,7 @@ async function updateSystemSettings(req, res) {
   });
 }
 
-async function testSmtp(req, res) {
+export async function testSmtp(req, res) {
   const {smtpServer, senderAddress} = req.body || {};
   if (!smtpServer || !senderAddress) {
     return res.status(400).json({
@@ -24,8 +29,3 @@ async function testSmtp(req, res) {
     message: 'SMTP settings accepted for test',
   });
 }
-
-module.exports = {
-  updateSystemSettings,
-  testSmtp,
-};
