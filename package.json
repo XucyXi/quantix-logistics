@@ -1,0 +1,13 @@
+{
+  "name": "web-project",
+  "private": true,
+  "description": "Quantix Logistics — frontend (Vite) + backend (Express)",
+  "scripts": {
+    "install:all": "npm install --prefix frontend && npm install --prefix backend",
+    "build": "npm run build --prefix frontend",
+    "lint": "npm run lint --prefix frontend",
+    "lint:backend": "npm run lint --prefix backend",
+    "typecheck": "npm run typecheck --prefix frontend",
+    "verify": "npm run typecheck --prefix frontend && npm run build --prefix frontend && npm run lint --prefix backend"
+  }
+}

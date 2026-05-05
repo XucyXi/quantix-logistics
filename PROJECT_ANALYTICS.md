@@ -758,22 +758,15 @@ tsconfig.json                 # TypeScript configuration
 ### Documentation Files
 
 ```
-README.md                                    # Project overview
-IMPLEMENTATION_GUIDE.md                      # Implementation details
-PHASE_PROGRESS_REPORT.md                     # Progress tracking
-TESTING_READINESS_REPORT.md                  # Testing status
+README.md                                    # Project overview & setup
+PROJECT_ANALYTICS.md                         # Structured project analytics (this document)
 docs/
-├── productEndpoints.md                      # Product API docs
-├── PROJECT_STATUS_AND_ROADMAP.md            # Project status
-├── backend/
-│   └── Satvikille_API_HANDOFF.md            # API handoff documentation
-├── frontend/
-│   ├── Axios_Migration.md                   # Axios migration guide
-│   ├── CUSTOMER_DASHBOARD_QUICK_GUIDE.md    # Customer dashboard
-│   ├── CUSTOMER_DASHBOARD_README.md         # Dashboard details
-│   ├── CUSTOMER_DASHBOARD_REPORT.md         # Dashboard report
-│   └── CUSTOMER_DASHBOARD_TECHNICAL_SPEC.md # Technical specs
-└── assets/                                   # Documentation assets
+└── backend/
+    ├── API_DOCUMENTATION.md
+    ├── API_QUICK_REFERENCE.md
+    ├── API_TESTING_GUIDE.md
+    ├── BACKEND_DOCUMENTATION_INDEX.md
+    └── DATABASE_SCHEMA.md
 ```
 
 ### Scripts
