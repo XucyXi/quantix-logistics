@@ -28,9 +28,9 @@ POST http://localhost:3000/api/auth/register
 Content-Type: application/json
 
 {
-    "email": "admin@quantix.fi",
-    "password": "admin",
-    "role": "admin"
+    "email": "driver@quantix.fi",
+    "password": "driver",
+    "role": "driver"
 }
 
 

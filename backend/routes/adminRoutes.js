@@ -1,36 +1,29 @@
 const express = require('express');
 const router = express.Router();
+
 const analyticsController = require('../controllers/analyticsController');
 const settingsController = require('../controllers/settingsController');
+const adminController = require('../controllers/adminController'); // <-- Dashboardin uusi kontrolleri
+
 const authMiddleware = require('../middlewares/authMiddleware');
 const roleMiddleware = require('../middlewares/roleMiddleware');
 
-router.get(
-  '/analytics/revenue',
-  authMiddleware.authenticate,
-  roleMiddleware.requireRole('admin'),
-  analyticsController.getRevenueStats
-);
+router.use(authMiddleware.authenticate);
+router.use(roleMiddleware.requireRole('admin'));
 
-router.get(
-  '/analytics/orders',
-  authMiddleware.authenticate,
-  roleMiddleware.requireRole('admin'),
-  analyticsController.getOrderStats
-);
+// ==========================================
+// (Analytiikka ja Asetukset)
+// ==========================================
+router.get('/analytics/revenue', analyticsController.getRevenueStats);
+router.get('/analytics/orders', analyticsController.getOrderStats);
+router.put('/settings/system', settingsController.updateSystemSettings);
+router.post('/settings/smtp/test', settingsController.testSmtp);
 
-router.put(
-  '/settings/system',
-  authMiddleware.authenticate,
-  roleMiddleware.requireRole('admin'),
-  settingsController.updateSystemSettings
-);
-
-router.post(
-  '/settings/smtp/test',
-  authMiddleware.authenticate,
-  roleMiddleware.requireRole('admin'),
-  settingsController.testSmtp
-);
+// ==========================================
+// (Admin Dashboard / Ajokeskus)
+// ==========================================
+router.get('/routes/overview', adminController.getRoutesOverview);
+router.get('/notifications', adminController.getNotifications);
+router.get('/analytics', adminController.getAnalytics);
 
 module.exports = router;

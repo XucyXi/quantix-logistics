@@ -14,10 +14,11 @@ import {
   FileText,
   Calendar,
   User,
+  AlertCircle,
 } from 'lucide-react';
-// import api from '../lib/api'; // Ota käyttöön backend-vaiheessa
+import {orderService} from '../services/orderService';
+import {userService, User as AppUser} from '../services/userService';
 
-// Päivitetty interface vastaamaan SQL-taulua (ID numeroksi, lisätty osoite ja notes)
 interface Order {
   id: number;
   customerName: string;
@@ -31,58 +32,14 @@ interface Order {
     | 'ready_for_pickup'
     | 'in_transit'
     | 'done'
-    | 'stuck';
+    | 'stuck'
+    | 'cancelled';
   orderedAt: string;
   deliveryAddress: string;
   notes: string | null;
   driverId: number | null;
+  driverName: string | null;
 }
-
-// Mock-kuskit (ID:t nyt numeroita tietokannan mukaan)
-const availableDrivers = [
-  {id: 1, name: 'Jari Laakso', status: 'active'},
-  {id: 2, name: 'Teppo K.', status: 'active'},
-  {id: 3, name: 'Sari Virtanen', status: 'inactive'},
-];
-
-const initialOrders: Order[] = [
-  {
-    id: 1001,
-    customerName: 'K-Market Kallio',
-    store: 'Helsinki',
-    items: 24,
-    total: 1240.5,
-    status: 'done',
-    orderedAt: '2026-04-21T08:30:00',
-    deliveryAddress: 'Hämeentie 1, 00530 Helsinki',
-    notes: 'Toimitus takaovelle.',
-    driverId: 1,
-  },
-  {
-    id: 1002,
-    customerName: 'S-Market Espoo',
-    store: 'Espoo',
-    items: 18,
-    total: 890.0,
-    status: 'in_progress',
-    orderedAt: '2026-04-21T09:15:00',
-    deliveryAddress: 'Länsiväylä 5, 02100 Espoo',
-    notes: null,
-    driverId: 2,
-  },
-  {
-    id: 1003,
-    customerName: 'Alepa Kamppi',
-    store: 'Helsinki',
-    items: 12,
-    total: 560.75,
-    status: 'pending',
-    orderedAt: '2026-04-21T10:00:00',
-    deliveryAddress: 'Kampinkuja 2, 00100 Helsinki',
-    notes: 'Soita kuskille kun olet perillä: 0401234567',
-    driverId: null,
-  },
-];
 
 const statusStyles = {
   pending: {
@@ -127,53 +84,141 @@ const statusStyles = {
     label: 'Ongelma',
     icon: XCircle,
   },
+  cancelled: {
+    bg: 'bg-slate-200 dark:bg-slate-800',
+    color: 'text-slate-600 dark:text-slate-400',
+    label: 'Peruutettu',
+    icon: XCircle,
+  },
 };
 
 export function OrdersPage() {
-  const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [drivers, setDrivers] = useState<AppUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | Order['status']>(
     'all'
   );
-
-  // Uusi tila modaalin hallintaan
   const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
 
-  // KUSKIN MÄÄRÄÄMINEN (Nyt myös päivittää avatun modaalin tilan!)
-  const handleAssignDriver = async (orderId: number, driverId: string) => {
-    const dId = driverId === '' ? null : parseInt(driverId, 10);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [rawOrders, allUsers] = await Promise.all([
+          orderService.getAllOrdersAdmin(),
+          userService.getAllUsers(),
+        ]);
 
-    // Pakotetaan tyyppi oikeaksi lisäämällä ": Order['status']", m
-    const newStatus: Order['status'] = dId ? 'assigned' : 'pending';
+        setDrivers(allUsers.filter((u) => u.role === 'Kuljettaja'));
 
-    const updatedOrders = orders.map((order) =>
-      order.id === orderId
-        ? {...order, driverId: dId, status: newStatus}
-        : order
+        const mappedOrders: Order[] = rawOrders.map((o) => ({
+          id: o.order_id,
+          customerName: o.customerName,
+          store: 'Yritysasiakas',
+          items: Number(o.items_count) || 0,
+          total: parseFloat(String(o.total_price)),
+          status: o.status,
+          orderedAt: o.ordered_at,
+          deliveryAddress: o.delivery_address,
+          notes: o.notes,
+          driverId: o.driver_id,
+          driverName: o.driverName || null,
+        }));
+
+        setOrders(mappedOrders);
+      } catch (err) {
+        console.error('Virhe tilausten haussa:', err);
+        setError('Tilausten lataaminen epäonnistui.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  // Apufunktio tilan turvalliseen päivittämiseen sekä taulukkoon että modaaliin
+  const updateLocalOrderStatus = (
+    orderId: number,
+    status: Order['status'],
+    driverId: number | null,
+    driverName: string | null
+  ) => {
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId ? {...o, status, driverId, driverName} : o
+      )
     );
+    setViewingOrder((prev) =>
+      prev?.id === orderId ? {...prev, status, driverId, driverName} : prev
+    );
+  };
 
-    setOrders(updatedOrders);
+  // KUSKIN MÄÄRÄÄMINEN + AUTOMAATTI-VARASTO SIMULAATIO
+  const handleAssignDriver = async (orderId: number, driverIdStr: string) => {
+    const dId = driverIdStr === '' ? null : parseInt(driverIdStr, 10);
+    const newStatus: Order['status'] = dId ? 'assigned' : 'pending';
+    const driverName = dId
+      ? drivers.find((d) => d.original_id === dId)?.name || null
+      : null;
 
-    // Jos modaali on auki samalle tilaukselle, päivitetään se heti
-    if (viewingOrder && viewingOrder.id === orderId) {
-      setViewingOrder({...viewingOrder, driverId: dId, status: newStatus});
-    }
-
-    /* BACKEND INTEGRAATIO:
     try {
-      await api.patch(`/orders/${orderId}/driver`, { driver_id: dId });
-    } catch(e) {
-      console.error(e);
-      alert("Virhe kuskin vaihdossa!");
+      // 1. Backend-kutsu
+      await orderService.assignDriver(orderId, dId);
+
+      // 2. Päivitetään heti "Assigned"-tilaan
+      updateLocalOrderStatus(orderId, newStatus, dId, driverName);
+
+      // 3. Simulaatio: Frontend peilaa backendin ajastimia
+      if (dId) {
+        // Ensimmäinen viive: Keräily alkaa (5s)
+        setTimeout(() => {
+          updateLocalOrderStatus(orderId, 'in_progress', dId, driverName);
+
+          // Toinen viive: Keräily valmis, odottaa noutoa (5s)
+          setTimeout(() => {
+            updateLocalOrderStatus(
+              orderId,
+              'ready_for_pickup',
+              dId,
+              driverName
+            );
+          }, 5000);
+        }, 5000);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Virhe kuskin vaihdossa. Tarkista yhteys.');
     }
-    */
+  };
+
+  const handleCancelOrder = async (orderId: number) => {
+    if (
+      !window.confirm(
+        'Haluatko varmasti peruuttaa tämän tilauksen? Tätä ei voi perua.'
+      )
+    )
+      return;
+    try {
+      await orderService.cancelOrder(orderId);
+      updateLocalOrderStatus(
+        orderId,
+        'cancelled',
+        viewingOrder?.driverId || null,
+        viewingOrder?.driverName || null
+      );
+    } catch {
+      alert('Tilauksen peruuttaminen epäonnistui.');
+    }
   };
 
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
       order.id.toString().includes(searchQuery) ||
       order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.store.toLowerCase().includes(searchQuery.toLowerCase());
+      order.deliveryAddress.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus =
       statusFilter === 'all' || order.status === statusFilter;
     return matchesSearch && matchesStatus;
@@ -190,7 +235,6 @@ export function OrdersPage() {
     completed: orders.filter((o) => o.status === 'done').length,
   };
 
-  // Apufunktio päivämäärän muotoiluun (2026-04-21T08:30:00 -> 21.4.2026 klo 08:30)
   const formatDate = (dateString: string) => {
     const d = new Date(dateString);
     return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()} klo ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
@@ -268,124 +312,148 @@ export function OrdersPage() {
           >
             <option value="all">Kaikki tilaukset</option>
             <option value="pending">Odottaa kuskia</option>
+            <option value="assigned">Kuski määrätty</option>
             <option value="in_progress">Keräilyssä</option>
+            <option value="ready_for_pickup">Odottaa noutoa</option>
             <option value="in_transit">Matkalla</option>
             <option value="done">Toimitettu</option>
+            <option value="cancelled">Peruutettu</option>
           </select>
         </div>
       </div>
 
-      {/* Päätaulukko */}
-      <motion.div
-        initial={{opacity: 0, y: 20}}
-        animate={{opacity: 1, y: 0}}
-        className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden"
-      >
-        <div className="overflow-x-auto overflow-y-hidden">
-          <table className="w-full border-collapse min-w-[900px]">
-            <thead>
-              <tr className="bg-muted/50 border-b border-border">
-                {[
-                  'TILAUS',
-                  'ASIAKAS',
-                  'TUOTTEET',
-                  'KULJETTAJA',
-                  'TILA',
-                  '',
-                ].map((h, idx) => (
-                  <th
-                    key={idx}
-                    className="p-4 text-left text-xs font-bold text-muted-foreground tracking-wider whitespace-nowrap"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filteredOrders.map((order) => {
-                const st = statusStyles[order.status];
-                const StatusIcon = st.icon;
-                const driverName = availableDrivers.find(
-                  (d) => d.id === order.driverId
-                )?.name;
-
-                return (
-                  <tr
-                    key={order.id}
-                    className="hover:bg-muted/30 transition-colors"
-                  >
-                    <td className="p-4 font-bold text-foreground text-sm">
-                      #{order.id}
-                    </td>
-                    <td className="p-4 text-foreground text-sm">
-                      {order.customerName}
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        {order.store}
-                      </div>
-                    </td>
-                    <td className="p-4 text-foreground font-semibold text-sm">
-                      {order.items} kpl{' '}
-                      <span className="text-muted-foreground font-normal ml-1">
-                        ({order.total.toFixed(2)} €)
-                      </span>
-                    </td>
-
-                    {/* Yksinkertaistettu kuski-näkyvyys taulukossa */}
-                    <td className="p-4">
-                      {driverName ? (
-                        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                          <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs">
-                            {driverName.charAt(0)}
-                          </div>
-                          {driverName}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground text-sm italic">
-                          Ei kuskia
-                        </span>
-                      )}
-                    </td>
-
-                    <td className="p-4">
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold ${st.bg} ${st.color}`}
-                      >
-                        <StatusIcon size={14} /> {st.label}
-                      </span>
-                    </td>
-
-                    {/* UUSI NAPPI: Näytä tiedot */}
-                    <td className="p-4 text-right">
-                      <button
-                        onClick={() => setViewingOrder(order)}
-                        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card text-foreground text-sm font-medium hover:border-primary hover:text-primary transition-colors"
-                      >
-                        <Eye size={16} /> Näytä tiedot
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      {loading ? (
+        <div className="text-center py-10 text-muted-foreground">
+          Ladataan tilauksia...
         </div>
-      </motion.div>
+      ) : error ? (
+        <div className="text-center py-10 text-destructive bg-destructive/10 rounded-xl border border-destructive/20 flex justify-center items-center gap-2">
+          <AlertCircle size={20} /> {error}
+        </div>
+      ) : (
+        <motion.div
+          initial={{opacity: 0, y: 20}}
+          animate={{opacity: 1, y: 0}}
+          className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden"
+        >
+          <div className="overflow-x-auto overflow-y-hidden">
+            <table className="w-full border-collapse min-w-[900px]">
+              <thead>
+                <tr className="bg-muted/50 border-b border-border">
+                  {[
+                    'TILAUS',
+                    'ASIAKAS',
+                    'TUOTTEET',
+                    'KULJETTAJA',
+                    'TILA',
+                    '',
+                  ].map((h, idx) => (
+                    <th
+                      key={idx}
+                      className="p-4 text-left text-xs font-bold text-muted-foreground tracking-wider whitespace-nowrap"
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filteredOrders.map((order) => {
+                  const st = statusStyles[order.status];
+                  const StatusIcon = st.icon;
+
+                  return (
+                    <tr
+                      key={order.id}
+                      className="hover:bg-muted/30 transition-colors"
+                    >
+                      <td className="p-4 font-bold text-foreground text-sm">
+                        #{order.id}
+                      </td>
+                      <td className="p-4 text-foreground text-sm">
+                        {order.customerName}
+                        <div className="text-xs text-muted-foreground mt-0.5 truncate max-w-[200px]">
+                          {order.deliveryAddress}
+                        </div>
+                      </td>
+                      <td className="p-4 text-foreground font-semibold text-sm">
+                        {order.items} kpl{' '}
+                        <span className="text-muted-foreground font-normal ml-1">
+                          ({order.total.toFixed(2)} €)
+                        </span>
+                      </td>
+
+                      <td className="p-4">
+                        {order.driverName ? (
+                          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                            <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs">
+                              {order.driverName.charAt(0)}
+                            </div>
+                            {order.driverName}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-sm italic">
+                            Ei kuskia
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="p-4">
+                        {/* Oikea taikatemppu on tässä motion.span -elementissä. Se animoituu sulavasti värin vaihtuessa! */}
+                        <motion.span
+                          key={order.status}
+                          initial={{opacity: 0, scale: 0.9}}
+                          animate={{opacity: 1, scale: 1}}
+                          className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold ${st.bg} ${st.color}`}
+                        >
+                          <StatusIcon size={14} /> {st.label}
+                        </motion.span>
+                      </td>
+
+                      <td className="p-4 text-right">
+                        <button
+                          onClick={() => setViewingOrder(order)}
+                          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card text-foreground text-sm font-medium hover:border-primary hover:text-primary transition-colors"
+                        >
+                          <Eye size={16} /> Näytä tiedot
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {filteredOrders.length === 0 && (
+              <div className="p-8 text-center text-muted-foreground">
+                Ei tilauksia.
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
 
       {/* MODAALI: TILAUSKORTTI */}
       {viewingOrder && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden animate-fadeIn flex flex-col max-h-[90vh]">
-            {/* Modal Header */}
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
+          onClick={() => setViewingOrder(null)}
+        >
+          <div
+            className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden animate-fadeIn flex flex-col max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex justify-between items-center p-5 border-b border-border bg-muted/30">
               <div>
                 <h2 className="text-xl font-bold text-foreground m-0 flex items-center gap-3">
                   Tilaus #{viewingOrder.id}
-                  <span
+                  <motion.span
+                    key={viewingOrder.status}
+                    initial={{opacity: 0, scale: 0.9}}
+                    animate={{opacity: 1, scale: 1}}
                     className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${statusStyles[viewingOrder.status].bg} ${statusStyles[viewingOrder.status].color}`}
                   >
                     {statusStyles[viewingOrder.status].label}
-                  </span>
+                  </motion.span>
                 </h2>
                 <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
                   <Calendar size={14} /> Tilaus vastaanotettu:{' '}
@@ -400,9 +468,7 @@ export function OrdersPage() {
               </button>
             </div>
 
-            {/* Modal Body */}
             <div className="p-5 overflow-y-auto flex flex-col gap-6">
-              {/* Asiakas & Osoite */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="p-4 rounded-xl bg-input-background border border-border">
                   <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -410,9 +476,6 @@ export function OrdersPage() {
                   </h3>
                   <div className="font-semibold text-foreground text-base">
                     {viewingOrder.customerName}
-                  </div>
-                  <div className="text-sm text-muted-foreground mt-1">
-                    {viewingOrder.store}
                   </div>
                 </div>
 
@@ -426,14 +489,13 @@ export function OrdersPage() {
                 </div>
               </div>
 
-              {/* Lisätiedot (Notes) */}
               {viewingOrder.notes && (
                 <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
                   <h3 className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-2 flex items-center gap-2">
                     <FileText size={14} /> Tilauksen lisätiedot / Huomiot
                   </h3>
                   <p className="text-sm text-amber-800 dark:text-amber-200 m-0 italic">
-                    "{viewingOrder.notes}"
+                    &quot;{viewingOrder.notes}&quot;
                   </p>
                 </div>
               )}
@@ -452,26 +514,36 @@ export function OrdersPage() {
                     className="flex-1 p-2.5 rounded-lg border border-border bg-input-background text-sm text-foreground font-medium outline-none focus:ring-2 focus:ring-ring"
                     disabled={
                       viewingOrder.status === 'done' ||
-                      viewingOrder.status === 'stuck'
+                      viewingOrder.status === 'cancelled' ||
+                      viewingOrder.status === 'stuck' ||
+                      viewingOrder.status === 'in_transit' ||
+                      viewingOrder.status === 'ready_for_pickup' ||
+                      viewingOrder.status === 'in_progress'
                     }
                   >
                     <option value="">-- Odottaa: Valitse kuljettaja --</option>
-                    {availableDrivers.map((driver) => (
-                      <option key={driver.id} value={driver.id}>
+                    {drivers.map((driver) => (
+                      <option
+                        key={driver.original_id}
+                        value={driver.original_id}
+                      >
                         {driver.name}{' '}
-                        {driver.status === 'inactive' ? '(Ei vuorossa)' : ''}
+                        {driver.activeOrders
+                          ? `(${driver.activeOrders} ajossa)`
+                          : '(Vapaana)'}
                       </option>
                     ))}
                   </select>
-                  {viewingOrder.status === 'done' && (
-                    <span className="text-xs text-muted-foreground italic">
-                      Toimitettua tilausta ei voi muuttaa
-                    </span>
-                  )}
                 </div>
+                {viewingOrder.status !== 'pending' &&
+                  viewingOrder.status !== 'assigned' && (
+                    <p className="text-xs text-muted-foreground mt-2 italic">
+                      Kuljettajaa ei voi vaihtaa enää kun tilaus on käsittelyssä
+                      tai matkalla.
+                    </p>
+                  )}
               </div>
 
-              {/* Yhteenveto (Items & Total) */}
               <div className="flex justify-between items-center p-4 bg-primary text-primary-foreground rounded-xl">
                 <div>
                   <div className="text-sm opacity-80 mb-1">
@@ -488,6 +560,19 @@ export function OrdersPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Peruuta tilaus -nappi alimpana */}
+              {viewingOrder.status !== 'done' &&
+                viewingOrder.status !== 'cancelled' && (
+                  <div className="pt-2 border-t border-border flex justify-end">
+                    <button
+                      onClick={() => handleCancelOrder(viewingOrder.id)}
+                      className="text-sm font-semibold text-destructive hover:bg-destructive/10 px-4 py-2 rounded-lg transition-colors"
+                    >
+                      Peruuta tilaus
+                    </button>
+                  </div>
+                )}
             </div>
           </div>
         </div>

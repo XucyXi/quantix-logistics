@@ -1,4 +1,10 @@
-import React, {createContext, useContext, useState} from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from 'react';
 import api from '../lib/api';
 
 export type UserRole = 'customer' | 'admin' | 'driver';
@@ -13,7 +19,6 @@ export interface User {
   company?: string;
 }
 
-// Apufunktio tarkistaa, onko käyttäjä business-asiakas
 export function isBusinessCustomer(user: User | null): boolean {
   return user?.tier === 'business';
 }
@@ -24,23 +29,23 @@ interface AuthContextType {
   login: (email: string, password: string, role?: UserRole) => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({children}: {children: React.ReactNode}) {
-  // Luetaan käyttäjä localStoragesta heti alussa, jotta kirjautuminen säilyy sivun päivityksessä.
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
   const [user, setUser] = useState<User | null>(() => {
     try {
       const saved = localStorage.getItem('quantix_user');
       return saved ? JSON.parse(saved) : null;
     } catch {
-      // Jos localStoragen data on rikki, jatketaan turvallisesti ilman käyttäjää.
       return null;
     }
   });
 
-  // Lisään Jwt tokenin
   const [token, setToken] = useState<string | null>(() => {
     return (
       localStorage.getItem('accessToken') ||
@@ -49,6 +54,54 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
       null
     );
   });
+
+  const logout = useCallback(() => {
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem('quantix_user');
+    localStorage.removeItem('quantix_token');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('token');
+
+    // Palataan landing pagelle
+    window.location.href = '/';
+  }, []);
+
+  useEffect(() => {
+    const verifySession = async () => {
+      const currentToken =
+        localStorage.getItem('accessToken') ||
+        localStorage.getItem('token') ||
+        localStorage.getItem('quantix_token');
+
+      // Ajetaan refresh vain, jos meillä on oikeasti token JA käyttäjä
+      if (currentToken && user) {
+        try {
+          const {data} = await api.post(
+            '/auth/refresh',
+            {},
+            {
+              headers: {Authorization: `Bearer ${currentToken}`},
+            }
+          );
+
+          if (data.success && data.token) {
+            const newToken = data.token;
+            setToken(newToken);
+            localStorage.setItem('accessToken', newToken);
+            localStorage.setItem('token', newToken);
+            localStorage.setItem('quantix_token', newToken);
+          }
+        } catch (error) {
+          console.error('Session verification failed, logging out.', error);
+          logout();
+        }
+      }
+      setIsLoading(false);
+    };
+
+    verifySession();
+  }, [logout, user]); // Lisättiin logout tänne riippuvuudeksi
 
   const login = async (
     email: string,
@@ -85,19 +138,9 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
     }
   };
 
-  const logout = () => {
-    // Tyhjennetään sekä React-tila että localStorage, jotta uloskirjautuminen on varma.
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem('quantix_user');
-    localStorage.removeItem('quantix_token');
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('token');
-  };
-
   return (
     <AuthContext.Provider
-      value={{user, token, login, logout, isAuthenticated: !!user}}
+      value={{user, token, login, logout, isAuthenticated: !!user, isLoading}}
     >
       {children}
     </AuthContext.Provider>
@@ -105,7 +148,6 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
 }
 
 export function useAuth() {
-  // Hookia saa käyttää vain providerin sisällä.
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;

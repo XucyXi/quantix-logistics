@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS PRODUCTS (
     stock_quantity INT DEFAULT 0,
     low_stock_threshold INT DEFAULT 5,
     product_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    product_exp DATE,
+    -- POISTETTU: product_exp DATE,
     -- POISTETTU: category_id INT (Siirretty alempaan tauluun)
     INDEX idx_products_stock (stock_quantity) -- KORJATTU: Ylimääräinen puolipiste poistettu
 );
@@ -75,12 +75,14 @@ CREATE TABLE IF NOT EXISTS ORDERS (
     order_id INT AUTO_INCREMENT PRIMARY KEY,
     customer_id INT NOT NULL,
     driver_id INT DEFAULT NULL,
-    status ENUM('pending','assigned','in_progress','ready_for_pickup','in_transit','done','stuck') DEFAULT 'pending',
+    status ENUM('pending','assigned','in_progress','ready_for_pickup','in_transit','done','stuck', 'cancelled') DEFAULT 'pending',
     delivery_address VARCHAR(255),
     notes TEXT,
     ordered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     order_finished TIMESTAMP NULL,
     total_price DECIMAL(10,2) DEFAULT 0.00,
+    latitude DECIMAL(10,8) DEFAULT NULL,
+    longitude DECIMAL(10,8) DEFAULT NULL,
     FOREIGN KEY (customer_id) REFERENCES USERS(user_id) ON DELETE CASCADE,
     FOREIGN KEY (driver_id) REFERENCES USERS(user_id) ON DELETE SET NULL,
     INDEX idx_orders_driver_status (driver_id, status),
@@ -104,7 +106,6 @@ CREATE TABLE IF NOT EXISTS ORDER_ITEMS (
 CREATE TABLE IF NOT EXISTS DELIVERY_TRACKING (
     tracking_id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL,
-    status ENUM('pending','assigned','in_progress','in_transit','done','stuck') DEFAULT 'pending',
     latitude DECIMAL(10,6) DEFAULT NULL,
     longitude DECIMAL(10,6) DEFAULT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -121,7 +122,7 @@ CREATE TABLE IF NOT EXISTS ANNOUNCEMENTS (
     expires_at TIMESTAMP NULL
 );
 
--- 9. NOTIFICATIONS table (User Notifications)
+-- 10. NOTIFICATIONS table (User Notifications)
 CREATE TABLE IF NOT EXISTS NOTIFICATIONS (
     notification_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,

@@ -1,53 +1,82 @@
 const express = require('express');
-const router = express.Router();
-
 const orderController = require('../controllers/orderController');
 const authMiddleware = require('../middlewares/authMiddleware');
 const roleMiddleware = require('../middlewares/roleMiddleware');
+const { orderLimiter } = require('../middlewares/rateLimiter');
 
-// Create order (customer)
-router.post('/', authMiddleware.authenticate, orderController.createOrder);
+const router = express.Router();
 
-// Get assigned orders (driver)
+// --- KAIKILLE KIRJAUTUNEILLE YHTEISET REITIT ---
+// (Asiakkaat, Kuskit, Adminit)
 router.get(
-  '/assigned',
+  '/cursor',
+  authMiddleware.authenticate,
+  orderController.getOrdersCursor
+);
+router.post('/', orderLimiter, authMiddleware.authenticate, orderController.createOrder);
+router.get('/:id', authMiddleware.authenticate, orderController.getOrder);
+
+// --- ASIAKKAAN REITIT ---
+// Huom: Nää kannattaa asettaa reitittimeen ennen /:id -reittiä, jotta 'stats' ei tulkittaisi id:ksi
+router.get(
+  '/customer/stats',
+  authMiddleware.authenticate,
+  orderController.getOrderStats
+);
+router.get(
+  '/customer/all',
+  authMiddleware.authenticate,
+  orderController.getCustomerOrders
+);
+
+// --- KULJETTAJAN REITIT ---
+router.get(
+  '/driver/assigned',
   authMiddleware.authenticate,
   roleMiddleware.requireRole('driver'),
   orderController.getAssignedOrders
 );
-
-// Get customer orders (customer) - TÄYTYY OLLA ENNEN /stats!
-router.get('/', authMiddleware.authenticate, orderController.getCustomerOrders);
-router.get(
-  '/my-orders',
+router.put(
+  '/driver/availability',
   authMiddleware.authenticate,
-  roleMiddleware.requireRole('customer'),
-  orderController.getCustomerOrders
+  roleMiddleware.requireRole('driver'),
+  orderController.updateAvailability
+);
+// Tilauksen statuksen päivitys (Kuski kuittaa noudetuksi / toimitetuksi)
+router.put(
+  '/:id/status',
+  authMiddleware.authenticate,
+  orderController.updateOrderStatus
 );
 
-// Get order stats (customer)
+// --- ADMIN REITIT ---
 router.get(
-  '/stats',
+  '/admin/all',
   authMiddleware.authenticate,
-  orderController.getOrderStats
+  roleMiddleware.requireRole('admin'),
+  orderController.getAllOrdersAdmin
+);
+router.get(
+  '/admin/drivers',
+  authMiddleware.authenticate,
+  roleMiddleware.requireRole('admin'),
+  orderController.getAllDrivers
 );
 
-// Assign driver (admin)
+// Kuskin määrääminen (KORJATTU: Käyttää nyt orderController.assignDriver -funktiota)
 router.put(
   '/:id/assign',
   authMiddleware.authenticate,
   roleMiddleware.requireRole('admin'),
-  orderController.assignDriverToOrder
+  orderController.assignDriver
 );
 
-// Get single order
-router.get('/:id', authMiddleware.authenticate, orderController.getOrder);
-
+// Tilauksen peruutus
 router.put(
-  '/:id/status',
+  '/:id/cancel',
   authMiddleware.authenticate,
-  roleMiddleware.requireRole('driver'),
-  orderController.updateOrderStatus
+  roleMiddleware.requireRole('admin'),
+  orderController.cancelOrder
 );
 
 module.exports = router;

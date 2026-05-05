@@ -1,6 +1,13 @@
 ### Muuttujat
 @baseUrl = http://localhost:3000/api
 @adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxOSwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzc3NDY0MTM5LCJleHAiOjE3Nzc0Njc3Mzl9.mKlGvc-bEE231MIxKxL8SEz_TcvY8XZdImmGIvvModw
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+    "email": "driver@quantix.fi",
+    "password": "driver"
+}
 
 ### 1. Lisää uusi tuote (Admin)
 POST {{baseUrl}}/products

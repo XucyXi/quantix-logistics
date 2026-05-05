@@ -2,42 +2,37 @@ const pool = require('../config/db.js');
 
 /**
  * Notification Service
- * Huolehtii asiakkaiden notifikaatioista: email, SMS, in-app
+ * Huolehtii asiakkaiden notifikaatioista.
+ * HUOM: SMS ja Email on toistaiseksi simulaatioita, jotka tulostuvat vain backendin konsoliin (┬┬﹏┬┬).
  */
 
-// 📧 Lähetä sähköpostilla
+// Lähetä sähköpostilla (SIMULAATIO), voidaan mahdollisesti tätä sitten jatkaa kunnon sähköpostin lähettämiseksi.
 const sendEmailNotification = async (email, subject, message) => {
   try {
-    // TODO: Integrointi email-palveluun (Sendgrid, Nodemailer, jne)
-    console.log(`📧 Email sent to ${email}: ${subject}`);
-    console.log(`Message: ${message}`);
-
-    // Placeholder - korvaa oikealla email-implementaatiolla
-    // Esim. Sendgrid:
-    // const sgMail = require('@sendgrid/mail');
-    // await sgMail.send({to: email, from: 'noreply@quantix.fi', subject, html: message});
+    console.log(`\n==========================================`);
+    console.log(`✉️  SIMULOITU SÄHKÖPOSTI LÄHETETTY`);
+    console.log(`Vastaanottaja: ${email}`);
+    console.log(`Otsikko: ${subject}`);
+    console.log(`------------------------------------------`);
+    console.log(`${message}`);
+    console.log(`==========================================\n`);
   } catch (error) {
     console.error(`Failed to send email to ${email}:`, error.message);
   }
 };
 
-// 📱 Lähetä SMS
+// Lähetä SMS (SIMULAATIO)
 const sendSmsNotification = async (phone, message) => {
   try {
-    // TODO: Integrointi SMS-palveluun (Twilio, jne)
-    console.log(`📱 SMS sent to ${phone}: ${message}`);
-
-    // Placeholder - korvaa oikealla SMS-implementaatiolla
-    // Esim. Twilio:
-    // const twilio = require('twilio');
-    // const client = twilio(accountSid, authToken);
-    // await client.messages.create({body: message, from: '+358...', to: phone});
+    if (!phone) return; // Ohitetaan jos puhelinnumero puuttuu
+    console.log(`\n📱 SIMULOITU TEKSTIVIESTI -> ${phone}:`);
+    console.log(`"${message}"\n`);
   } catch (error) {
     console.error(`Failed to send SMS to ${phone}:`, error.message);
   }
 };
 
-// 🔔 In-app notifikaatio (tietokantaan)
+// In-app notifikaatio (tietokantaan)
 const createInAppNotification = async (
   userId,
   title,
@@ -60,7 +55,7 @@ const createInAppNotification = async (
   }
 };
 
-// 📦 Order status muuttui
+// Order status muuttui
 const notifyOrderStatusChange = async (order, newStatus, userDetails) => {
   try {
     if (!order || !order.order_id || !userDetails) {
@@ -105,7 +100,7 @@ const notifyOrderStatusChange = async (order, newStatus, userDetails) => {
       type: 'info',
     };
 
-    // 1. Tallenna in-app notification
+    // Tallenetaan in-app notification
     await createInAppNotification(
       user_id,
       notification.title,
@@ -113,16 +108,16 @@ const notifyOrderStatusChange = async (order, newStatus, userDetails) => {
       notification.type
     );
 
-    // 2. Lähetä sähköposti
+    // Lähetetään sähköposti
     if (email) {
       await sendEmailNotification(
         email,
         notification.title,
-        `Hei ${name},\n\n${notification.message}\n\nTilausnumero: #${order_id}\n\nOsoite: ${delivery_address}\n\nYstävällisin terveisin,\nQuantix Logistics`
+        `Hei ${name || 'Asiakas'},\n\n${notification.message}\n\nTilausnumero: #${order_id}\n\nOsoite: ${delivery_address}\n\nYstävällisin terveisin,\nQuantix Logistics`
       );
     }
 
-    // 3. Lähetä SMS (jos saatavilla)
+    // Lähetetään SMS (jos saatavilla)
     if (phone && (newStatus === 'in_transit' || newStatus === 'delivered')) {
       await sendSmsNotification(
         phone,
@@ -130,9 +125,6 @@ const notifyOrderStatusChange = async (order, newStatus, userDetails) => {
       );
     }
 
-    console.log(
-      `✅ Notifications sent for order #${order_id} - Status: ${newStatus}`
-    );
     return true;
   } catch (error) {
     console.error('Error in notifyOrderStatusChange:', error.message);
@@ -140,7 +132,7 @@ const notifyOrderStatusChange = async (order, newStatus, userDetails) => {
   }
 };
 
-// 📦 Order luotu
+// Order luotu
 const notifyOrderCreated = async (order, userDetails) => {
   try {
     if (!order || !order.order_id || !userDetails) {
@@ -162,11 +154,10 @@ const notifyOrderCreated = async (order, userDetails) => {
       await sendEmailNotification(
         email,
         '📋 Tilaus vastaanotettu',
-        `Hei ${name},\n\nKiitos tilauksestasi! Tilausnumero: #${order_id}\nHinta: €${total_price}\nOsoite: ${delivery_address}\n\nSeuraa tilauksen kulkua portaalissa.\n\nYstävällisin terveisin,\nQuantix Logistics`
+        `Hei ${name || 'Asiakas'},\n\nKiitos tilauksestasi! Tilausnumero: #${order_id}\nHinta: €${total_price}\nOsoite: ${delivery_address}\n\nSeuraa tilauksen kulkua portaalissa.\n\nYstävällisin terveisin,\nQuantix Logistics`
       );
     }
 
-    console.log(`✅ Order created notification sent for order #${order_id}`);
     return true;
   } catch (error) {
     console.error('Error in notifyOrderCreated:', error.message);
@@ -174,14 +165,14 @@ const notifyOrderCreated = async (order, userDetails) => {
   }
 };
 
-// 👨‍💼 Admin notifikaatio - uusi tilaus
+// Admin notifikaatio - uusi tilaus
 const notifyAdminNewOrder = async (order, itemCount) => {
   try {
     const {order_id, customer_id, total_price, delivery_address} = order;
 
-    // Hae kaikki adminit
+    // Haetaan full_name AS name!
     const [admins] = await pool.query(
-      `SELECT user_id, email, name FROM USERS WHERE role = 'admin'`
+      `SELECT user_id, email, full_name AS name FROM USERS WHERE role = 'admin'`
     );
 
     for (let admin of admins) {
@@ -201,7 +192,6 @@ const notifyAdminNewOrder = async (order, itemCount) => {
       );
     }
 
-    console.log(`✅ Admin notifications sent for new order #${order_id}`);
     return true;
   } catch (error) {
     console.error('Error in notifyAdminNewOrder:', error.message);
@@ -209,7 +199,7 @@ const notifyAdminNewOrder = async (order, itemCount) => {
   }
 };
 
-// 👨‍🚗 Driver notifikaatio - uusi tilaus määrätty
+// Driver notifikaatio - uusi tilaus määrätty
 const notifyDriverAssignment = async (driverId, order, driverDetails) => {
   try {
     const {order_id, delivery_address, total_price} = order;
@@ -228,7 +218,7 @@ const notifyDriverAssignment = async (driverId, order, driverDetails) => {
       await sendEmailNotification(
         email,
         '🚚 Uusi toimitus sinulle',
-        `Hei ${name},\n\nSinulle on määrätty uusi toimitus!\n\nTilausnumero: #${order_id}\nOsoite: ${delivery_address}\nArvo: €${total_price}\n\nAvaa sovellus nähdäksesi kartan ja ohjeet.\n\nYstävällisin terveisin,\nQuantix Dispatch`
+        `Hei ${name || 'Kuljettaja'},\n\nSinulle on määrätty uusi toimitus!\n\nTilausnumero: #${order_id}\nOsoite: ${delivery_address}\nArvo: €${total_price}\n\nAvaa sovellus nähdäksesi kartan ja ohjeet.\n\nYstävällisin terveisin,\nQuantix Dispatch`
       );
     }
 
@@ -240,7 +230,6 @@ const notifyDriverAssignment = async (driverId, order, driverDetails) => {
       );
     }
 
-    console.log(`✅ Driver notifications sent for order #${order_id}`);
     return true;
   } catch (error) {
     console.error('Error in notifyDriverAssignment:', error.message);
@@ -248,7 +237,7 @@ const notifyDriverAssignment = async (driverId, order, driverDetails) => {
   }
 };
 
-// Hae käyttäjän notifikaatiot
+// Haetaan käyttäjän notifikaatiot tässä
 const getUserNotifications = async (userId, limit = 20) => {
   try {
     const [notifications] = await pool.query(

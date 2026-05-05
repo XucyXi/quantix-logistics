@@ -1,5 +1,6 @@
 import {useState} from 'react';
 import {useNavigate} from 'react-router';
+import {motion} from 'motion/react';
 import {useAuth} from '../contexts/AuthContext';
 import {useCart} from '../contexts/CartContext';
 import {
@@ -7,7 +8,7 @@ import {
   getCustomerDiscountRate,
   getDiscountedPrice,
 } from '../lib/pricing';
-import api from '../lib/api';
+import {orderService} from '../services/orderService';
 
 interface CheckoutForm {
   deliveryAddress: string;
@@ -41,7 +42,7 @@ export function CheckoutPage() {
     0
   );
 
-  const handleSubmit = async (e: React.SubmitEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError('');
     setIsSubmitting(true);
@@ -59,10 +60,12 @@ export function CheckoutPage() {
         .filter((item) => Number.isFinite(item.product_id));
 
       if (payloadItems.length === 0) {
-        throw new Error('Korissa ei ole kelvollisia tuotteita tilausta varten.');
+        throw new Error(
+          'Korissa ei ole kelvollisia tuotteita tilausta varten.'
+        );
       }
 
-      const {data} = await api.post('/orders', {
+      const response = await orderService.createOrder({
         delivery_address: form.deliveryAddress,
         notes: [form.reference ? `Ref: ${form.reference}` : '', form.notes]
           .filter(Boolean)
@@ -71,7 +74,7 @@ export function CheckoutPage() {
       });
 
       clearCart();
-      setOrderNumber(String(data?.order_id ?? 'N/A'));
+      setOrderNumber(String(response?.order_id ?? 'N/A'));
       setOrderPlaced(true);
     } catch (error: unknown) {
       const message =
@@ -128,7 +131,10 @@ export function CheckoutPage() {
           textAlign: 'center',
         }}
       >
-        <div
+        <motion.div
+          initial={{scale: 0}}
+          animate={{scale: 1}}
+          transition={{type: 'spring', stiffness: 200, damping: 15}}
           style={{
             width: 80,
             height: 80,
@@ -150,7 +156,7 @@ export function CheckoutPage() {
           >
             <polyline points="20 6 9 17 4 12" />
           </svg>
-        </div>
+        </motion.div>
         <h1
           style={{
             fontSize: '2rem',
@@ -172,8 +178,12 @@ export function CheckoutPage() {
             marginBottom: '1.5rem',
           }}
         >
-          <span style={{color: '#64748b', fontSize: '0.9rem'}}>Tilausnumero: </span>
-          <span style={{fontWeight: 700, color: '#0f2444'}}>{orderNumber}</span>
+          <span style={{color: '#64748b', fontSize: '0.9rem'}}>
+            Tilausnumero:{' '}
+          </span>
+          <span style={{fontWeight: 700, color: '#0f2444'}}>
+            #{orderNumber}
+          </span>
         </div>
         <button
           onClick={() => navigate('/tuotteet')}
@@ -306,7 +316,7 @@ export function CheckoutPage() {
                 onChange={(e) =>
                   setForm({...form, deliveryAddress: e.target.value})
                 }
-                placeholder="Yrityksen osoite, katuosoite ja postinumero"
+                placeholder="Esim. Mannerheimintie 1, 00100 Helsinki"
                 style={{
                   width: '100%',
                   padding: '0.75rem 1rem',
@@ -316,6 +326,17 @@ export function CheckoutPage() {
                   fontFamily: "'Space Grotesk', sans-serif",
                 }}
               />
+              <p
+                style={{
+                  margin: '0.4rem 0 0 0',
+                  fontSize: '0.75rem',
+                  color: '#64748b',
+                }}
+              >
+                Anna katuosoite, postinumero ja kaupunki. Lisää mahdollinen
+                rapun/asunnon numero &quot;Lisätiedot&quot; -kenttään, jotta
+                karttanavigointi toimii.
+              </p>
             </div>
 
             <div style={{marginBottom: '1rem'}}>

@@ -1,78 +1,181 @@
-const productModel = require('../services/productsService.js');
+const productsService = require('../services/productsService');
 
 // GET /products
 async function getProducts(req, res) {
   try {
-    const products = await productModel.getAllProducts();
+    const products = await productsService.getAllProducts();
     res.json(products);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch products' });
+    res.status(500).json({error: 'Failed to fetch products'});
   }
-}
+} 
 
 // POST /products
 async function createProduct(req, res) {
   try {
-    const { name, base_price, stock_quantity } = req.body;
+    // Luetaan kentät, tuetaan sekä frontendin uutta muotoa että mahdollista vanhaa testiä
+    const {
+      name,
+      description,
+      price,
+      base_price,
+      stock,
+      stock_quantity,
+      categories,
+    } = req.body;
 
-    if (!name || !base_price) {
-      return res.status(400).json({ error: 'Missing fields' });
+    const finalPrice = price !== undefined ? price : base_price;
+    const finalStock = stock !== undefined ? stock : stock_quantity;
+
+    if (!name || finalPrice === undefined) {
+      return res
+        .status(400)
+        .json({error: 'Missing required fields (name, price)'});
     }
 
-    const id = await productModel.createProduct(
+    const id = await productsService.createProduct(
       name,
-      base_price,
-      stock_quantity || 0
+      description || '',
+      finalPrice,
+      finalStock || 0,
+      categories || []
     );
 
-    res.status(201).json({ message: 'Product created', id });
+    res.status(201).json({message: 'Product created', id});
   } catch (err) {
-    res.status(500).json({ error: 'Failed to create product' });    
+    console.error('Error creating product:', err);
+    res.status(500).json({error: 'Failed to create product'});
   }
 }
 
+// GET /products/:id
 async function getProductById(req, res) {
-  console.log("🔥 HIT getProductById:", req.params);
-    try {
-        const { id } = req.params;
-        const product_getter = await productModel.getProductById(id);
-        if (!product_getter) {
-            throw new Error("Product not found. ");
-        }
-        res.json(product_getter);
+  console.log('🔥 HIT getProductById:', req.params);
+  try {
+    const {id} = req.params;
+    const product_getter = await productsService.getProductById(id);
+    if (!product_getter) {
+      throw new Error('Product not found. ');
     }
-    catch (err) {
-        console.error("Product fetching by ID error: " + err);
-        res.status(404).json({ error: err.message });
-    }
+    res.json(product_getter);
+  } catch (err) {
+    console.error('Product fetching by ID error: ' + err);
+    res.status(404).json({error: err.message});
+  }
 }
 
 // PUT /products/:id
 async function updateProduct(req, res) {
   try {
-    const { id } = req.params;
-    const { name, base_price, stock_quantity } = req.body;
+    const {id} = req.params;
+    const {
+      name,
+      description,
+      price,
+      base_price,
+      stock,
+      stock_quantity,
+      categories,
+    } = req.body;
 
-    const updated = await productModel.updateProduct(
+    const finalPrice = price !== undefined ? price : base_price;
+    const finalStock = stock !== undefined ? stock : stock_quantity;
+
+    const updated = await productsService.updateProduct(
       id,
       name,
-      base_price,
-      stock_quantity
+      description || '',
+      finalPrice,
+      finalStock || 0,
+      categories || []
     );
 
     if (updated === 0) {
-      return res.status(404).json({ error: 'Product not found' });
+      return res.status(404).json({error: 'Product not found'});
     }
 
-    res.json({ message: 'Product updated' });
+    res.json({message: 'Product updated'});
   } catch (err) {
-    res.status(500).json({ error: 'Failed to update product' });
+    console.error('Error updating product:', err);
+    res.status(500).json({error: 'Failed to update product'});
   }
 }
+
+// GET /products/cursor
+async function getProductsCursor(req, res) {
+  try {
+    const cursor = req.query.cursor || 0;
+    const limit = req.query.limit || 16;
+    const search = req.query.search || null; // Lisätty hakusanan vastaanotto
+
+    const result = await productsService.getProductsCursor(cursor, limit, search);
+    return res.json({success: true, ...result});
+  } catch (error) {
+    console.error('Error fetching products cursor:', error);
+    return res.status(500).json({success: false, error: error.message});
+  }
+}
+
+// GET /products/category/cursor (UUSI)
+async function getProductsByCategoryCursor(req, res) {
+  try {
+    const cursor = req.query.cursor || 0;
+    const limit = req.query.limit || 24;
+    
+    // Nappaa kategoriat joko 'categories[]' taulukkona tai 'category' stringinä
+    const categories = req.query.categories || req.query.category;
+
+    if (!categories) {
+      return res.status(400).json({ success: false, error: 'Category parameter is required' });
+    }
+
+    const result = await productsService.getProductsByCategoryCursor(categories, cursor, limit);
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('Error fetching products by category cursor:', error);
+    
+    // Nappaa service-kerroksen validointivirheet
+    if (error.message.includes('do not exist') || error.message.includes('required')) {
+      return res.status(400).json({ success: false, error: error.message });
+    }
+
+    return res.status(500).json({ success: false, error: 'Failed to fetch products by category' });
+  }
+}
+
+
+
+// DELETE /products/:id
+async function deleteProduct(req, res) {
+  try {
+    const { id } = req.params;
+    const result = await productsService.deleteProduct(id);
+    
+    res.json({ message: 'Product deleted successfully', id: result.product_id });
+  } catch (err) {
+    console.error(`Error deleting product ${req.params.id}:`, err);
+    
+    // Nappaa service-kerroksen heittämä "Not found" -virhe
+    if (err.message.includes('not found')) {
+      return res.status(404).json({ error: err.message });
+    }
+    
+    // Nappaa viiteavain-virhe (Foreign Key Constraint) - 409 Conflict on tähän oikea statuskoodi
+    if (err.message.includes('tied to existing order history')) {
+      return res.status(409).json({ error: err.message });
+    }
+
+    res.status(500).json({ error: 'Failed to delete product' });
+  }
+}
+
 
 module.exports = {
   getProducts,
   getProductById,
   createProduct,
   updateProduct,
+  getProductsCursor,
+  deleteProduct,
+  getProductsByCategoryCursor
 };

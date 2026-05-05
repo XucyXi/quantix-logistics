@@ -7,7 +7,7 @@ import {LandingPage} from './pages/LandingPage';
 import {AboutPage} from './pages/AboutPage';
 import {ProductsPage} from './pages/ProductsPage';
 import {PricingPage} from './pages/PricingPage';
-import {LoginPage} from './pages/AdminLoginPage';
+import {LoginPage} from './pages/LoginPage';
 import {RegisterPage} from './pages/RegisterPage';
 import {ForgotPasswordPage} from './pages/ForgotPassword';
 import {CartPage} from './pages/CartPage';
@@ -21,60 +21,13 @@ import {ReportsPage} from './pages/ReportsPage';
 import {SettingsPage} from './pages/SettingsPage';
 import {LiveMapPage} from './pages/LiveMapPage';
 import {DriverDashboard} from './pages/DriverDashboard';
-import {DriverDeliveriesPage} from './pages/DriverDeliversPage';
-import {DriverMapPage} from './pages/DriverMapPage';
+import {DriverDeliveriesPage} from './pages/DriverDeliveriesPage';
 import {DriverProfilePage} from './pages/DriverProfilePage';
-import {StoreDashboard} from './pages/StoreDashboard';
-import {DriverMapTestPage} from './pages/DriverMapTestPage';
 import {DeliveryManager} from './components/delivery-tracking/DeliveryManager';
 import {CustomerTrackingView} from './components/delivery-tracking/CustomerTrackingView';
 import {AdminProductsPage} from './pages/AdminProductsPage';
 import {CustomerDashboard} from './pages/CustomerDashboard';
-
-const loadLandingPage = async () => {
-  const module = await import('./pages/LandingPage');
-  return {Component: module.LandingPage};
-};
-
-const loadAboutPage = async () => {
-  const module = await import('./pages/AboutPage');
-  return {Component: module.AboutPage};
-};
-
-const loadProductsPage = async () => {
-  const module = await import('./pages/ProductsPage');
-  return {Component: module.ProductsPage};
-};
-
-const loadPricingPage = async () => {
-  const module = await import('./pages/PricingPage');
-  return {Component: module.PricingPage};
-};
-
-const loadLoginPage = async () => {
-  const module = await import('./pages/AdminLoginPage');
-  return {Component: module.LoginPage};
-};
-
-const loadRegisterPage = async () => {
-  const module = await import('./pages/RegisterPage');
-  return {Component: module.RegisterPage};
-};
-
-const loadCartPage = async () => {
-  const module = await import('./pages/CartPage');
-  return {Component: module.CartPage};
-};
-
-const loadAdminLogin = async () => {
-  const module = await import('./pages/AdminLogin');
-  return {Component: module.AdminLogin};
-};
-
-const loadAdminDashboard = async () => {
-  const module = await import('./pages/AdminDashboard');
-  return {Component: module.AdminDashboard};
-};
+import {NotFoundPage} from './pages/NotFoundPage';
 
 const loadDriverDashboard = async () => {
   const module = await import('./pages/DriverDashboard');
@@ -135,9 +88,13 @@ export const router = createBrowserRouter([
     Component: DriverRoot,
     children: [{index: true, lazy: loadDriverDashboard}],
   },
-
   {
     path: '/user/maptest',
     Component: CustomerTrackingView,
+  },
+
+  {
+    path: '*',
+    Component: NotFoundPage,
   },
 ]);

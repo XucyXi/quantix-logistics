@@ -1,39 +1,62 @@
-const getAuthHeaders = (token: string) => ({
-  Authorization: `Bearer ${token}`,
-  'Content-Type': 'application/json',
-});
+import api from '../lib/api';
+
+export interface AdminAnnouncement {
+  announcement_id: number;
+  title: string;
+  content?: string | null;
+  created_at: string;
+  expires_at?: string | null;
+}
 
 export const adminService = {
-  getAnalytics: async (token: string) => {
-    const res = await fetch('/api/admin/analytics/revenue', {
-      headers: getAuthHeaders(token),
-    });
-    if (!res.ok) throw new Error('Failed to fetch admin analytics');
-    return res.json();
+  getAnalytics: async () => {
+    const res = await api.get('/admin/analytics/revenue');
+    return res.data;
   },
 
-  getActiveRoutes: async (token: string) => {
-    // Backward-compatible fallback while /routes/overview is being implemented.
-    const res = await fetch('/api/admin/routes/overview', {
-      headers: getAuthHeaders(token),
-    });
-    if (res.ok) return res.json();
-
-    const fallbackRes = await fetch('/api/admin/analytics/orders', {
-      headers: getAuthHeaders(token),
-    });
-    if (!fallbackRes.ok) throw new Error('Failed to fetch active routes');
-    return fallbackRes.json();
+  getOrderAnalytics: async () => {
+    const res = await api.get('/admin/analytics/orders');
+    return res.data;
   },
 
-  getNotifications: async (token: string) => {
-    const res = await fetch('/api/notifications', {
-      headers: getAuthHeaders(token),
-    });
-    if (res.status === 404) {
-      return {notifications: []};
+  getActiveRoutes: async () => {
+    try {
+      const res = await api.get('/admin/routes/overview');
+      return res.data;
+    } catch {
+      // Fallback jos overview ei ole vielä implementoitu backendissä
+      const fallbackRes = await api.get('/admin/analytics/orders');
+      return fallbackRes.data;
     }
-    if (!res.ok) throw new Error('Failed to fetch notifications');
-    return res.json();
+  },
+
+  updateSystemSettings: async (settingsData: {
+    timezone?: string;
+    language?: string;
+  }) => {
+    const res = await api.put('/admin/settings/system', settingsData);
+    return res.data;
+  },
+
+  getNotifications: async () => {
+    try {
+      const res = await api.get('/notifications');
+      return res.data;
+    } catch (error: unknown) {
+      const axiosError = error as {response?: {status?: number}};
+      if (axiosError.response && axiosError.response.status === 404) {
+        return {notifications: [], announcements: [], unreadCount: 0};
+      }
+      throw error;
+    }
+  },
+
+  createAnnouncement: async (announcementData: {
+    title: string;
+    content?: string;
+    expires_at?: string | null;
+  }) => {
+    const res = await api.post('/notifications/announcements', announcementData);
+    return res.data;
   },
 };

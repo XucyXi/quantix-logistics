@@ -2,14 +2,18 @@ const express = require('express');
 const router = express.Router();
 const deliveryController = require('../controllers/deliveryController');
 const {authenticate} = require('../middlewares/authMiddleware');
+const { gpsLimiter } = require('../middlewares/rateLimiter');
 
-// 1. KUSKI PÄIVITTÄÄ (POST)
+router.get('/active', authenticate, deliveryController.getAllActiveLocations);
+
+// KUSKI PÄIVITTÄÄ (POST)
 router.post(
   '/:orderId/location',
+  gpsLimiter,
   authenticate,
   deliveryController.updateLocation
 );
-// 2. ASIAKAS LUKEE (GET)
+// ASIAKAS LUKEE (GET)
 router.get(
   '/:orderId/status',
   authenticate,

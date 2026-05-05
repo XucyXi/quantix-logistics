@@ -4,18 +4,26 @@ export interface User {
   email: string;
 }
 
+export interface OrderItem {
+  order_item_id: number;
+  order_id: number;
+  product_id: number;
+  product_name?: string;
+  quantity: number;
+  unit_price: number | string;
+}
+
 export interface Order {
   order_id: number;
   customer_id: number;
   driver_id: number | null;
-  status: 'done' | 'assigned' | 'in_transit' | 'ready_for_pickup';
+  status: 'pending' | 'assigned' | 'ready_for_pickup' | 'in_transit' | 'done';
   delivery_address: string;
   notes?: string;
   customer?: {
     company_name: string;
   };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  items?: any[];
+  items?: OrderItem[];
   ordered_at: string;
   scheduled_delivery: string | null;
   total_price: number;
@@ -41,19 +49,6 @@ export interface TrackingResponse {
   phone?: string;
   dest_lat?: string | number;
   dest_lng?: string | number;
-}
-
-export interface TrackingResponse {
-  status: string;
-  destination: {
-    lat: number;
-    lng: number;
-  };
-  driver: {
-    lat: number;
-    lng: number;
-    updated_at?: string;
-  } | null;
 }
 
 export interface DeliveryTracking {
