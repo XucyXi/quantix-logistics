@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import {Link, useNavigate} from 'react-router';
+import {Link} from 'react-router';
 import {motion, AnimatePresence} from 'motion/react';
 import {
   ShoppingCart,
@@ -7,11 +7,11 @@ import {
   Plus,
   Minus,
   ArrowRight,
-  CheckCircle,
   Package,
   Leaf,
 } from 'lucide-react';
 import {useCart} from '../contexts/CartContext';
+import {Checkout} from './Checkout';
 
 const tagColors: Record<string, {bg: string; color: string}> = {
   Gluteeniton: {bg: '#fef3c7', color: '#d97706'},
@@ -39,135 +39,28 @@ const deliveryOptions = [
 ];
 
 export function CartPage() {
-  const {items, removeItem, updateQuantity, clearCart, totalItems, totalPrice} =
-    useCart();
+  const {
+    items,
+    removeItem,
+    updateQuantity,
+    clearCart,
+    totalItems,
+    totalPrice,
+    totalPriceWithDiscount,
+    discount,
+    isBusinessCustomer,
+  } = useCart();
+
   const [delivery, setDelivery] = useState('standard');
-  const [orderDone, setOrderDone] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  const [showCheckout, setShowCheckout] = useState(false);
 
   const deliveryPrice =
     deliveryOptions.find((d) => d.id === delivery)?.price ?? 0;
-  const total = totalPrice + deliveryPrice;
+  const total = totalPriceWithDiscount + deliveryPrice;
   const vat = total * 0.14;
-  const totalWithVat = total;
 
-  const handleOrder = async () => {
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 1500));
-    setLoading(false);
-    clearCart();
-    setOrderDone(true);
-  };
-
-  if (orderDone) {
-    return (
-      <div
-        style={{
-          fontFamily: "'Space Grotesk', sans-serif",
-          minHeight: '80vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#f8fafc',
-          padding: '2rem',
-        }}
-      >
-        <div
-          style={{
-            backgroundColor: 'white',
-            borderRadius: 20,
-            padding: '3rem',
-            textAlign: 'center',
-            maxWidth: 480,
-            boxShadow: '0 8px 40px rgba(0,0,0,0.08)',
-          }}
-        >
-          <motion.div
-            initial={{scale: 0}}
-            animate={{scale: 1}}
-            transition={{type: 'spring', stiffness: 200, damping: 15}}
-            style={{
-              width: 72,
-              height: 72,
-              borderRadius: '50%',
-              backgroundColor: '#dcfce7',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 1.5rem',
-            }}
-          >
-            <CheckCircle size={36} color="#16a34a" />
-          </motion.div>
-          <h2
-            style={{
-              color: '#0f2444',
-              fontWeight: 800,
-              fontSize: '1.5rem',
-              marginBottom: '0.75rem',
-            }}
-          >
-            Tilaus vastaanotettu!
-          </h2>
-          <p
-            style={{
-              color: '#64748b',
-              fontSize: '0.9rem',
-              lineHeight: 1.7,
-              marginBottom: '0.75rem',
-            }}
-          >
-            Tilauksesi on lähetetty jakelukeskukselle. Saat vahvistusviestin
-            sähköpostitse.
-          </p>
-          <p
-            style={{
-              color: '#94a3b8',
-              fontSize: '0.82rem',
-              marginBottom: '2rem',
-            }}
-          >
-            Tilausnumero:{' '}
-            <strong style={{color: '#0f2444'}}>
-              ORD-{Math.floor(Math.random() * 9000) + 1000}
-            </strong>
-          </p>
-          <div
-            style={{display: 'flex', gap: '0.75rem', justifyContent: 'center'}}
-          >
-            <Link
-              to="/products"
-              style={{
-                padding: '0.75rem 1.5rem',
-                borderRadius: 10,
-                border: '1.5px solid #e2e8f0',
-                color: '#64748b',
-                textDecoration: 'none',
-                fontWeight: 600,
-                fontSize: '0.9rem',
-              }}
-            >
-              Jatka tilaamista
-            </Link>
-            <Link
-              to="/"
-              style={{
-                padding: '0.75rem 1.5rem',
-                borderRadius: 10,
-                backgroundColor: '#f97316',
-                color: 'white',
-                textDecoration: 'none',
-                fontWeight: 700,
-                fontSize: '0.9rem',
-              }}
-            >
-              Etusivulle
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
+  if (showCheckout) {
+    return <Checkout />;
   }
 
   if (items.length === 0) {
@@ -248,7 +141,6 @@ export function CartPage() {
         minHeight: '80vh',
       }}
     >
-      {/* Header */}
       <div
         style={{
           background: 'linear-gradient(135deg, #0f2444 0%, #1e3a5f 100%)',
@@ -281,7 +173,6 @@ export function CartPage() {
 
       <div style={{maxWidth: 1100, margin: '0 auto', padding: '2rem 1.5rem'}}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Cart items */}
           <div className="lg:col-span-2">
             <div
               style={{
@@ -346,22 +237,6 @@ export function CartPage() {
                       alignItems: 'flex-start',
                     }}
                   >
-                    {/* Image */}
-                    {item.image && (
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        style={{
-                          width: 72,
-                          height: 72,
-                          borderRadius: 10,
-                          objectFit: 'cover',
-                          flexShrink: 0,
-                        }}
-                      />
-                    )}
-
-                    {/* Info */}
                     <div style={{flex: 1, minWidth: 0}}>
                       <div
                         style={{
@@ -445,7 +320,6 @@ export function CartPage() {
                           justifyContent: 'space-between',
                         }}
                       >
-                        {/* Quantity */}
                         <div
                           style={{
                             display: 'flex',
@@ -520,7 +394,6 @@ export function CartPage() {
               </AnimatePresence>
             </div>
 
-            {/* Delivery options */}
             <div
               style={{
                 backgroundColor: 'white',
@@ -611,7 +484,6 @@ export function CartPage() {
             </div>
           </div>
 
-          {/* Order summary */}
           <div>
             <div
               style={{
@@ -659,8 +531,40 @@ export function CartPage() {
                     }}
                   >
                     <span>Tuotteet ({totalItems} kpl)</span>
-                    <span>{totalPrice.toFixed(2)} €</span>
+                    <span>
+                      {isBusinessCustomer ? (
+                        <span>
+                          <span
+                            style={{
+                              textDecoration: 'line-through',
+                              color: '#94a3b8',
+                              marginRight: '0.5rem',
+                            }}
+                          >
+                            {totalPrice.toFixed(2)} €
+                          </span>
+                          <span style={{color: '#22c55e', fontWeight: 600}}>
+                            {totalPriceWithDiscount.toFixed(2)} €
+                          </span>
+                        </span>
+                      ) : (
+                        <span>{totalPrice.toFixed(2)} €</span>
+                      )}
+                    </span>
                   </div>
+                  {isBusinessCustomer && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: '0.875rem',
+                        color: '#22c55e',
+                      }}
+                    >
+                      <span>Business-alennus (15%)</span>
+                      <span>-{discount.toFixed(2)} €</span>
+                    </div>
+                  )}
                   <div
                     style={{
                       display: 'flex',
@@ -704,34 +608,35 @@ export function CartPage() {
                 </div>
 
                 <button
-                  onClick={handleOrder}
-                  disabled={loading}
+                  onClick={() => setShowCheckout(true)}
+                  disabled={items.length === 0}
                   style={{
                     width: '100%',
                     padding: '0.9rem',
                     borderRadius: 10,
                     border: 'none',
-                    backgroundColor: loading ? '#94a3b8' : '#f97316',
+                    backgroundColor: items.length === 0 ? '#94a3b8' : '#f97316',
                     color: 'white',
                     fontWeight: 800,
                     fontSize: '1rem',
-                    cursor: loading ? 'not-allowed' : 'pointer',
+                    cursor: items.length === 0 ? 'not-allowed' : 'pointer',
                     fontFamily: "'Space Grotesk', sans-serif",
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '0.5rem',
                     transition: 'background 0.2s',
-                    boxShadow: loading
-                      ? 'none'
-                      : '0 4px 16px rgba(249,115,22,0.3)',
+                    boxShadow:
+                      items.length === 0
+                        ? 'none'
+                        : '0 4px 16px rgba(249,115,22,0.3)',
                   }}
                 >
-                  {loading ? (
-                    'Lähetetään tilausta...'
+                  {items.length === 0 ? (
+                    'Ostoskori tyhjä'
                   ) : (
                     <>
-                      Tilaa nyt
+                      Siirry kassalle
                       <ArrowRight size={18} />
                     </>
                   )}

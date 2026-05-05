@@ -1,28 +1,18 @@
-import {useEffect} from 'react';
-import {Outlet, useLocation} from 'react-router-dom';
-import {ChatBot} from '../components/layout/ChatBot';
-import {Footer} from '../components/layout/Footer';
+import {Outlet} from 'react-router';
 import {Navbar} from '../components/layout/Navbar';
+import {Footer} from '../components/layout/Footer';
+import {ThemeProvider} from '../contexts/ThemeProvider';
 
 export function Root() {
-  const location = useLocation();
-
-  useEffect(() => {
-    window.scrollTo({top: 0, left: 0, behavior: 'smooth'});
-  }, [location.pathname]);
-
   return (
-    // Yhteinen runko: ylävalikko ylös, sisältö keskelle, footer alas.
-    <div style={{minHeight: '100vh', display: 'flex', flexDirection: 'column'}}>
-      {/* Navbar on näkyvissä kaikilla tämän layoutin reiteillä. */}
-      <Navbar />
-      <main style={{flex: 1}}>
-        {/* Outlet renderöi nykyisen lapsireitin sisällön tähän kohtaan. */}
-        <Outlet />
-      </main>
-      <ChatBot />
-      {/* Footer pysyy sivun alareunassa myös lyhyillä sivuilla. */}
-      <Footer />
-    </div>
+    <ThemeProvider defaultTheme="light" storageKey="quantix-theme-root">
+      <div className="min-h-screen flex flex-col bg-background font-sans">
+        <Navbar />
+        <main className="flex-1 flex flex-col">
+          <Outlet />
+        </main>
+        <Footer />
+      </div>
+    </ThemeProvider>
   );
 }

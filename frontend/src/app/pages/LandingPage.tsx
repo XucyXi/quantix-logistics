@@ -1,7 +1,8 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useState, useRef} from 'react';
+import type {RefObject} from 'react';
 import {Link} from 'react-router-dom';
 import {motion} from 'motion/react';
-import testimonialVideo from '../../../Ravintolaomistajan_suositus_kuljetuspalvelulle.mp4';
+import testimonialVideo from '../../assets/videos/Ravintolaomistajan_suositus_kuljetuspalvelulle.mp4';
 import {
   Truck,
   Package,
@@ -10,100 +11,168 @@ import {
   CheckCircle,
   BarChart2,
   Shield,
-  Clock,
   Star,
-  ChevronRight,
   Zap,
-  Mail,
-  Phone,
-  MapPin,
-  Send,
 } from 'lucide-react';
-
-// Rivikohtainen lisaselitys loytyy tiedostosta: src/app/pages/LandingPage.comments.md
 
 const heroImg =
   'https://images.unsplash.com/photo-1641290451977-a427586acf49?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmb29kJTIwbG9naXN0aWNzJTIwdHJ1Y2slMjBkZWxpdmVyeSUyMHdhcmVob3VzZXxlbnwxfHx8fDE3NzQzNDA3Nzd8MA&ixlib=rb-4.1.0&q=80&w=1080';
-const distImg =
-  'https://images.unsplash.com/photo-1766793110924-98e05b48eadc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBkaXN0cmlidXRpb24lMjBjZW50ZXIlMjBsb2dpc3RpY3N8ZW58MXx8fHwxNzc0MzQwNzc4fDA&ixlib=rb-4.1.0&q=80&w=1080';
 
-// Hero-osan KPI-luvut: desktopissa kortteina, mobiilissa omana rivinään.
 const stats = [
-  {value: '340+', label: 'Kauppaa palveltu'},
-  {value: '12 000', label: 'Toimitusta / viikko'},
-  {value: '99.2%', label: 'Ajallaan-prosentti'},
-  {value: '5', label: 'Toimintavuotta'},
-];
+  {key: 'shops', end: 340, suffix: '+', label: 'Kauppaa palveltu'},
+  {key: 'deliveries', end: 12000, label: 'Toimitusta / viikko', group: true},
+  {
+    key: 'ontime',
+    end: 99.2,
+    suffix: '%',
+    label: 'Ajallaan-prosentti',
+    decimals: 1,
+  },
+  {key: 'years', end: 5, label: 'Toimintavuotta'},
+] as const;
 
-// Ominaisuuskortit: icon + teksti + korostusväri, renderöidään features-gridiin.
+type StatItem = (typeof stats)[number];
+
+function formatStatDisplay(value: number, s: StatItem): string {
+  if ('decimals' in s && s.decimals !== undefined) {
+    return `${value.toFixed(s.decimals)}${'suffix' in s ? (s.suffix ?? '') : ''}`;
+  }
+  if ('group' in s && s.group) {
+    return `${Math.round(value).toLocaleString('fi-FI')}`;
+  }
+  return `${Math.round(value)}${'suffix' in s ? (s.suffix ?? '') : ''}`;
+}
+
+function useIntersectionActivate(ref: RefObject<HTMLElement | null>) {
+  const [active, setActive] = useState(
+    () => typeof IntersectionObserver === 'undefined'
+  );
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || active || typeof IntersectionObserver === 'undefined') return;
+
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) setActive(true);
+      },
+      {threshold: 0.15, rootMargin: '0px 0px -8% 0px'}
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [ref, active]);
+  return active;
+}
+
+function useCountUpStat(end: number, active: boolean, decimals?: number) {
+  const [value, setValue] = useState(0);
+  const startedRef = useRef(false);
+
+  useEffect(() => {
+    if (!active || startedRef.current) return;
+    startedRef.current = true;
+    const duration = 1800;
+    let startTs: number | null = null;
+    let raf = 0;
+
+    const tick = (ts: number) => {
+      if (startTs === null) startTs = ts;
+      const p = Math.min((ts - startTs) / duration, 1);
+      const eased = 1 - (1 - p) ** 3;
+      const cur = end * eased;
+      if (decimals !== undefined) {
+        setValue(Number(cur.toFixed(decimals)));
+      } else {
+        setValue(cur);
+      }
+      if (p < 1) {
+        raf = requestAnimationFrame(tick);
+      } else {
+        setValue(end);
+      }
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [active, end, decimals]);
+
+  return value;
+}
+
+function AnimatedStatFigure({
+  stat,
+  color,
+  active,
+  fontSize,
+}: {
+  stat: StatItem;
+  color: string;
+  active: boolean;
+  fontSize: string;
+}) {
+  const decimals = 'decimals' in stat ? stat.decimals : undefined;
+  const v = useCountUpStat(stat.end, active, decimals);
+  const text = formatStatDisplay(v, stat);
+
+  return (
+    <div
+      style={{fontSize, color}}
+      className="font-extrabold leading-none mb-2 tabular-nums"
+    >
+      {text}
+    </div>
+  );
+}
+
 const features = [
   {
     icon: Zap,
     title: 'Live-seuranta',
     desc: 'Reaaliaikainen seuranta jokaiselle ruokarullakolle jakelukeskuksesta kauppaan asti.',
     color: '#f97316',
+    bg: 'bg-orange-500/10',
+    text: 'text-orange-500',
   },
   {
     icon: Package,
     title: 'Älykäs pakkaus',
     desc: 'Jakelukeskus pakkaa rullakot optimaalisesti boksikohtaisten tilausten mukaan.',
     color: '#3b82f6',
+    bg: 'bg-blue-500/10',
+    text: 'text-blue-500',
   },
   {
     icon: Truck,
     title: 'Reittioptimointi',
     desc: 'Automaattinen reittioptimointi vähentää kuljetuskustannuksia ja parantaa tehokkuutta.',
     color: '#8b5cf6',
+    bg: 'bg-purple-500/10',
+    text: 'text-purple-500',
   },
   {
     icon: Store,
     title: 'Kaupan portaali',
     desc: 'Kaupat seuraavat tilauksiaan, vastaanottavat toimitukset ja hallinnoivat valikoimaa.',
     color: '#22c55e',
+    bg: 'bg-green-500/10',
+    text: 'text-green-500',
   },
   {
     icon: BarChart2,
     title: 'Kattavat raportit',
     desc: 'Analytiikka kaikesta toimitusketjusta – myynneistä reklamaatioihin.',
     color: '#ec4899',
+    bg: 'bg-pink-500/10',
+    text: 'text-pink-500',
   },
   {
     icon: Shield,
     title: 'Elintarviketurvallisuus',
     desc: 'Täysi jäljitettävyys ja kylmäketjun valvonta HACCP-standardien mukaisesti.',
     color: '#f59e0b',
+    bg: 'bg-amber-500/10',
+    text: 'text-amber-500',
   },
 ];
 
-// Roolikortit ja niiden CTA-linkit roolikohtaisiin näkymiin.
-const roles = [
-  {
-    icon: BarChart2,
-    role: 'Ajokeskus',
-    desc: 'Hallinnoi reittejä, pakkausta ja kuljettajia yhdestä paikasta.',
-    to: '/admin/login',
-    color: '#0f2444',
-    cta: 'Kirjaudu ylläpitoon',
-  },
-  {
-    icon: Truck,
-    role: 'Kuljettaja',
-    desc: 'Näe päivän reitit, toimitukset ja päivitä tilanne liikkeellä ollessa.',
-    to: '/driver',
-    color: '#17324f',
-    cta: 'Kuljettajan portaali',
-  },
-  {
-    icon: Store,
-    role: 'Kauppa',
-    desc: 'Seuraa saapuvia toimituksia ja hallinnoi tilauksia helposti.',
-    to: '/store',
-    color: '#0f2444',
-    cta: 'Kaupan portaali',
-  },
-];
-
-// Asiakastiedot säilytetään edelleen datassa mahdollista laajennusta varten.
 const testimonials = [
   {
     name: 'Jaakko Koskinen',
@@ -111,54 +180,26 @@ const testimonials = [
     text: 'Quantix on muuttanut tavan, jolla seuraamme saapuvia toimituksia. Ei enää yllätysten odottelua – tiedämme tarkalleen milloin rekka saapuu.',
     rating: 5,
   },
-  {
-    name: 'Petri Salminen',
-    company: 'S-Market Espoo',
-    text: 'Tuotetietojen hallinta on nyt niin paljon helpompaa. Kaupan henkilökunta tietää tarkalleen mitä on tulossa ja milloin.',
-    rating: 5,
-  },
-  {
-    name: 'Anne Virtanen',
-    company: 'Lidl Tampere',
-    text: 'Toimitusaikataulu pitää yllättävän hyvin. Quantixiin siirtymisen jälkeen hukkaprosenttimme putosi merkittävästi.',
-    rating: 5,
-  },
 ];
 
-// Yhteinen tyyli lomakkeen kentille
-const inputStyle = {
-  width: '100%',
-  padding: '0.875rem 1rem',
-  borderRadius: 8,
-  border: '1px solid #cbd5e1',
-  backgroundColor: 'white',
-  fontSize: '0.95rem',
-  color: '#334155',
-  fontFamily: "'Space Grotesk', sans-serif",
-  outline: 'none',
-  transition: 'border-color 0.2s',
-};
-
 export function LandingPage() {
-  // now-tila päivittyy sekunnin välein, jotta hero-badgen kello käy reaaliajassa.
   const [now, setNow] = useState(() => new Date());
+  const desktopStatsRef = useRef<HTMLDivElement>(null);
+  const mobileStatsRef = useRef<HTMLElement>(null);
+  const desktopStatsVisible = useIntersectionActivate(desktopStatsRef);
+  const mobileStatsVisible = useIntersectionActivate(mobileStatsRef);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(timer);
   }, []);
 
-  // Muotoillaan päivä, viikonpäivä ja aika erikseen, jotta niitä voi yhdistellä UI:ssa vapaasti.
   const liveDate = now.toLocaleDateString('fi-FI', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
   });
-
-  const liveWeekday = now.toLocaleDateString('fi-FI', {
-    weekday: 'long',
-  });
-
+  const liveWeekday = now.toLocaleDateString('fi-FI', {weekday: 'long'});
   const liveTime = now.toLocaleTimeString('fi-FI', {
     hour: '2-digit',
     minute: '2-digit',
@@ -166,208 +207,78 @@ export function LandingPage() {
   });
 
   return (
-    <div style={{fontFamily: "'Space Grotesk', sans-serif"}}>
+    <div className="font-sans">
       {/* Hero */}
-      <section
-        style={{
-          position: 'relative',
-          minHeight: '88vh',
-          display: 'flex',
-          alignItems: 'center',
-          overflow: 'hidden',
-          backgroundColor: '#0a1929',
-        }}
-      >
+      <section className="relative min-h-[85vh] flex items-center overflow-hidden bg-[#0a1929]">
         <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            backgroundImage: `url(${heroImg})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            opacity: 0.18,
-          }}
+          className="absolute inset-0 bg-cover bg-center opacity-20"
+          style={{backgroundImage: `url(${heroImg})`}}
         />
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background:
-              'linear-gradient(135deg, #0a1929 0%, rgba(10,25,41,0.85) 60%, rgba(15,36,68,0.7) 100%)',
-          }}
-        />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0a1929] via-[#0a1929]/85 to-[#0f2444]/70" />
 
-        <div
-          style={{
-            maxWidth: 1280,
-            margin: '0 auto',
-            padding: '4rem 1.5rem',
-            position: 'relative',
-            zIndex: 2,
-            width: '100%',
-          }}
-        >
+        <div className="max-w-7xl mx-auto px-6 py-16 relative z-10 w-full">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <motion.div
               initial={{opacity: 0, y: 30}}
               animate={{opacity: 1, y: 0}}
               transition={{duration: 0.7}}
             >
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.375rem 1rem',
-                  borderRadius: 30,
-                  backgroundColor: 'rgba(249,115,22,0.15)',
-                  border: '1px solid rgba(249,115,22,0.3)',
-                  marginBottom: '1.5rem',
-                  flexWrap: 'wrap',
-                }}
-              >
-                <div
-                  style={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: '50%',
-                    backgroundColor: '#f97316',
-                  }}
-                />
-                <span
-                  style={{
-                    color: '#f97316',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                  }}
-                >
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-500/15 border border-orange-500/30 mb-6 flex-wrap">
+                <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+                <span className="text-orange-500 text-sm font-semibold">
                   Live-seuranta käytössä
                 </span>
-                <span
-                  style={{
-                    width: 1,
-                    height: 14,
-                    backgroundColor: 'rgba(249,115,22,0.35)',
-                  }}
-                />
-                <span
-                  style={{
-                    color: 'rgba(255,255,255,0.82)',
-                    fontSize: '0.8rem',
-                    fontWeight: 500,
-                  }}
-                >
+                <span className="w-px h-3.5 bg-orange-500/35 mx-1" />
+                <span className="text-white/80 text-sm font-medium capitalize-first">
                   {liveWeekday} {liveDate} {liveTime}
                 </span>
               </div>
 
-              <h1
-                style={{
-                  color: '#ffffff',
-                  fontSize: 'clamp(2rem, 5vw, 3.5rem)',
-                  fontWeight: 800,
-                  lineHeight: 1.15,
-                  marginBottom: '1.25rem',
-                  letterSpacing: '-0.02em',
-                }}
-              >
+              <h1 className="text-white text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-5 tracking-tight">
                 Ruokalogistiikka{' '}
-                <span
-                  style={{
-                    background: 'linear-gradient(90deg, #f97316, #fb923c)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                  }}
-                >
+                <span className="bg-gradient-to-r from-orange-500 to-orange-400 bg-clip-text text-transparent">
                   uudella tasolla
                 </span>
               </h1>
 
-              <p
-                style={{
-                  color: 'rgba(255,255,255,0.72)',
-                  fontSize: '1.1rem',
-                  lineHeight: 1.75,
-                  marginBottom: '2rem',
-                  maxWidth: 520,
-                }}
-              >
+              <p className="text-white/70 text-lg md:text-xl leading-relaxed mb-8 max-w-xl">
                 Quantix Logistics yhdistää jakelukeskuksen, kuljettajat ja
                 kaupat saumattomaksi digitaaliseksi ketjuksi – reaaliaikaisesti,
                 läpinäkyvästi ja tehokkaasti.
               </p>
 
-              <div style={{display: 'flex', gap: '1rem', flexWrap: 'wrap'}}>
+              <div className="flex flex-wrap gap-4">
                 <Link
                   to="/register"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.875rem 2rem',
-                    borderRadius: 10,
-                    backgroundColor: '#f97316',
-                    color: 'white',
-                    textDecoration: 'none',
-                    fontWeight: 700,
-                    fontSize: '1rem',
-                    transition: 'all 0.2s',
-                    boxShadow: '0 4px 20px rgba(249,115,22,0.35)',
-                  }}
+                  className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-orange-500 text-white font-bold text-base shadow-lg shadow-orange-500/30 hover:bg-orange-600 transition-all hover:-translate-y-0.5 cursor-pointer"
                 >
-                  Aloita ilmaiseksi
-                  <ArrowRight size={18} />
+                  Aloita ilmaiseksi <ArrowRight size={18} />
                 </Link>
                 <Link
                   to="/products"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.875rem 2rem',
-                    borderRadius: 10,
-                    backgroundColor: 'rgba(255,255,255,0.08)',
-                    border: '1px solid rgba(255,255,255,0.15)',
-                    color: 'white',
-                    textDecoration: 'none',
-                    fontWeight: 600,
-                    fontSize: '1rem',
-                    transition: 'all 0.2s',
-                  }}
+                  className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-white/10 border border-white/20 text-white font-semibold text-base hover:bg-white/20 transition-all hover:-translate-y-0.5 cursor-pointer"
                 >
                   Katso tuotteet
                 </Link>
               </div>
 
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1.5rem',
-                  marginTop: '2.5rem',
-                }}
-              >
+              <div className="flex flex-wrap items-center gap-6 mt-10">
                 {['HACCP-sertifioitu', 'ISO 22000', 'GDPR-yhteensopiva'].map(
                   (tag) => (
                     <div
                       key={tag}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.375rem',
-                        color: 'rgba(255,255,255,0.55)',
-                        fontSize: '0.78rem',
-                      }}
+                      className="flex items-center gap-1.5 text-white/50 text-sm font-medium"
                     >
-                      <CheckCircle size={13} color="#22c55e" />
-                      {tag}
+                      <CheckCircle size={16} className="text-green-500" /> {tag}
                     </div>
                   )
                 )}
               </div>
             </motion.div>
 
+            {/* Desktop Stats */}
             <motion.div
+              ref={desktopStatsRef}
               initial={{opacity: 0, x: 40}}
               animate={{opacity: 1, x: 0}}
               transition={{duration: 0.7, delay: 0.2}}
@@ -375,32 +286,16 @@ export function LandingPage() {
             >
               {stats.map((stat, i) => (
                 <div
-                  key={stat.label}
-                  style={{
-                    backgroundColor: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: 16,
-                    padding: '1.5rem',
-                    backdropFilter: 'blur(10px)',
-                  }}
+                  key={stat.key}
+                  className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md"
                 >
-                  <div
-                    style={{
-                      fontSize: '2rem',
-                      fontWeight: 800,
-                      color: i % 2 === 0 ? '#f97316' : '#60a5fa',
-                      lineHeight: 1,
-                      marginBottom: '0.5rem',
-                    }}
-                  >
-                    {stat.value}
-                  </div>
-                  <div
-                    style={{
-                      color: 'rgba(255,255,255,0.6)',
-                      fontSize: '0.85rem',
-                    }}
-                  >
+                  <AnimatedStatFigure
+                    stat={stat}
+                    active={desktopStatsVisible}
+                    color={i % 2 === 0 ? '#f97316' : '#60a5fa'}
+                    fontSize="2.5rem"
+                  />
+                  <div className="text-white/60 text-sm font-medium">
                     {stat.label}
                   </div>
                 </div>
@@ -408,91 +303,42 @@ export function LandingPage() {
             </motion.div>
           </div>
         </div>
-
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: 80,
-            background: 'linear-gradient(to top, #f8fafc, transparent)',
-          }}
-        />
+        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-slate-50 to-transparent pointer-events-none" />
       </section>
 
-      {/* Stats row (mobile) */}
-      <section
-        style={{backgroundColor: '#f8fafc', padding: '2rem 1.5rem'}}
-        className="lg:hidden"
-      >
-        <div style={{maxWidth: 1280, margin: '0 auto'}}>
-          <div className="grid grid-cols-2 gap-4">
-            {stats.map((stat) => (
-              <div
-                key={stat.label}
-                style={{
-                  backgroundColor: 'white',
-                  borderRadius: 12,
-                  padding: '1.25rem',
-                  textAlign: 'center',
-                  boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: '1.75rem',
-                    fontWeight: 800,
-                    color: '#f97316',
-                  }}
-                >
-                  {stat.value}
-                </div>
-                <div style={{color: '#64748b', fontSize: '0.8rem'}}>
-                  {stat.label}
-                </div>
+      {/* Mobile Stats */}
+      <section ref={mobileStatsRef} className="bg-slate-50 py-8 px-6 lg:hidden">
+        <div className="max-w-7xl mx-auto grid grid-cols-2 gap-4">
+          {stats.map((stat, i) => (
+            <div
+              key={stat.key}
+              className="bg-white rounded-xl p-5 text-center shadow-sm border border-slate-100"
+            >
+              <AnimatedStatFigure
+                stat={stat}
+                active={mobileStatsVisible}
+                color={i % 2 === 0 ? '#f97316' : '#3b82f6'}
+                fontSize="1.75rem"
+              />
+              <div className="text-slate-500 text-xs font-semibold uppercase tracking-wide">
+                {stat.label}
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </section>
 
       {/* Features */}
-      <section style={{backgroundColor: '#f8fafc', padding: '5rem 1.5rem'}}>
-        <div style={{maxWidth: 1280, margin: '0 auto'}}>
-          <div style={{textAlign: 'center', marginBottom: '3.5rem'}}>
-            <div
-              style={{
-                display: 'inline-block',
-                backgroundColor: 'rgba(249,115,22,0.1)',
-                color: '#f97316',
-                padding: '0.3rem 1rem',
-                borderRadius: 20,
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                marginBottom: '1rem',
-              }}
-            >
-              OMINAISUUDET
+      <section className="bg-slate-50 py-24 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <div className="inline-block bg-orange-500/10 text-orange-600 px-4 py-1.5 rounded-full text-sm font-bold tracking-wide uppercase mb-4">
+              Ominaisuudet
             </div>
-            <h2
-              style={{
-                color: '#0f2444',
-                fontSize: 'clamp(1.75rem, 3vw, 2.5rem)',
-                fontWeight: 800,
-                marginBottom: '1rem',
-              }}
-            >
+            <h2 className="text-[#0f2444] text-3xl md:text-4xl font-extrabold mb-4">
               Kaikki mitä tarvitset tehokkaaseen ruokalogistiikkaan
             </h2>
-            <p
-              style={{
-                color: '#64748b',
-                fontSize: '1rem',
-                maxWidth: 580,
-                margin: '0 auto',
-              }}
-            >
+            <p className="text-slate-500 text-lg max-w-2xl mx-auto">
               Quantix yhdistää kaikki toimitusketjun osat yhteen älykkääseen
               järjestelmään.
             </p>
@@ -506,51 +352,17 @@ export function LandingPage() {
                 whileInView={{opacity: 1, y: 0}}
                 transition={{duration: 0.5, delay: i * 0.08}}
                 viewport={{once: true}}
-                style={{
-                  backgroundColor: 'white',
-                  borderRadius: 16,
-                  padding: '1.75rem',
-                  boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-                  border: '1px solid #f1f5f9',
-                  transition: 'transform 0.2s, box-shadow 0.2s',
-                  cursor: 'default',
-                }}
-                whileHover={{y: -4, boxShadow: '0 8px 30px rgba(0,0,0,0.1)'}}
+                className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 hover:shadow-md hover:-translate-y-1 transition-all"
               >
                 <div
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 12,
-                    backgroundColor: `${f.color}15`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginBottom: '1.25rem',
-                  }}
+                  className={`w-14 h-14 rounded-xl ${f.bg} flex items-center justify-center mb-6`}
                 >
-                  <f.icon size={22} color={f.color} />
+                  <f.icon size={26} className={f.text} />
                 </div>
-                <h3
-                  style={{
-                    color: '#0f2444',
-                    marginBottom: '0.625rem',
-                    fontSize: '1rem',
-                    fontWeight: 700,
-                  }}
-                >
+                <h3 className="text-[#0f2444] text-xl font-bold mb-3">
                   {f.title}
                 </h3>
-                <p
-                  style={{
-                    color: '#64748b',
-                    fontSize: '0.875rem',
-                    lineHeight: 1.65,
-                    margin: 0,
-                  }}
-                >
-                  {f.desc}
-                </p>
+                <p className="text-slate-500 leading-relaxed">{f.desc}</p>
               </motion.div>
             ))}
           </div>
@@ -558,36 +370,18 @@ export function LandingPage() {
       </section>
 
       {/* How it works */}
-      <section style={{backgroundColor: '#0f2444', padding: '5rem 1.5rem'}}>
-        <div style={{maxWidth: 1280, margin: '0 auto'}}>
-          <div style={{textAlign: 'center', marginBottom: '3.5rem'}}>
-            <div
-              style={{
-                display: 'inline-block',
-                backgroundColor: 'rgba(249,115,22,0.15)',
-                color: '#f97316',
-                padding: '0.3rem 1rem',
-                borderRadius: 20,
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                marginBottom: '1rem',
-              }}
-            >
-              MITEN SE TOIMII
+      <section className="bg-[#0f2444] py-24 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-20">
+            <div className="inline-block bg-orange-500/15 text-orange-500 px-4 py-1.5 rounded-full text-sm font-bold tracking-wide uppercase mb-4">
+              Miten se toimii
             </div>
-            <h2
-              style={{
-                color: 'white',
-                fontSize: 'clamp(1.75rem, 3vw, 2.5rem)',
-                fontWeight: 800,
-                marginBottom: '1rem',
-              }}
-            >
+            <h2 className="text-white text-3xl md:text-4xl font-extrabold">
               Kolme vaihetta täydelliseen toimitukseen
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             {[
               {
                 step: '01',
@@ -612,280 +406,57 @@ export function LandingPage() {
                 key={item.step}
                 initial={{opacity: 0, y: 40}}
                 whileInView={{opacity: 1, y: 0}}
-                transition={{
-                  duration: 0.6,
-                  delay: i * 0.3,
-                  ease: 'easeOut',
-                }}
+                transition={{duration: 0.6, delay: i * 0.2}}
                 viewport={{once: true}}
-                style={{textAlign: 'center'}}
+                className="text-center"
               >
-                <motion.div
-                  initial={{scale: 0}}
-                  whileInView={{scale: 1}}
-                  transition={{
-                    duration: 0.5,
-                    delay: i * 0.3 + 0.2,
-                    type: 'spring',
-                    stiffness: 200,
-                    damping: 15,
-                  }}
-                  viewport={{once: true}}
-                  whileHover={{scale: 1.1}}
-                  style={{
-                    width: 72,
-                    height: 72,
-                    borderRadius: '50%',
-                    backgroundColor: 'rgba(249,115,22,0.15)',
-                    border: '2px solid rgba(249,115,22,0.3)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 1.25rem',
-                    position: 'relative',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <item.icon size={28} color="#f97316" />
-                  <motion.div
-                    initial={{scale: 0, rotate: -180}}
-                    whileInView={{scale: 1, rotate: 0}}
-                    transition={{
-                      duration: 0.6,
-                      delay: i * 0.3 + 0.4,
-                      type: 'spring',
-                      stiffness: 200,
-                    }}
-                    viewport={{once: true}}
-                    style={{
-                      position: 'absolute',
-                      top: -8,
-                      right: -8,
-                      width: 28,
-                      height: 28,
-                      borderRadius: '50%',
-                      backgroundColor: '#f97316',
-                      color: 'white',
-                      fontSize: '0.7rem',
-                      fontWeight: 800,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <motion.div
-                      animate={{
-                        boxShadow: [
-                          '0 0 0 0 rgba(249,115,22,0.4)',
-                          '0 0 0 10px rgba(249,115,22,0)',
-                          '0 0 0 0 rgba(249,115,22,0)',
-                        ],
-                      }}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                        repeatDelay: 1,
-                        delay: i * 0.3 + 0.8,
-                      }}
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        borderRadius: '50%',
-                        pointerEvents: 'none',
-                      }}
-                    />
+                <div className="w-20 h-20 mx-auto bg-orange-500/15 border-2 border-orange-500/30 rounded-full flex items-center justify-center mb-6 relative">
+                  <item.icon size={32} className="text-orange-500" />
+                  <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-orange-500 text-white text-xs font-bold flex items-center justify-center">
                     {item.step}
-                  </motion.div>
-                </motion.div>
-                <motion.h3
-                  initial={{opacity: 0}}
-                  whileInView={{opacity: 1}}
-                  transition={{duration: 0.5, delay: i * 0.3 + 0.5}}
-                  viewport={{once: true}}
-                  style={{
-                    color: 'white',
-                    fontWeight: 700,
-                    marginBottom: '0.75rem',
-                    fontSize: '1.1rem',
-                  }}
-                >
+                  </div>
+                </div>
+                <h3 className="text-white text-xl font-bold mb-3">
                   {item.title}
-                </motion.h3>
-                <motion.p
-                  initial={{opacity: 0}}
-                  whileInView={{opacity: 1}}
-                  transition={{duration: 0.5, delay: i * 0.3 + 0.6}}
-                  viewport={{once: true}}
-                  style={{
-                    color: 'rgba(255,255,255,0.6)',
-                    fontSize: '0.9rem',
-                    lineHeight: 1.7,
-                  }}
-                >
-                  {item.desc}
-                </motion.p>
+                </h3>
+                <p className="text-white/60 leading-relaxed">{item.desc}</p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Roles */}
-      <section style={{backgroundColor: '#f8fafc', padding: '5rem 1.5rem'}}>
-        <div style={{maxWidth: 1280, margin: '0 auto'}}>
-          <div style={{textAlign: 'center', marginBottom: '3rem'}}>
-            <h2
-              style={{
-                color: '#0f2444',
-                fontSize: 'clamp(1.75rem, 3vw, 2.5rem)',
-                fontWeight: 800,
-              }}
-            >
-              Portaalit jokaiselle roolille
-            </h2>
-            <p style={{color: '#64748b', marginTop: '0.75rem'}}>
-              Kolme erillistä käyttäjäroolia, kukin omalla räätälöidyllä
-              näkymällään.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {roles.map((r) => (
-              <div
-                key={r.role}
-                style={{
-                  backgroundColor: r.color,
-                  borderRadius: 20,
-                  padding: '2rem',
-                  color: 'white',
-                  display: 'flex',
-                  flexDirection: 'column',
-                }}
-              >
-                <div
-                  style={{
-                    width: 52,
-                    height: 52,
-                    borderRadius: 14,
-                    backgroundColor: 'rgba(249,115,22,0.2)',
-                    border: '1px solid rgba(249,115,22,0.4)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginBottom: '1.25rem',
-                  }}
-                >
-                  <r.icon size={24} color="#f97316" />
-                </div>
-                <h3
-                  style={{
-                    fontWeight: 800,
-                    fontSize: '1.2rem',
-                    marginBottom: '0.75rem',
-                  }}
-                >
-                  {r.role}
-                </h3>
-                <p
-                  style={{
-                    color: 'rgba(255,255,255,0.7)',
-                    fontSize: '0.9rem',
-                    lineHeight: 1.65,
-                    flex: 1,
-                  }}
-                >
-                  {r.desc}
-                </p>
-                <Link
-                  to={r.to}
-                  style={{
-                    marginTop: '1.5rem',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.6rem 1.25rem',
-                    borderRadius: 8,
-                    backgroundColor: 'rgba(249,115,22,0.2)',
-                    border: '1px solid rgba(249,115,22,0.4)',
-                    color: '#fb923c',
-                    textDecoration: 'none',
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    alignSelf: 'flex-start',
-                  }}
-                >
-                  {r.cta}
-                  <ChevronRight size={15} />
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Testimonials */}
-      <section style={{backgroundColor: 'white', padding: '5rem 1.5rem'}}>
-        <div style={{maxWidth: 1280, margin: '0 auto'}}>
-          <div style={{textAlign: 'center', marginBottom: '3rem'}}>
-            <h2
-              style={{
-                color: '#0f2444',
-                fontSize: 'clamp(1.5rem, 3vw, 2.25rem)',
-                fontWeight: 800,
-              }}
-            >
+      <section className="bg-white py-24 px-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-[#0f2444] text-3xl md:text-4xl font-extrabold">
               Asiakkaiden kokemuksia
             </h2>
           </div>
-
-          <div
-            style={{
-              backgroundColor: '#f8fafc',
-              borderRadius: 18,
-              padding: '1.75rem',
-              border: '1px solid #e2e8f0',
-              maxWidth: 920,
-              margin: '0 auto',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                gap: '0.25rem',
-                marginBottom: '1rem',
-              }}
-            >
-              {Array.from({length: testimonials[0].rating}).map((_, i) => (
-                <Star key={i} size={16} color="#f97316" fill="#f97316" />
+          <div className="bg-slate-50 rounded-3xl p-6 md:p-10 border border-slate-200 shadow-sm">
+            <div className="flex gap-1 mb-6">
+              {[...Array(5)].map((_, i) => (
+                <Star
+                  key={i}
+                  size={20}
+                  className="text-orange-500 fill-orange-500"
+                />
               ))}
             </div>
-
             <video
               controls
               playsInline
               preload="metadata"
-              style={{
-                width: '100%',
-                borderRadius: 14,
-                marginBottom: '1.25rem',
-                backgroundColor: '#000000',
-              }}
+              className="w-full rounded-2xl mb-8 bg-black aspect-video object-cover shadow-lg"
             >
               <source src={testimonialVideo} type="video/mp4" />
-              Selaimesi ei tue videotoistoa.
             </video>
-
             <div>
-              <div
-                style={{
-                  fontWeight: 700,
-                  color: '#0f2444',
-                  fontSize: '0.95rem',
-                }}
-              >
+              <div className="font-extrabold text-lg text-[#0f2444]">
                 {testimonials[0].name}
               </div>
-              <div style={{color: '#64748b', fontSize: '0.85rem'}}>
+              <div className="text-slate-500 font-medium">
                 {testimonials[0].company}
               </div>
             </div>
@@ -893,329 +464,28 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Ota yhteyttä */}
-      <section
-        style={{
-          backgroundColor: 'white',
-          padding: '5rem 1.5rem',
-          borderTop: '1px solid #f1f5f9',
-        }}
-      >
-        <div style={{maxWidth: 1280, margin: '0 auto'}}>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-            {/* Vasen puoli: Yhteystiedot */}
-            <div>
-              <div
-                style={{
-                  display: 'inline-block',
-                  backgroundColor: 'rgba(249,115,22,0.1)',
-                  color: '#f97316',
-                  padding: '0.3rem 1rem',
-                  borderRadius: 20,
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  marginBottom: '1rem',
-                }}
-              >
-                OTA YHTEYTTÄ
-              </div>
-              <h2
-                style={{
-                  color: '#0f2444',
-                  fontSize: 'clamp(1.75rem, 3vw, 2.5rem)',
-                  fontWeight: 800,
-                  marginBottom: '1rem',
-                }}
-              >
-                Kysyttävää? Olemme täällä auttamassa.
-              </h2>
-              <p
-                style={{
-                  color: '#64748b',
-                  fontSize: '1.05rem',
-                  lineHeight: 1.6,
-                  marginBottom: '2.5rem',
-                }}
-              >
-                Haluatko kuulla lisää siitä, miten Quantix voi tehostaa
-                yrityksesi ruokalogistiikkaa? Jätä viesti, niin asiantuntijamme
-                on sinuun yhteydessä.
-              </p>
-
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '1.5rem',
-                }}
-              >
-                {[
-                  {icon: Mail, title: 'Sähköposti', value: 'myynti@quantix.fi'},
-                  {icon: Phone, title: 'Puhelin', value: '+358 10 123 4567'},
-                  {
-                    icon: MapPin,
-                    title: 'Toimisto',
-                    value: 'Logistiikkakuja 1, 00980 Helsinki',
-                  },
-                ].map((info) => (
-                  <div
-                    key={info.title}
-                    style={{display: 'flex', alignItems: 'center', gap: '1rem'}}
-                  >
-                    <div
-                      style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 12,
-                        backgroundColor: '#f8fafc',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        border: '1px solid #e2e8f0',
-                      }}
-                    >
-                      <info.icon size={20} color="#f97316" />
-                    </div>
-                    <div>
-                      <div
-                        style={{
-                          color: '#64748b',
-                          fontSize: '0.85rem',
-                          fontWeight: 600,
-                        }}
-                      >
-                        {info.title}
-                      </div>
-                      <div style={{color: '#0f2444', fontWeight: 700}}>
-                        {info.value}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Oikea puoli: Lomake */}
-            <div
-              style={{
-                backgroundColor: '#f8fafc',
-                borderRadius: 20,
-                padding: '2.5rem',
-                border: '1px solid #e2e8f0',
-              }}
-            >
-              <form
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '1.25rem',
-                }}
-                onSubmit={(e) => e.preventDefault()}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.5rem',
-                    }}
-                  >
-                    <label
-                      style={{
-                        fontSize: '0.875rem',
-                        fontWeight: 600,
-                        color: '#0f2444',
-                      }}
-                    >
-                      Etunimi
-                    </label>
-                    <input type="text" placeholder="Matti" style={inputStyle} />
-                  </div>
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.5rem',
-                    }}
-                  >
-                    <label
-                      style={{
-                        fontSize: '0.875rem',
-                        fontWeight: 600,
-                        color: '#0f2444',
-                      }}
-                    >
-                      Sukunimi
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Meikäläinen"
-                      style={inputStyle}
-                    />
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.5rem',
-                  }}
-                >
-                  <label
-                    style={{
-                      fontSize: '0.875rem',
-                      fontWeight: 600,
-                      color: '#0f2444',
-                    }}
-                  >
-                    Sähköposti
-                  </label>
-                  <input
-                    type="email"
-                    placeholder="matti.meikalainen@yritys.fi"
-                    style={inputStyle}
-                  />
-                </div>
-
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.5rem',
-                  }}
-                >
-                  <label
-                    style={{
-                      fontSize: '0.875rem',
-                      fontWeight: 600,
-                      color: '#0f2444',
-                    }}
-                  >
-                    Viesti
-                  </label>
-                  <textarea
-                    rows={4}
-                    placeholder="Miten voimme auttaa?"
-                    style={{...inputStyle, resize: 'vertical'}}
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  style={{
-                    marginTop: '0.5rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    padding: '1rem',
-                    borderRadius: 10,
-                    backgroundColor: '#f97316',
-                    color: 'white',
-                    fontWeight: 700,
-                    border: 'none',
-                    cursor: 'pointer',
-                    transition: 'background-color 0.2s',
-                    fontSize: '1rem',
-                  }}
-                  onMouseOver={(e) =>
-                    (e.currentTarget.style.backgroundColor = '#ea580c')
-                  }
-                  onMouseOut={(e) =>
-                    (e.currentTarget.style.backgroundColor = '#f97316')
-                  }
-                >
-                  Lähetä viesti
-                  <Send size={18} />
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* CTA */}
-      <section
-        style={{
-          background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-          padding: '4rem 1.5rem',
-          textAlign: 'center',
-        }}
-      >
-        <div style={{maxWidth: 700, margin: '0 auto'}}>
-          <h2
-            style={{
-              color: 'white',
-              fontSize: 'clamp(1.75rem, 3vw, 2.5rem)',
-              fontWeight: 800,
-              marginBottom: '1rem',
-            }}
-          >
+      <section className="bg-gradient-to-br from-orange-500 to-orange-600 py-24 px-6 text-center">
+        <div className="max-w-2xl mx-auto">
+          <h2 className="text-white text-3xl md:text-5xl font-extrabold mb-6">
             Valmis aloittamaan?
           </h2>
-          <p
-            style={{
-              color: 'rgba(255,255,255,0.85)',
-              fontSize: '1.05rem',
-              marginBottom: '2rem',
-            }}
-          >
+          <p className="text-white/90 text-lg md:text-xl mb-10">
             Liity satojen kauppojen joukkoon ja koe ero reaaliaikaisessa
             ruokalogistiikassa.
           </p>
-          <div
-            style={{
-              display: 'flex',
-              gap: '1rem',
-              justifyContent: 'center',
-              flexWrap: 'wrap',
-            }}
-          >
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               to="/register"
-              style={{
-                padding: '0.9rem 2.25rem',
-                borderRadius: 10,
-                backgroundColor: 'white',
-                color: '#ea580c',
-                fontWeight: 700,
-                fontSize: '1rem',
-                textDecoration: 'none',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-              }}
+              className="px-8 py-4 rounded-xl bg-white text-orange-600 font-extrabold text-lg shadow-xl hover:scale-105 transition-transform cursor-pointer"
             >
               Aloita ilmaiseksi
             </Link>
             <Link
               to="/pricing"
-              style={{
-                padding: '0.9rem 2.25rem',
-                borderRadius: 10,
-                backgroundColor: 'rgba(255,255,255,0.15)',
-                border: '2px solid rgba(255,255,255,0.5)',
-                color: 'white',
-                fontWeight: 600,
-                fontSize: '1rem',
-                textDecoration: 'none',
-              }}
+              className="px-8 py-4 rounded-xl bg-white/10 border-2 border-white/40 text-white font-bold text-lg hover:bg-white/20 transition-colors cursor-pointer"
             >
               Katso hinnat
-            </Link>
-            <Link
-              to="/meista"
-              style={{
-                padding: '0.9rem 2.25rem',
-                borderRadius: 10,
-                backgroundColor: 'rgba(255,255,255,0.08)',
-                border: '2px solid rgba(255,255,255,0.25)',
-                color: 'white',
-                fontWeight: 600,
-                fontSize: '1rem',
-                textDecoration: 'none',
-              }}
-            >
-              Meistä
             </Link>
           </div>
         </div>

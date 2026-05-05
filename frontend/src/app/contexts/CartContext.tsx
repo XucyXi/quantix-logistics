@@ -1,4 +1,5 @@
 import React, {createContext, useContext, useState, useEffect} from 'react';
+import {useAuth} from './AuthContext';
 
 export interface CartItem {
   id: string;
@@ -10,6 +11,9 @@ export interface CartItem {
   dietTags?: string[];
 }
 
+// Business-asiakkaan alennusprosentti
+const BUSINESS_DISCOUNT = 0.15;
+
 interface CartContextType {
   items: CartItem[];
   addItem: (item: Omit<CartItem, 'quantity'>) => void;
@@ -18,6 +22,9 @@ interface CartContextType {
   clearCart: () => void;
   totalItems: number;
   totalPrice: number;
+  totalPriceWithDiscount: number;
+  discount: number;
+  isBusinessCustomer: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -72,10 +79,16 @@ export function CartProvider({children}: {children: React.ReactNode}) {
 
   const clearCart = () => setItems([]);
 
+  // Tarkistetaan onko käyttäjä business-asiakas
+  const {user} = useAuth();
+  const isBusinessCustomer = user?.tier === 'business';
+
   // Johdetut arvot lasketaan keskitetysti providerissa, jotta UI-komponentit
   // eivät toista samaa laskentaa eri paikoissa.
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
   const totalPrice = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const discount = isBusinessCustomer ? totalPrice * BUSINESS_DISCOUNT : 0;
+  const totalPriceWithDiscount = totalPrice - discount;
 
   return (
     <CartContext.Provider
@@ -87,6 +100,9 @@ export function CartProvider({children}: {children: React.ReactNode}) {
         clearCart,
         totalItems,
         totalPrice,
+        totalPriceWithDiscount,
+        discount,
+        isBusinessCustomer,
       }}
     >
       {children}

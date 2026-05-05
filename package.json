@@ -1,12 +1,13 @@
 {
-  "devDependencies": {
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^7.0.1"
-  },
-  "dependencies": {
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5"
+  "name": "web-project",
+  "private": true,
+  "description": "Quantix Logistics — frontend (Vite) + backend (Express)",
+  "scripts": {
+    "install:all": "npm install --prefix frontend && npm install --prefix backend",
+    "build": "npm run build --prefix frontend",
+    "lint": "npm run lint --prefix frontend",
+    "lint:backend": "npm run lint --prefix backend",
+    "typecheck": "npm run typecheck --prefix frontend",
+    "verify": "npm run typecheck --prefix frontend && npm run build --prefix frontend && npm run lint --prefix backend"
   }
 }

@@ -11,27 +11,45 @@ import {
   Settings,
 } from 'lucide-react';
 import {useCart} from '../../contexts/CartContext';
-import {useAuth} from '../../contexts/AuthContext';
+import {useAuth, type UserRole} from '../../contexts/AuthContext';
+
+type PortalEntry = {label: string; path: string; emoji: string};
+
+// Palauttaa vain YHDEN portaalin kirjautuneen käyttäjän roolin perusteella.
+// Jos ei ole kirjautunut, palauttaa null.
+function getPortalForUser(user: {role: UserRole} | null): PortalEntry | null {
+  if (!user) return null;
+
+  switch (user.role) {
+    case 'admin':
+      return {label: 'Ylläpito', path: '/admin', emoji: '🏢'};
+    case 'driver':
+      return {label: 'Kuljettaja', path: '/driver', emoji: '🚚'};
+    case 'customer':
+    default:
+      return {label: 'Kaupan portaali', path: '/customer', emoji: '👤'};
+  }
+}
 
 export function Navbar() {
-  // Mobiilimenu, desktop-käyttäjämenu ja mobiilin portaali-alaosio hallitaan erikseen.
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [mobilePortalsOpen, setMobilePortalsOpen] = useState(false); // UUSI: Portaalit-valikon tila
 
   const {totalItems} = useCart();
   const {user, logout} = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Määritellään linkit dynaamisesti käyttäjän mukaan
   const navLinks = [
     {to: '/', label: 'Etusivu'},
-    {to: '/meista', label: 'Meistä'},
-    {to: '/tuotteet', label: 'Tuotteet'},
-    {to: '/hinnoittelu', label: 'Hinnoittelu'},
+    {to: '/about', label: 'Meistä'},
+    // Tuotteet-linkki näkyy VAIKKA olisi admin tai asiakas.
+    // (Joskus adminitkin haluavat nähdä sen, tai voit rajata vain user.role === 'customer')
+    ...(user ? [{to: '/products', label: 'Tuotteet'}] : []),
+    {to: '/pricing', label: 'Hinnoittelu'},
   ];
 
-  // Juurireitti käsitellään erikoistapauksena, muut polut vertaillaan startsWith-logiikalla.
   const isActive = (path: string) =>
     path === '/'
       ? location.pathname === '/'
@@ -49,80 +67,22 @@ export function Navbar() {
     driver: 'Kuljettaja',
   };
 
-  const roleDashboard: Record<string, string> = {
-    admin: '/admin',
-    driver: '/driver',
-    customer: '/tuotteet',
-  };
+  const userPortal = getPortalForUser(user);
 
   return (
-    <nav
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 50,
-        backgroundColor: 'rgba(15, 36, 68, 0.97)',
-        backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid rgba(255,255,255,0.08)',
-        fontFamily: "'Space Grotesk', sans-serif",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 1280,
-          margin: '0 auto',
-          padding: '0 1.5rem',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            height: 64,
-          }}
-        >
+    <nav className="sticky top-0 z-50 bg-[#0f2444]/95 backdrop-blur-md border-b border-white/10 font-sans">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link
-            to="/"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.625rem',
-              textDecoration: 'none',
-            }}
-          >
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 8,
-                background: 'linear-gradient(135deg, #f97316, #ea580c)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Truck size={20} color="white" />
+          <Link to="/" className="flex items-center gap-3 cursor-pointer group">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+              <Truck size={20} className="text-white" />
             </div>
-            <div>
-              <span
-                style={{
-                  color: '#ffffff',
-                  fontSize: '1.1rem',
-                  fontWeight: 700,
-                  letterSpacing: '-0.01em',
-                }}
-              >
+            <div className="hidden sm:block">
+              <span className="text-white font-bold text-lg tracking-tight">
                 QUANTIX
               </span>
-              <span
-                style={{
-                  color: '#f97316',
-                  fontSize: '1.1rem',
-                  fontWeight: 700,
-                }}
-              >
+              <span className="text-orange-500 font-bold text-lg">
                 {' '}
                 LOGISTICS
               </span>
@@ -130,241 +90,114 @@ export function Navbar() {
           </Link>
 
           {/* Desktop Nav */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.25rem',
-            }}
-            className="hidden md:flex"
-          >
+          <div className="hidden md:flex items-center gap-2">
             {navLinks.map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
-                style={{
-                  padding: '0.4rem 0.9rem',
-                  borderRadius: 6,
-                  color: isActive(link.to)
-                    ? '#f97316'
-                    : 'rgba(255,255,255,0.8)',
-                  textDecoration: 'none',
-                  fontSize: '0.9rem',
-                  fontWeight: 500,
-                  backgroundColor: isActive(link.to)
-                    ? 'rgba(249,115,22,0.1)'
-                    : 'transparent',
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive(link.to)) {
-                    (e.target as HTMLElement).style.color = '#ffffff';
-                    (e.target as HTMLElement).style.backgroundColor =
-                      'rgba(255,255,255,0.07)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive(link.to)) {
-                    (e.target as HTMLElement).style.color =
-                      'rgba(255,255,255,0.8)';
-                    (e.target as HTMLElement).style.backgroundColor =
-                      'transparent';
-                  }
-                }}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+                  isActive(link.to)
+                    ? 'text-orange-500 bg-orange-500/10'
+                    : 'text-white/80 hover:text-white hover:bg-white/10'
+                }`}
               >
                 {link.label}
               </Link>
             ))}
+
+            {/* Suora linkki portaaliin, JOS käyttäjä on kirjautunut */}
+            {userPortal && (
+              <Link
+                to={userPortal.path}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white/80 hover:text-white hover:bg-orange-500 transition-all cursor-pointer group ml-2"
+              >
+                <span className="group-hover:scale-110 transition-transform">
+                  {userPortal.emoji}
+                </span>
+                {userPortal.label}
+              </Link>
+            )}
           </div>
 
-          {/* Right side */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-            }}
-          >
-            {/* Cart */}
-            <Link
-              to="/ostoskori"
-              style={{
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 40,
-                height: 40,
-                borderRadius: 8,
-                color: 'rgba(255,255,255,0.8)',
-                backgroundColor: 'rgba(255,255,255,0.07)',
-                textDecoration: 'none',
-                transition: 'all 0.2s',
-              }}
-            >
-              <ShoppingCart size={20} />
-              {totalItems > 0 && (
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: -4,
-                    right: -4,
-                    width: 18,
-                    height: 18,
-                    borderRadius: '50%',
-                    backgroundColor: '#f97316',
-                    color: 'white',
-                    fontSize: '0.65rem',
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  {totalItems}
-                </span>
-              )}
-            </Link>
+          {/* Right side (Cart, Auth, Mobile Menu Toggle) */}
+          <div className="flex items-center gap-3 sm:gap-4">
+            {/* Cart (Näkyy aina jos on tuotteita, tai jos käyttäjä on kirjautunut sisään) */}
+            {(user || totalItems > 0) && (
+              <Link
+                to="/cart"
+                className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-white/10 text-white/90 hover:bg-white/20 hover:text-white transition-all cursor-pointer"
+              >
+                <ShoppingCart size={20} />
+                {totalItems > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-orange-500 text-white text-[10px] font-bold flex items-center justify-center border-2 border-[#0f2444] shadow-sm">
+                    {totalItems}
+                  </span>
+                )}
+              </Link>
+            )}
 
-            {/* Desktop Auth: näyttää joko käyttäjämenun tai login/register-linkit */}
+            {/* Desktop Auth */}
             <div className="hidden md:block">
               {user ? (
-                <div style={{position: 'relative'}}>
+                <div className="relative">
                   <button
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.4rem 0.875rem',
-                      borderRadius: 8,
-                      backgroundColor: 'rgba(249,115,22,0.15)',
-                      border: '1px solid rgba(249,115,22,0.3)',
-                      color: '#f97316',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: 500,
-                    }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-500/15 border border-orange-500/30 text-orange-500 text-sm font-bold hover:bg-orange-500/25 transition-all cursor-pointer"
                   >
                     <User size={16} />
                     <span>{user.name.split(' ')[0]}</span>
-                    <ChevronDown size={14} />
+                    <ChevronDown
+                      size={14}
+                      className={`transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`}
+                    />
                   </button>
+
                   {userMenuOpen && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        right: 0,
-                        top: 'calc(100% + 8px)',
-                        minWidth: 200,
-                        backgroundColor: '#ffffff',
-                        borderRadius: 10,
-                        boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
-                        border: '1px solid #e2e8f0',
-                        overflow: 'hidden',
-                        zIndex: 100,
-                      }}
-                    >
-                      <div
-                        style={{
-                          padding: '0.875rem 1rem',
-                          borderBottom: '1px solid #f1f5f9',
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontWeight: 600,
-                            color: '#0f2444',
-                            fontSize: '0.875rem',
-                          }}
-                        >
+                    <div className="absolute top-full right-0 mt-2 min-w-[240px] bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                      <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50">
+                        <div className="font-bold text-[#0f2444] text-sm">
                           {user.name}
                         </div>
-                        <div
-                          style={{
-                            color: '#64748b',
-                            fontSize: '0.75rem',
-                          }}
-                        >
+                        <div className="text-slate-500 text-xs font-semibold uppercase tracking-wider mt-0.5">
                           {roleLabels[user.role]}
                         </div>
                       </div>
-                      {user.role !== 'customer' && (
+
+                      {userPortal && (
                         <button
+                          type="button"
                           onClick={() => {
-                            navigate(roleDashboard[user.role]);
+                            navigate(userPortal.path);
                             setUserMenuOpen(false);
                           }}
-                          style={{
-                            width: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            padding: '0.75rem 1rem',
-                            backgroundColor: 'transparent',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: '#374151',
-                            fontSize: '0.875rem',
-                            textAlign: 'left',
-                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer text-left"
                         >
-                          <Settings size={15} />
-                          Hallintapaneeli
+                          <Settings size={16} className="text-slate-400" />
+                          Siirry portaaliin
                         </button>
                       )}
+
                       <button
                         onClick={handleLogout}
-                        style={{
-                          width: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.75rem 1rem',
-                          backgroundColor: 'transparent',
-                          border: 'none',
-                          cursor: 'pointer',
-                          color: '#dc2626',
-                          fontSize: '0.875rem',
-                          textAlign: 'left',
-                          borderTop: '1px solid #f1f5f9',
-                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 border-t border-slate-100 transition-colors cursor-pointer text-left"
                       >
-                        <LogOut size={15} />
+                        <LogOut size={16} className="text-red-500" />
                         Kirjaudu ulos
                       </button>
                     </div>
                   )}
                 </div>
               ) : (
-                <div style={{display: 'flex', gap: '0.5rem'}}>
+                <div className="flex items-center gap-2">
                   <Link
                     to="/login"
-                    style={{
-                      padding: '0.4rem 1rem',
-                      borderRadius: 8,
-                      color: 'rgba(255,255,255,0.85)',
-                      border: '1px solid rgba(255,255,255,0.15)',
-                      textDecoration: 'none',
-                      fontSize: '0.875rem',
-                      fontWeight: 500,
-                      transition: 'all 0.2s',
-                    }}
+                    className="px-4 py-2 rounded-lg text-white/90 hover:text-white font-semibold text-sm hover:bg-white/10 transition-colors cursor-pointer"
                   >
                     Kirjaudu
                   </Link>
                   <Link
                     to="/register"
-                    style={{
-                      padding: '0.4rem 1rem',
-                      borderRadius: 8,
-                      backgroundColor: '#f97316',
-                      color: 'white',
-                      textDecoration: 'none',
-                      fontSize: '0.875rem',
-                      fontWeight: 600,
-                      transition: 'all 0.2s',
-                    }}
+                    className="px-4 py-2 rounded-lg bg-orange-500 text-white font-bold text-sm hover:bg-orange-600 shadow-md transition-all hover:-translate-y-0.5 cursor-pointer"
                   >
                     Rekisteröidy
                   </Link>
@@ -372,221 +205,78 @@ export function Navbar() {
               )}
             </div>
 
-            {/* Mobile menu toggle: näkyy vain md-breakpointin alapuolella */}
+            {/* Mobile Menu Toggle */}
             <button
-              onClick={() => {
-                setMobileOpen(!mobileOpen);
-                if (mobileOpen) setMobilePortalsOpen(false); // Sulkee alavalikon kun päävalikko suljetaan
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 36,
-                height: 36,
-                borderRadius: 6,
-                backgroundColor: 'rgba(255,255,255,0.08)',
-                border: 'none',
-                color: 'white',
-                cursor: 'pointer',
-              }}
-              className="md:hidden"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="md:hidden flex items-center justify-center w-10 h-10 rounded-xl bg-white/10 text-white hover:bg-white/20 transition-colors cursor-pointer"
             >
-              {mobileOpen ? <X size={18} /> : <Menu size={18} />}
+              {mobileOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
         </div>
 
-        {/* Backdrop overlay */}
+        {/* Mobile Backdrop Overlay */}
         {mobileOpen && (
           <div
             onClick={() => setMobileOpen(false)}
-            style={{
-              position: 'fixed',
-              top: 64,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(0,0,0,0.5)',
-              zIndex: 999,
-              animation: 'fadeIn 0.3s ease-out',
-            }}
-            className="md:hidden"
+            className="md:hidden fixed inset-0 top-16 bg-black/60 z-40 animate-in fade-in"
           />
         )}
 
-        {/* MOBILE MENU - Slide from right */}
+        {/* Mobile Menu Slide-in Panel */}
         {mobileOpen && (
-          <div
-            style={{
-              position: 'fixed',
-              top: 64,
-              right: 0,
-              width: '280px',
-              maxWidth: '80vw',
-              height: 'calc(100vh - 64px)',
-              backgroundColor: 'rgba(15, 36, 68, 0.98)',
-              backdropFilter: 'blur(12px)',
-              borderLeft: '1px solid rgba(255,255,255,0.08)',
-              paddingBottom: '1.5rem',
-              paddingTop: '1rem',
-              paddingLeft: '1.5rem',
-              paddingRight: '1.5rem',
-              display: 'flex',
-              flexDirection: 'column',
-              overflowY: 'auto',
-              zIndex: 1000,
-              boxShadow: '-4px 0 20px rgba(0,0,0,0.3)',
-              animation: 'slideInRight 0.3s ease-out',
-            }}
-            className="md:hidden"
-          >
-            {/* Navigointilinkit */}
-            {navLinks.map((link) => (
-              <Link
-                key={link.to}
-                to={link.to}
-                onClick={() => setMobileOpen(false)}
-                style={{
-                  display: 'block',
-                  padding: '0.75rem 0',
-                  color: isActive(link.to)
-                    ? '#f97316'
-                    : 'rgba(255,255,255,0.8)',
-                  textDecoration: 'none',
-                  fontSize: '1rem',
-                  fontWeight: 500,
-                  borderBottom: '1px solid rgba(255,255,255,0.05)',
-                }}
-              >
-                {link.label}
-              </Link>
-            ))}
-
-            {/* UUSI: Portaalit Dropdown mobiilissa */}
-            <div>
-              <button
-                onClick={() => setMobilePortalsOpen(!mobilePortalsOpen)}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0.75rem 0',
-                  color: 'rgba(255,255,255,0.8)',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  borderBottom: '1px solid rgba(255,255,255,0.05)',
-                  fontSize: '1rem',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                }}
-              >
-                Portaalit
-                <ChevronDown
-                  size={18}
-                  style={{
-                    transform: mobilePortalsOpen
-                      ? 'rotate(180deg)'
-                      : 'rotate(0)',
-                    transition: 'transform 0.2s ease-in-out',
-                  }}
-                />
-              </button>
-
-              {/* Portaalit Aukeava Sisältö */}
-              {mobilePortalsOpen && (
-                <div
-                  style={{
-                    padding: '0.5rem 0 0.5rem 1rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.75rem',
-                    borderBottom: '1px solid rgba(255,255,255,0.05)',
-                    backgroundColor: 'rgba(0,0,0,0.1)', // Pieni tummennus erottaa sen päävalikosta
-                  }}
+          <div className="md:hidden fixed top-16 right-0 w-72 max-w-[85vw] h-[calc(100vh-64px)] bg-[#0f2444]/98 backdrop-blur-xl border-l border-white/10 p-6 flex flex-col overflow-y-auto z-50 animate-in slide-in-from-right duration-200">
+            <div className="flex flex-col gap-2 mb-8">
+              {/* Navigointilinkit */}
+              {navLinks.map((link) => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  onClick={() => setMobileOpen(false)}
+                  className={`px-4 py-3 rounded-xl text-base font-semibold transition-colors cursor-pointer ${
+                    isActive(link.to)
+                      ? 'bg-orange-500/20 text-orange-400'
+                      : 'text-white/80 hover:text-white hover:bg-white/10'
+                  }`}
                 >
-                  <Link
-                    to="/admin"
-                    onClick={() => setMobileOpen(false)}
-                    style={{
-                      color: 'rgba(255,255,255,0.7)',
-                      textDecoration: 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                    }}
-                  >
-                    🏢 Ajokeskus
-                  </Link>
-                  <Link
-                    to="/driver"
-                    onClick={() => setMobileOpen(false)}
-                    style={{
-                      color: 'rgba(255,255,255,0.7)',
-                      textDecoration: 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                    }}
-                  >
-                    🚚 Kuljettaja
-                  </Link>
-                </div>
+                  {link.label}
+                </Link>
+              ))}
+
+              {/* Portaalin suora linkki mobiilissa, vain jos kirjautunut */}
+              {userPortal && (
+                <Link
+                  to={userPortal.path}
+                  onClick={() => setMobileOpen(false)}
+                  className="mt-2 flex items-center gap-3 px-4 py-3 rounded-xl bg-white/10 text-white font-semibold hover:bg-white/20 transition-colors cursor-pointer"
+                >
+                  <span className="text-lg">{userPortal.emoji}</span>{' '}
+                  {userPortal.label}
+                </Link>
               )}
             </div>
 
-            {/* Kirjautumisen tilan mukainen lisävalikko mobiiliin */}
-            <div style={{marginTop: '1rem'}}>
+            {/* Mobile Auth Bottom Section */}
+            <div className="mt-auto border-t border-white/10 pt-6">
               {user ? (
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.5rem',
-                  }}
-                >
-                  <div
-                    style={{
-                      padding: '0.5rem 0',
-                      color: '#ffffff',
-                      fontWeight: 600,
-                      borderBottom: '1px solid rgba(255,255,255,0.05)',
-                    }}
-                  >
-                    {user.name}{' '}
-                    <span
-                      style={{
-                        color: 'rgba(255,255,255,0.5)',
-                        fontWeight: 400,
-                        fontSize: '0.85rem',
-                      }}
-                    >
-                      ({roleLabels[user.role]})
-                    </span>
+                <div className="flex flex-col gap-3">
+                  <div className="mb-2 px-2">
+                    <div className="text-white font-bold">{user.name}</div>
+                    <div className="text-white/50 text-xs font-semibold uppercase tracking-wider mt-1">
+                      {roleLabels[user.role]}
+                    </div>
                   </div>
 
-                  {user.role !== 'customer' && (
+                  {userPortal && (
                     <button
                       onClick={() => {
-                        navigate(roleDashboard[user.role]);
+                        navigate(userPortal.path);
                         setMobileOpen(false);
                       }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        padding: '0.75rem 0',
-                        color: 'rgba(255,255,255,0.8)',
-                        backgroundColor: 'transparent',
-                        border: 'none',
-                        fontSize: '1rem',
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 text-white hover:bg-white/10 transition-colors font-medium cursor-pointer text-left"
                     >
-                      <Settings size={18} />
-                      Hallintapaneeli
+                      <Settings size={18} className="text-slate-400" />
+                      Asetukset / Portaali
                     </button>
                   )}
 
@@ -595,58 +285,25 @@ export function Navbar() {
                       handleLogout();
                       setMobileOpen(false);
                     }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.75rem 0',
-                      color: '#f87171',
-                      backgroundColor: 'transparent',
-                      border: 'none',
-                      fontSize: '1rem',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors font-medium cursor-pointer text-left"
                   >
                     <LogOut size={18} />
                     Kirjaudu ulos
                   </button>
                 </div>
               ) : (
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.75rem',
-                  }}
-                >
+                <div className="flex flex-col gap-3">
                   <Link
                     to="/login"
                     onClick={() => setMobileOpen(false)}
-                    style={{
-                      padding: '0.75rem',
-                      borderRadius: 8,
-                      color: 'rgba(255,255,255,0.9)',
-                      border: '1px solid rgba(255,255,255,0.2)',
-                      textDecoration: 'none',
-                      textAlign: 'center',
-                      fontWeight: 500,
-                    }}
+                    className="w-full text-center px-4 py-3 rounded-xl text-white border border-white/20 font-bold hover:bg-white/10 transition-colors cursor-pointer"
                   >
-                    Kirjaudu
+                    Kirjaudu sisään
                   </Link>
                   <Link
                     to="/register"
                     onClick={() => setMobileOpen(false)}
-                    style={{
-                      padding: '0.75rem',
-                      borderRadius: 8,
-                      backgroundColor: '#f97316',
-                      color: 'white',
-                      textDecoration: 'none',
-                      textAlign: 'center',
-                      fontWeight: 600,
-                    }}
+                    className="w-full text-center px-4 py-3 rounded-xl bg-orange-500 text-white font-bold hover:bg-orange-600 shadow-lg shadow-orange-500/20 transition-colors cursor-pointer"
                   >
                     Rekisteröidy
                   </Link>
