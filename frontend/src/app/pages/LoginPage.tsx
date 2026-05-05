@@ -103,19 +103,6 @@ export function LoginPage() {
               </p>
             </div>
 
-            {/* Demo hint
-
-            <div className="bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-900/50 rounded-xl p-4 mb-6 text-xs text-sky-800 dark:text-sky-300">
-              <strong className="block mb-2 font-bold uppercase tracking-wider">
-                Demotunnukset:
-              </strong>
-              <div className="space-y-1 font-medium">
-                <p>Ylläpito: admin@quantix.fi / admin123</p>
-                <p>Kuljettaja: kuljettaja@quantix.fi / driver123</p>
-                <p>Asiakas: asiakas@demo.fi / demo123</p>
-              </div>
-            </div>*/}
-
             {error && (
               <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-3 mb-6 flex items-center gap-2 text-destructive text-sm font-medium">
                 <AlertCircle size={18} className="shrink-0" />
