@@ -16,6 +16,7 @@ Projektissa korostuu **läpinäkyvä toimitusketju**: tilausrjet, tilat, karttap
 
 ## Sisältö
 
+- [Projektiesityksen vaaditut kohdat](#projektiesityksen-vaaditut-kohdat)
 - [Tausta ja kohde](#tausta-ja-kohde)
 - [Käyttäjäroolit ja työnkulut](#käyttäjäroolit-ja-työnkulut)
 - [Arkkitehtuuri](#arkkitehtuuri)
@@ -27,6 +28,67 @@ Projektissa korostuu **läpinäkyvä toimitusketju**: tilausrjet, tilat, karttap
 - [Linkit](#linkit)
 - [Pika-aloitus](#pika-aloitus)
 - [Ympäristömuuttujat](#ympäristömuuttujat)
+
+---
+
+## Projektiesityksen vaaditut kohdat
+
+Tämä osio vastaa kurssin ohjeeseen, jossa PPT:n sijaan vaaditut esityssisällöt voidaan tuoda suoraan `README.md`:hen.
+
+### 1) Ryhmän jäsenet
+
+| Nimi | Rooli |
+|------|-------|
+| **Anders Nuri** | Frontend |
+| **Jere Lappalainen** | Fullstack |
+| **Teemu Poutanen** | Fullstack 2 |
+| **Satvik Velpola** | Backend |
+
+### 2) Sovelluksen idea ja kohderyhmä
+
+**Idea:** Quantix Logistics on tilaus- ja kuljetusketjun hallintasovellus, jossa yhdistyvät verkkokauppamainen tilauskokemus, kuljettajan operatiivinen näkymä ja ylläpidon analytiikka.
+
+**Kohderyhmä:**
+- yritys- ja kuluttaja-asiakkaat, jotka tilaavat tuotteita toimituksella
+- kuljettajat, jotka hallitsevat omia toimituksiaan
+- ylläpitäjät/operatiivinen tiimi, joka hallitsee tuotteita, käyttäjiä, tilauksia ja raportointia
+
+### 3) Sovelluksen toiminnallisuudet
+
+- käyttäjähallinta ja roolipohjainen kirjautuminen (`customer`, `driver`, `admin`)
+- tuoteluettelo, ostoskori ja tilauksen luonti
+- tilausten tilaelinkaari (asiakas, kuljettaja ja admin eri näkymillä)
+- kuljettajan toimitusnäkymä ja sijaintiin perustuva seuranta kartalla
+- adminin analytiikka- ja hallintanäkymät (tuotteet, kategoriat, käyttäjät, raportointi)
+- ilmoitustoiminnot ja rajapintapohjainen integraatiorakenne
+
+### 4) Demo (esitysrunko alle 10 min)
+
+Suositeltu demopolku esitykseen:
+1. **Landing + kirjautuminen** eri rooleilla (1-2 min)
+2. **Asiakkaan polku**: tuotteet -> kori -> checkout -> omat tilaukset (2-3 min)
+3. **Kuljettajan polku**: osoitetut toimitukset + karttanäkymä + statuspäivitys (2 min)
+4. **Admin-polku**: tuotteiden/kategorioiden hallinta + analytiikka (2 min)
+5. **Lopetus**: arkkitehtuuri + testiohjeen sijainti README:ssä (1 min)
+
+### 5) Ohjeistus sovelluksen testaamiseen
+
+Alla oleva testiohje varmistaa, että keskeiset toiminnallisuudet löytyvät:
+
+1. Käynnistä backend ja frontend (`Pika-aloitus`-osion mukaan).
+2. Rekisteröi tai kirjaudu käyttäjänä ja varmista:
+   - tuotteet latautuvat
+   - koriin lisääminen toimii
+   - checkout luo tilauksen
+3. Kirjaudu kuljettajaroolilla ja varmista:
+   - osoitetut tilaukset näkyvät
+   - tilan päivitys toimii
+   - karttanäkymä ja seurantatieto päivittyvät
+4. Kirjaudu admin-roolilla ja varmista:
+   - käyttäjä-/tuote-/kategoriatoiminnot toimivat
+   - analytiikkanäkymät latautuvat ilman virhettä
+5. Aja laatutarkistus:
+   - `npm run verify` juuresta (typecheck + build + backend-syntax-check)
 
 ---
 
