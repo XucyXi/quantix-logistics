@@ -14,7 +14,11 @@ import notificationRoutes from './routes/notificationRoutes.js';
 export function createApp() {
   const app = express();
 
-  app.set('trust proxy', 1);
+  // Trust proxy only when behind a known reverse proxy (e.g. Render/Heroku/Nginx).
+  // This prevents spoofed X-Forwarded-* headers when directly exposed.
+  if (process.env.TRUST_PROXY === 'true') {
+    app.set('trust proxy', 1);
+  }
 
   const allowedOrigins = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',')
@@ -37,7 +41,6 @@ export function createApp() {
   const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 500,
-    skip: (req) => req.originalUrl.includes('/location'),
     message: {error: 'Too many requests from this IP, please try again later.'},
     standardHeaders: true,
     legacyHeaders: false,
