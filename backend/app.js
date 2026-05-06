@@ -32,7 +32,15 @@ export function createApp() {
   );
 
   app.use((req, res, next) => {
-    console.log(`Incoming request: ${req.method} ${req.url}`);
+    // Keep logs structured and avoid query-string data in request logs.
+    console.info(
+      JSON.stringify({
+        level: 'info',
+        message: 'Incoming request',
+        method: req.method,
+        path: req.path,
+      })
+    );
     next();
   });
 
@@ -59,4 +67,3 @@ export function createApp() {
 
   return app;
 }
-
