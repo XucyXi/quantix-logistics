@@ -53,7 +53,7 @@ export const createInAppNotification = async (
     if (!userId) throw new Error('userId is required');
 
     const [result] = await pool.query(
-      `INSERT INTO NOTIFICATIONS (user_id, title, message, type, created_at, read_at)
+      `INSERT INTO notifications (user_id, title, message, type, created_at, read_at)
        VALUES (?, ?, ?, ?, NOW(), NULL)`,
       [userId, title, message, type]
     );
@@ -175,7 +175,7 @@ export const notifyAdminNewOrder = async (order, itemCount) => {
   try {
     const {order_id, customer_id, total_price, delivery_address} = order;
     const [admins] = await pool.query(
-      `SELECT user_id, email, full_name AS name FROM USERS WHERE role = 'admin'`
+      `SELECT user_id, email, full_name AS name FROM users WHERE role = 'admin'`
     );
 
     for (let admin of admins) {
@@ -240,7 +240,7 @@ export const notifyDriverAssignment = async (
  */
 export const getUserNotifications = async (userId, limit = 20) => {
   const [notifications] = await pool.query(
-    `SELECT * FROM NOTIFICATIONS WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`,
+    `SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`,
     [userId, limit]
   );
   return notifications;
@@ -252,7 +252,7 @@ export const getUserNotifications = async (userId, limit = 20) => {
 export const markNotificationAsRead = async (notificationId) => {
   if (!notificationId) throw new Error('notificationId is required');
   const result = await pool.query(
-    `UPDATE NOTIFICATIONS SET read_at = NOW() WHERE notification_id = ?`,
+    `UPDATE notifications SET read_at = NOW() WHERE notification_id = ?`,
     [notificationId]
   );
   return result;

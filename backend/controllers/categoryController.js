@@ -14,7 +14,7 @@ import db from '../config/db.js';
  */
 export async function getCategories(req, res) {
   try {
-    const [categories] = await db.query('SELECT * FROM CATEGORIES');
+    const [categories] = await db.query('SELECT * FROM categories');
     res.json(categories);
   } catch (err) {
     res.status(500).json({error: 'Failed to fetch categories'});
@@ -35,7 +35,7 @@ export async function createCategory(req, res) {
       return res.status(400).json({error: 'Category name is required'});
 
     const [result] = await db.query(
-      'INSERT INTO CATEGORIES (name) VALUES (?)',
+      'INSERT INTO categories (name) VALUES (?)',
       [name]
     );
     res.status(201).json({category_id: result.insertId, name});
@@ -62,7 +62,7 @@ export async function updateCategory(req, res) {
       return res.status(400).json({error: 'Category name is required'});
 
     const [result] = await db.query(
-      'UPDATE CATEGORIES SET name = ? WHERE category_id = ?',
+      'UPDATE categories SET name = ? WHERE category_id = ?',
       [name, id]
     );
 
@@ -87,7 +87,7 @@ export async function deleteCategory(req, res) {
   try {
     const {id} = req.params;
     const [result] = await db.query(
-      'DELETE FROM CATEGORIES WHERE category_id = ?',
+      'DELETE FROM categories WHERE category_id = ?',
       [id]
     );
 

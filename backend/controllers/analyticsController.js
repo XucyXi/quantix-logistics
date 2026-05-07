@@ -20,7 +20,7 @@ export async function getRevenueStats(req, res) {
         COUNT(*) as total_orders,
         AVG(total_price) as avg_order_value,
         COUNT(CASE WHEN status = 'done' THEN 1 END) as delivered
-      FROM ORDERS
+      FROM orders
       WHERE ordered_at > DATE_SUB(NOW(), INTERVAL 30 DAY)
     `;
     const [statsResult] = await pool.query(query);
@@ -44,7 +44,7 @@ export async function getOrderStats(req, res) {
   try {
     const [rows] = await pool.query(`
       SELECT status, COUNT(*) as count
-      FROM ORDERS
+      FROM orders
       GROUP BY status
     `);
 

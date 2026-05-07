@@ -26,7 +26,7 @@ import api from '../lib/api';
 
 // --- MOCK DATA (Vastaa sitä muotoa, jota backendisi tulee palauttamaan) ---
 
-// SQL: SELECT SUM(total_price), COUNT(order_id), AVG(total_price) FROM ORDERS...
+// SQL: SELECT SUM(total_price), COUNT(order_id), AVG(total_price) FROM orders...
 const mockKpiStats = {
   revenue: 0,
   revenueChange: '',
@@ -46,7 +46,7 @@ const mockMonthlyData = [
   {id: 'month-4', month: 'Huhti', revenue: 61000, orders: 312}, // Nykyhetki: Huhtikuu 2026
 ];
 
-// SQL: JOIN ORDER_ITEMS, PRODUCT_CATEGORIES, CATEGORIES GROUP BY category_id
+// SQL: JOIN order_items, product_categories, categories GROUP BY category_id
 const mockCategoryData = [
   {id: 'cat-1', category: 'Liha', amount: 45000},
   {id: 'cat-2', category: 'Maitotuotteet', amount: 38000},
@@ -348,7 +348,7 @@ export function ReportsPage() {
           {[
             {
               title: 'Myyntiraportti',
-              desc: 'Tarkka erittely tilausten tuotteista (ORDER_ITEMS)',
+              desc: 'Tarkka erittely tilausten tuotteista (order_items)',
               icon: FileText,
             },
             {

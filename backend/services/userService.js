@@ -15,9 +15,9 @@ export async function getAllUsers() {
       c.tier,
       d.current_orders,
       d.vehicle_info
-    FROM USERS u
-    LEFT JOIN CUSTOMER_PROFILES c ON u.user_id = c.user_id
-    LEFT JOIN DRIVER_PROFILES d ON u.user_id = d.user_id
+    FROM users u
+    LEFT JOIN customer_profiles c ON u.user_id = c.user_id
+    LEFT JOIN driver_profiles d ON u.user_id = d.user_id
     ORDER BY u.user_id DESC
   `;
   const [rows] = await pool.query(query);
@@ -29,7 +29,7 @@ export async function getAllUsers() {
  */
 export async function getUserById(userId) {
   const [rows] = await pool.query(
-    `SELECT user_id, role FROM USERS WHERE user_id = ? LIMIT 1`,
+    `SELECT user_id, role FROM users WHERE user_id = ? LIMIT 1`,
     [userId]
   );
   return rows[0] || null;
@@ -51,19 +51,19 @@ export async function createUserTransaction(
     await connection.beginTransaction();
 
     const [userRes] = await connection.query(
-      `INSERT INTO USERS (full_name, email, password_hash, role) VALUES (?, ?, ?, ?)`,
+      `INSERT INTO users (full_name, email, password_hash, role) VALUES (?, ?, ?, ?)`,
       [fullName, email, passwordHash, role]
     );
     const userId = userRes.insertId;
 
     if (role === 'customer') {
       await connection.query(
-        `INSERT INTO CUSTOMER_PROFILES (user_id, tier, status) VALUES (?, ?, 'active')`,
+        `INSERT INTO customer_profiles (user_id, tier, status) VALUES (?, ?, 'active')`,
         [userId, tier]
       );
     } else if (role === 'driver') {
       await connection.query(
-        `INSERT INTO DRIVER_PROFILES (user_id, active, current_orders, vehicle_info) VALUES (?, ?, ?, ?)`,
+        `INSERT INTO driver_profiles (user_id, active, current_orders, vehicle_info) VALUES (?, ?, ?, ?)`,
         [userId, true, 0, vehicleInfo || null]
       );
     }
@@ -94,7 +94,7 @@ export async function updateUserTransaction(
   try {
     await connection.beginTransaction();
 
-    let userQuery = `UPDATE USERS SET full_name = ?, email = ?, role = ?`;
+    let userQuery = `UPDATE users SET full_name = ?, email = ?, role = ?`;
     let userParams = [fullName, email, role];
 
     if (passwordHash) {
@@ -114,28 +114,28 @@ export async function updateUserTransaction(
     let currentOrders = 0;
     if (role === 'driver') {
       const [existingDriverRows] = await connection.query(
-        `SELECT current_orders FROM DRIVER_PROFILES WHERE user_id = ? LIMIT 1`,
+        `SELECT current_orders FROM driver_profiles WHERE user_id = ? LIMIT 1`,
         [userId]
       );
       if (existingDriverRows.length)
         currentOrders = existingDriverRows[0].current_orders;
     }
 
-    await connection.query(`DELETE FROM CUSTOMER_PROFILES WHERE user_id = ?`, [
+    await connection.query(`DELETE FROM customer_profiles WHERE user_id = ?`, [
       userId,
     ]);
-    await connection.query(`DELETE FROM DRIVER_PROFILES WHERE user_id = ?`, [
+    await connection.query(`DELETE FROM driver_profiles WHERE user_id = ?`, [
       userId,
     ]);
 
     if (role === 'customer') {
       await connection.query(
-        `INSERT INTO CUSTOMER_PROFILES (user_id, tier, status) VALUES (?, ?, 'active')`,
+        `INSERT INTO customer_profiles (user_id, tier, status) VALUES (?, ?, 'active')`,
         [userId, tier]
       );
     } else if (role === 'driver') {
       await connection.query(
-        `INSERT INTO DRIVER_PROFILES (user_id, active, current_orders, vehicle_info) VALUES (?, ?, ?, ?)`,
+        `INSERT INTO driver_profiles (user_id, active, current_orders, vehicle_info) VALUES (?, ?, ?, ?)`,
         [userId, true, currentOrders, vehicleInfo || null]
       );
     }
@@ -154,7 +154,7 @@ export async function updateUserTransaction(
  * Deletes a user. Assumes ON DELETE CASCADE is active in the database for profile tables.
  */
 export async function deleteUser(userId) {
-  const [result] = await pool.query(`DELETE FROM USERS WHERE user_id = ?`, [
+  const [result] = await pool.query(`DELETE FROM users WHERE user_id = ?`, [
     userId,
   ]);
   return result.affectedRows > 0;

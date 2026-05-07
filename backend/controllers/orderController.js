@@ -101,7 +101,7 @@ export async function assignDriver(req, res) {
       try {
         const order = await orderService.getOrderById(id);
         const [users] = await db.query(
-          'SELECT email, full_name AS name FROM USERS WHERE user_id = ?',
+          'SELECT email, full_name AS name FROM users WHERE user_id = ?',
           [driver_id]
         );
         if (users.length > 0) {
@@ -156,7 +156,7 @@ export async function updateOrderStatus(req, res) {
       const order = await orderService.getOrderById(orderId);
       if (order && order.customer_id) {
         const [users] = await db.query(
-          'SELECT email, full_name AS name FROM USERS WHERE user_id = ?',
+          'SELECT email, full_name AS name FROM users WHERE user_id = ?',
           [order.customer_id]
         );
         if (users.length > 0) {

@@ -13,9 +13,9 @@ export async function getAllProducts() {
     SELECT 
       P.*,
       GROUP_CONCAT(C.name SEPARATOR ',') AS categories_list
-    FROM PRODUCTS P
-    LEFT JOIN PRODUCT_CATEGORIES PC ON P.product_id = PC.product_id
-    LEFT JOIN CATEGORIES C ON PC.category_id = C.category_id
+    FROM products P
+    LEFT JOIN product_categories PC ON P.product_id = PC.product_id
+    LEFT JOIN categories C ON PC.category_id = C.category_id
     GROUP BY P.product_id
   `;
   const [rows] = await pool.query(query);
@@ -38,9 +38,9 @@ export async function getProductById(product_id) {
     SELECT 
       P.*,
       GROUP_CONCAT(C.name SEPARATOR ',') AS categories_list
-    FROM PRODUCTS P
-    LEFT JOIN PRODUCT_CATEGORIES PC ON P.product_id = PC.product_id
-    LEFT JOIN CATEGORIES C ON PC.category_id = C.category_id
+    FROM products P
+    LEFT JOIN product_categories PC ON P.product_id = PC.product_id
+    LEFT JOIN categories C ON PC.category_id = C.category_id
     WHERE P.product_id = ?
     GROUP BY P.product_id
   `;
@@ -91,14 +91,14 @@ export async function createProduct(
     await connection.beginTransaction();
 
     const [result] = await connection.query(
-      `INSERT INTO PRODUCTS (name, description, base_price, stock_quantity) VALUES (?, ?, ?, ?)`,
+      `INSERT INTO products (name, description, base_price, stock_quantity) VALUES (?, ?, ?, ?)`,
       [name, description, base_price, stock_quantity]
     );
     const productId = result.insertId;
 
     if (categoryNames && categoryNames.length > 0) {
       const [catRows] = await connection.query(
-        `SELECT category_id FROM CATEGORIES WHERE name IN (?)`,
+        `SELECT category_id FROM categories WHERE name IN (?)`,
         [categoryNames]
       );
 
@@ -108,7 +108,7 @@ export async function createProduct(
       if (catRows.length > 0) {
         const values = catRows.map((c) => [productId, c.category_id]);
         await connection.query(
-          `INSERT INTO PRODUCT_CATEGORIES (product_id, category_id) VALUES ?`,
+          `INSERT INTO product_categories (product_id, category_id) VALUES ?`,
           [values]
         );
       }
@@ -142,7 +142,7 @@ export async function updateProduct(
     await connection.beginTransaction();
 
     const [result] = await connection.query(
-      `UPDATE PRODUCTS SET name = ?, description = ?, base_price = ?, stock_quantity = ? WHERE product_id = ?`,
+      `UPDATE products SET name = ?, description = ?, base_price = ?, stock_quantity = ? WHERE product_id = ?`,
       [name, description, base_price, stock_quantity, id]
     );
 
@@ -152,20 +152,20 @@ export async function updateProduct(
     }
 
     await connection.query(
-      `DELETE FROM PRODUCT_CATEGORIES WHERE product_id = ?`,
+      `DELETE FROM product_categories WHERE product_id = ?`,
       [id]
     );
 
     if (categoryNames && categoryNames.length > 0) {
       const [catRows] = await connection.query(
-        `SELECT category_id FROM CATEGORIES WHERE name IN (?)`,
+        `SELECT category_id FROM categories WHERE name IN (?)`,
         [categoryNames]
       );
 
       if (catRows.length > 0) {
         const values = catRows.map((c) => [id, c.category_id]);
         await connection.query(
-          `INSERT INTO PRODUCT_CATEGORIES (product_id, category_id) VALUES ?`,
+          `INSERT INTO product_categories (product_id, category_id) VALUES ?`,
           [values]
         );
       }
@@ -207,9 +207,9 @@ export async function getProductsCursor(
     SELECT 
       P.*,
       GROUP_CONCAT(C.name SEPARATOR ',') AS categories_list
-    FROM PRODUCTS P
-    LEFT JOIN PRODUCT_CATEGORIES PC ON P.product_id = PC.product_id
-    LEFT JOIN CATEGORIES C ON PC.category_id = C.category_id
+    FROM products P
+    LEFT JOIN product_categories PC ON P.product_id = PC.product_id
+    LEFT JOIN categories C ON PC.category_id = C.category_id
     WHERE P.product_id > ? 
   `;
 
@@ -257,7 +257,7 @@ export async function getProductsByCategoryCursor(
   const limit = normalizeLimit(rawLimit, 24, 24);
 
   const [catCheck] = await pool.query(
-    `SELECT category_id FROM CATEGORIES WHERE name IN (?)`,
+    `SELECT category_id FROM categories WHERE name IN (?)`,
     [categoryNames]
   );
 
@@ -268,10 +268,10 @@ export async function getProductsByCategoryCursor(
     SELECT 
       P.*,
       GROUP_CONCAT(DISTINCT C.name SEPARATOR ',') AS categories_list
-    FROM PRODUCTS P
-    INNER JOIN PRODUCT_CATEGORIES PC_FILTER ON P.product_id = PC_FILTER.product_id 
-    LEFT JOIN PRODUCT_CATEGORIES PC ON P.product_id = PC.product_id
-    LEFT JOIN CATEGORIES C ON PC.category_id = C.category_id
+    FROM products P
+    INNER JOIN product_categories PC_FILTER ON P.product_id = PC_FILTER.product_id 
+    LEFT JOIN product_categories PC ON P.product_id = PC.product_id
+    LEFT JOIN categories C ON PC.category_id = C.category_id
     WHERE PC_FILTER.category_id IN (?) AND P.product_id > ?
     GROUP BY P.product_id
     ORDER BY P.product_id ASC 
@@ -294,7 +294,7 @@ export async function getProductsByCategoryCursor(
 
 /**
  * Deletes a product from the database.
- * If ON DELETE CASCADE is set for PRODUCT_CATEGORIES, relationships drop automatically.
+ * If ON DELETE CASCADE is set for product_categories, relationships drop automatically.
  * Will throw an error if the product is tied to historical orders.
  */
 export async function deleteProduct(productId) {
@@ -304,7 +304,7 @@ export async function deleteProduct(productId) {
     await connection.beginTransaction();
 
     const [result] = await connection.query(
-      `DELETE FROM PRODUCTS WHERE product_id = ?`,
+      `DELETE FROM products WHERE product_id = ?`,
       [productId]
     );
 

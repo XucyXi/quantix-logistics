@@ -20,9 +20,9 @@ export async function getRoutesOverview() {
       COUNT(o.order_id) AS totalStops,
       SUM(CASE WHEN o.status = 'done' THEN 1 ELSE 0 END) AS completedStops,
       SUM(CASE WHEN o.status = 'stuck' THEN 1 ELSE 0 END) AS stuckCount
-    FROM USERS u
-    JOIN DRIVER_PROFILES dp ON u.user_id = dp.user_id
-    JOIN ORDERS o ON u.user_id = o.driver_id
+    FROM users u
+    JOIN driver_profiles dp ON u.user_id = dp.user_id
+    JOIN orders o ON u.user_id = o.driver_id
     WHERE o.status != 'cancelled'
     GROUP BY u.user_id, u.full_name, dp.vehicle_info
     HAVING totalStops > completedStops
@@ -49,13 +49,13 @@ export async function getRoutesOverview() {
 export async function getSystemNotifications() {
   const [announcements] = await db.execute(`
     SELECT announcement_id, title, content, created_at, expires_at 
-    FROM ANNOUNCEMENTS 
+    FROM announcements 
     ORDER BY created_at DESC LIMIT 5
   `);
 
   const [alerts] = await db.execute(`
     SELECT notification_id, title, message, type, created_at 
-    FROM NOTIFICATIONS 
+    FROM notifications 
     WHERE type IN ('warning', 'error')
     ORDER BY created_at DESC LIMIT 10
   `);
@@ -71,7 +71,7 @@ export async function getSystemNotifications() {
 export async function getBasicAnalytics() {
   const [rows] = await db.execute(`
     SELECT COUNT(*) as deliveredToday 
-    FROM ORDERS 
+    FROM orders 
     WHERE status = 'done' AND DATE(order_finished) = CURDATE()
   `);
 

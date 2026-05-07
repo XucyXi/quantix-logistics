@@ -28,7 +28,7 @@ export async function createOrder(customerId, deliveryAddress, notes, items) {
     // 'FOR UPDATE' lukitsee tuoterivin transaktion ajaksi, estäen päällekkäiset ostot
     for (const item of items) {
       const [productRows] = await connection.query(
-        `SELECT base_price, stock_quantity, name FROM PRODUCTS WHERE product_id = ? FOR UPDATE`,
+        `SELECT base_price, stock_quantity, name FROM products WHERE product_id = ? FOR UPDATE`,
         [item.product_id]
       );
 
@@ -61,7 +61,7 @@ export async function createOrder(customerId, deliveryAddress, notes, items) {
 
     // LUODAAN TILAUS
     const [orderRes] = await connection.query(
-      `INSERT INTO ORDERS (customer_id, delivery_address, notes, total_price, status, latitude, longitude)
+      `INSERT INTO orders (customer_id, delivery_address, notes, total_price, status, latitude, longitude)
        VALUES (?, ?, ?, ?, 'pending', ?, ?)`,
       [customerId, deliveryAddress, notes, totalPrice, lat, lng]
     );
@@ -70,24 +70,24 @@ export async function createOrder(customerId, deliveryAddress, notes, items) {
     // LISÄTÄÄN TUOTTEET TILAUKSEEN JA VÄHENNETÄÄN VARASTOSALDO
     for (const item of items) {
       const [pRows] = await connection.query(
-        `SELECT base_price FROM PRODUCTS WHERE product_id = ?`,
+        `SELECT base_price FROM products WHERE product_id = ?`,
         [item.product_id]
       );
 
       await connection.query(
-        `INSERT INTO ORDER_ITEMS (order_id, product_id, quantity, unit_price) VALUES (?, ?, ?, ?)`,
+        `INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES (?, ?, ?, ?)`,
         [orderId, item.product_id, item.quantity, pRows[0].base_price]
       );
 
       await connection.query(
-        `UPDATE PRODUCTS SET stock_quantity = stock_quantity - ? WHERE product_id = ?`,
+        `UPDATE products SET stock_quantity = stock_quantity - ? WHERE product_id = ?`,
         [item.quantity, item.product_id]
       );
     }
 
     // LUODAAN TRACKING-RIVI LIVE-KARTTAA VARTEN
     await connection.query(
-      `INSERT INTO DELIVERY_TRACKING (order_id, latitude, longitude) VALUES (?, ?, ?)`,
+      `INSERT INTO delivery_tracking (order_id, latitude, longitude) VALUES (?, ?, ?)`,
       [orderId, lat, lng]
     );
 
@@ -105,14 +105,14 @@ export async function createOrder(customerId, deliveryAddress, notes, items) {
  * Retrieves a single order and its associated items.
  */
 export async function getOrderById(orderId) {
-  const [orders] = await pool.query(`SELECT * FROM ORDERS WHERE order_id = ?`, [
+  const [orders] = await pool.query(`SELECT * FROM orders WHERE order_id = ?`, [
     orderId,
   ]);
   if (!orders.length) return null;
 
   const order = orders[0];
   const [items] = await pool.query(
-    `SELECT * FROM ORDER_ITEMS WHERE order_id = ?`,
+    `SELECT * FROM order_items WHERE order_id = ?`,
     [orderId]
   );
   order.items = items;
@@ -129,10 +129,10 @@ export async function getAllOrdersAdmin() {
       o.order_id, o.status, o.delivery_address, o.notes, o.ordered_at, o.total_price, o.driver_id,
       cu.full_name AS customerName, dr.full_name AS driverName,
       COALESCE(SUM(oi.quantity), 0) AS items_count
-    FROM ORDERS o
-    LEFT JOIN USERS cu ON o.customer_id = cu.user_id
-    LEFT JOIN USERS dr ON o.driver_id = dr.user_id
-    LEFT JOIN ORDER_ITEMS oi ON o.order_id = oi.order_id
+    FROM orders o
+    LEFT JOIN users cu ON o.customer_id = cu.user_id
+    LEFT JOIN users dr ON o.driver_id = dr.user_id
+    LEFT JOIN order_items oi ON o.order_id = oi.order_id
     GROUP BY o.order_id
     ORDER BY o.ordered_at DESC
   `;
@@ -145,7 +145,7 @@ export async function getAllOrdersAdmin() {
  */
 export async function assignDriver(orderId, driverId, newStatus) {
   const [result] = await pool.query(
-    `UPDATE ORDERS SET driver_id = ?, status = ? WHERE order_id = ?`,
+    `UPDATE orders SET driver_id = ?, status = ? WHERE order_id = ?`,
     [driverId, newStatus, orderId]
   );
   return result.affectedRows > 0;
@@ -156,7 +156,7 @@ export async function assignDriver(orderId, driverId, newStatus) {
  */
 export async function updateOrderStatus(orderId, status) {
   const [result] = await pool.query(
-    `UPDATE ORDERS SET status = ? WHERE order_id = ?`,
+    `UPDATE orders SET status = ? WHERE order_id = ?`,
     [status, orderId]
   );
   return result.affectedRows > 0;
@@ -172,7 +172,7 @@ export async function cancelOrder(orderId) {
     await connection.beginTransaction();
 
     const [[order]] = await connection.query(
-      `SELECT status, driver_id FROM ORDERS WHERE order_id = ? FOR UPDATE`,
+      `SELECT status, driver_id FROM orders WHERE order_id = ? FOR UPDATE`,
       [orderId]
     );
 
@@ -184,26 +184,26 @@ export async function cancelOrder(orderId) {
 
     // Palauta varastosaldo
     const [items] = await connection.query(
-      `SELECT product_id, quantity FROM ORDER_ITEMS WHERE order_id = ?`,
+      `SELECT product_id, quantity FROM order_items WHERE order_id = ?`,
       [orderId]
     );
 
     for (const item of items) {
       await connection.query(
-        `UPDATE PRODUCTS SET stock_quantity = stock_quantity + ? WHERE product_id = ?`,
+        `UPDATE products SET stock_quantity = stock_quantity + ? WHERE product_id = ?`,
         [item.quantity, item.product_id]
       );
     }
 
     if (order.driver_id) {
       await connection.query(
-        `UPDATE DRIVER_PROFILES SET current_orders = GREATEST(current_orders - 1, 0) WHERE user_id = ?`,
+        `UPDATE driver_profiles SET current_orders = GREATEST(current_orders - 1, 0) WHERE user_id = ?`,
         [order.driver_id]
       );
     }
 
     await connection.query(
-      `UPDATE ORDERS SET status = 'cancelled' WHERE order_id = ?`,
+      `UPDATE orders SET status = 'cancelled' WHERE order_id = ?`,
       [orderId]
     );
 
@@ -239,11 +239,11 @@ export async function getAssignedOrders(driverId) {
       cp.company_name, cp.address AS customer_address, cp.tel AS customer_tel,
       dp.vehicle_info, dp.active AS driver_active,
       oi.product_id, oi.quantity, oi.unit_price, p.name AS product_name
-    FROM ORDERS o
-    LEFT JOIN CUSTOMER_PROFILES cp ON o.customer_id = cp.user_id
-    LEFT JOIN DRIVER_PROFILES dp ON o.driver_id = dp.user_id
-    LEFT JOIN ORDER_ITEMS oi ON o.order_id = oi.order_id
-    LEFT JOIN PRODUCTS p ON oi.product_id = p.product_id
+    FROM orders o
+    LEFT JOIN customer_profiles cp ON o.customer_id = cp.user_id
+    LEFT JOIN driver_profiles dp ON o.driver_id = dp.user_id
+    LEFT JOIN order_items oi ON o.order_id = oi.order_id
+    LEFT JOIN products p ON oi.product_id = p.product_id
     WHERE o.driver_id = ? AND o.status IN (${statusPlaceholders})
     ORDER BY o.order_id;
     `,
@@ -288,9 +288,9 @@ export async function getOrdersByCustomerId(
     SELECT
       o.order_id, o.status, o.delivery_address, o.total_price, o.ordered_at,
       COUNT(oi.order_item_id) as item_count, u.email as driver_email
-    FROM ORDERS o
-    LEFT JOIN ORDER_ITEMS oi ON o.order_id = oi.order_id
-    LEFT JOIN USERS u ON o.driver_id = u.user_id
+    FROM orders o
+    LEFT JOIN order_items oi ON o.order_id = oi.order_id
+    LEFT JOIN users u ON o.driver_id = u.user_id
     WHERE o.customer_id = ?`;
 
   const params = [customerId];
@@ -323,7 +323,7 @@ export async function getOrderStats(customerId) {
       COALESCE(AVG(total_price), 0) as average_order_value,
       COALESCE(ROUND(AVG(DATEDIFF(CURDATE(), ordered_at)), 1), 0) as delivery_speed_days,
       COALESCE(ROUND(SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0), 1), 0) as success_rate
-    FROM ORDERS
+    FROM orders
     WHERE customer_id = ?
     `,
     [customerId]
@@ -348,7 +348,7 @@ export async function getOrderStats(customerId) {
  */
 export async function setDriverAvailability(driverId, isActive) {
   const [result] = await pool.query(
-    `UPDATE DRIVER_PROFILES SET active = ? WHERE user_id = ?`,
+    `UPDATE driver_profiles SET active = ? WHERE user_id = ?`,
     [isActive, driverId]
   );
   if (result.affectedRows === 0) throw new Error('Driver not found');
@@ -363,8 +363,8 @@ export async function getAllDrivers() {
     SELECT
       dp.driver_id, dp.user_id, dp.vehicle_info, dp.active, dp.current_orders, dp.max_orders,
       u.full_name, u.email, u.created_at, u.last_login
-    FROM DRIVER_PROFILES dp
-    JOIN USERS u ON dp.user_id = u.user_id
+    FROM driver_profiles dp
+    JOIN users u ON dp.user_id = u.user_id
     ORDER BY dp.driver_id DESC
   `);
   return rows;
@@ -395,7 +395,7 @@ export async function getOrdersCursor(rawCursor = 0, rawLimit = 16) {
     const [orders] = await pool.query(
       `
       SELECT order_id, customer_id, driver_id, status, delivery_address, notes, ordered_at, total_price
-      FROM ORDERS WHERE order_id > ? ORDER BY order_id ASC LIMIT ?
+      FROM orders WHERE order_id > ? ORDER BY order_id ASC LIMIT ?
       `,
       [cursor, limit]
     );
@@ -406,8 +406,8 @@ export async function getOrdersCursor(rawCursor = 0, rawLimit = 16) {
     const [items] = await pool.query(
       `
       SELECT oi.order_id, oi.product_id, oi.quantity, oi.unit_price, p.name AS product_name
-      FROM ORDER_ITEMS oi
-      LEFT JOIN PRODUCTS p ON oi.product_id = p.product_id
+      FROM order_items oi
+      LEFT JOIN products p ON oi.product_id = p.product_id
       WHERE oi.order_id IN (?)
       `,
       [orderIds]

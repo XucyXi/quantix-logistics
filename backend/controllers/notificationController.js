@@ -24,7 +24,7 @@ export async function getNotifications(req, res) {
 
     const [announcements] = await db.query(
       `SELECT announcement_id, title, content, created_at, expires_at
-       FROM ANNOUNCEMENTS
+       FROM announcements
        WHERE expires_at IS NULL OR expires_at > NOW()
        ORDER BY created_at DESC
        LIMIT 20`
@@ -63,7 +63,7 @@ export async function createAnnouncement(req, res) {
     }
 
     const [result] = await db.query(
-      `INSERT INTO ANNOUNCEMENTS (title, content, created_at, expires_at)
+      `INSERT INTO announcements (title, content, created_at, expires_at)
        VALUES (?, ?, NOW(), ?)`,
       [
         String(title).trim(),
@@ -74,7 +74,7 @@ export async function createAnnouncement(req, res) {
 
     const [rows] = await db.query(
       `SELECT announcement_id, title, content, created_at, expires_at
-       FROM ANNOUNCEMENTS
+       FROM announcements
        WHERE announcement_id = ?`,
       [result.insertId]
     );
@@ -106,7 +106,7 @@ export async function markNotificationAsRead(req, res) {
 
     // Verify ownership before updating
     const [ownedNotification] = await db.query(
-      `SELECT notification_id FROM NOTIFICATIONS
+      `SELECT notification_id FROM notifications
        WHERE notification_id = ? AND user_id = ?
        LIMIT 1`,
       [notificationId, userId]
