@@ -166,6 +166,7 @@ Dokumentoidussa skeemassa on 11 päätaulua, mm: `USERS`, `CUSTOMER_PROFILES`, `
 - **Frontend (Tuotanto):** [https://logistics.quantixincorporated.com/](https://logistics.quantixincorporated.com/)
 - **Kokonaisanalytiikka:** [PROJECT_ANALYTICS.md](PROJECT_ANALYTICS.md)
 - **Kartoissa hyödynnetyt palvelut:** [Leaflet](https://leafletjs.com/), [OSRM](https://router.project-osrm.org/), [Nominatim](https://nominatim.org/)
+- **Koodi TypeDocs dokumentaatio:** [TypeDocs]( https://xucyxi.github.io/quantix-logistics/)
 
 ```text
 quantix-logistics/
