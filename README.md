@@ -89,7 +89,7 @@ Jos haluat ajaa ohjelmistoa omalla koneellasi lähdekoodista, toimi näin:
 **1. Kloonaa repositorio ja asenna riippuvuudet**
 
 ```bash
-git clone [https://github.com/XucyXi/quantix-logistics.git](https://github.com/XucyXi/quantix-logistics.git)
+git clone https://github.com/XucyXi/quantix-logistics.git
 cd quantix-logistics
 npm run install:all
 
