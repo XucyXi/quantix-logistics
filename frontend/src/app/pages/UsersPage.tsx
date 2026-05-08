@@ -58,8 +58,8 @@ export function UsersPage() {
   const handleDelete = async (user: User) => {
     // Varmistetaan vielä kerran, ettei vahingossakaan yritetä poistaa adminia
     if (user.role === 'Admin') {
-        alert('Admin-käyttäjiä ei voi poistaa!');
-        return;
+      alert('Admin-käyttäjiä ei voi poistaa!');
+      return;
     }
 
     if (window.confirm(`Haluatko varmasti poistaa käyttäjän ${user.name}?`)) {
@@ -380,7 +380,7 @@ export function UsersPage() {
                       <Edit size={16} />
                     </button>
                   ) : null}
-                  
+
                   {/* Piilotetaan Poista-nappi Admineilta */}
                   {user.role !== 'Admin' ? (
                     <button
@@ -390,7 +390,7 @@ export function UsersPage() {
                       <Trash2 size={16} />
                     </button>
                   ) : (
-                     <div className="h-8 w-8" /> {/* Placeholder jotta asettelu pysyy siistinä */}
+                    <div className="h-8 w-8" /> // Placeholder jotta asettelu pysyy siistinä
                   )}
                 </div>
               </MasterTableCell>
