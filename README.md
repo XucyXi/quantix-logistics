@@ -16,11 +16,11 @@ Projektissa korostuu **läpinäkyvä toimitusketju**: tilausrivit, tilat, kartta
 
 ## 1. Projektin kuvaus
 
-### Mikä on Quantix Logistics? (Idea)
+### Mikä on Quantix Logistics?
 
 Quantix Logistics on moderni tilaus- ja kuljetusketjun hallintasovellus. Se yhdistää verkkokauppamaisen tilauskokemuksen, kuljettajan operatiivisen näkymän sekä ylläpidon hallinta- ja analytiikkatyökalut yhteen saumattomaan käyttöliittymään.
 
-### Kenelle se on tehty? (Kohderyhmä)
+### Kenelle se on tehty?
 
 - **Asiakkaat (B2B/B2C):** Käyttäjät, jotka tilaavat tuotteita ja haluavat seurata toimituksen etenemistä reaaliajassa.
 - **Kuljettajat:** Logistiikkahenkilöstö, joka hallitsee omia toimituksiaan ja navigoi kohteisiin.
@@ -53,7 +53,7 @@ Nykyajan logistiikassa läpinäkyvyys on kaikki kaikessa. Järjestelmämme ratka
 
 ---
 
-## 4. Ohjeistus testaamiseen (Vertaisarvioijille)
+## 4. Ohjeistus testaamiseen
 
 Voit testata sovellusta vapaasti livenä osoitteessa:
 👉 **[logistics.quantixincorporated.com](https://logistics.quantixincorporated.com/)**
@@ -66,7 +66,7 @@ Voit rekisteröidä oman asiakastunnuksen tai käyttää näitä valmiita testit
 - **Kuljettaja:** `example@driver.com` | Salasana: `exampleDriver123`
 - **Admin:** `example@admin.com` | Salasana: `exampleAdmin123`
 
-### Suositeltu testauspolku (Demo)
+### Suositeltu testauspolku
 
 Tätä polkua seuraamalla näet kaikki järjestelmän päätoiminnallisuudet:
 
@@ -89,8 +89,8 @@ Jos haluat ajaa ohjelmistoa omalla koneellasi lähdekoodista, toimi näin:
 **1. Kloonaa repositorio ja asenna riippuvuudet**
 
 ```bash
-git clone [https://github.com/XucyXi/web-project.git](https://github.com/XucyXi/web-project.git)
-cd web-project
+git clone [https://github.com/XucyXi/quantix-logistics.git](https://github.com/XucyXi/quantix-logistics.git)
+cd quantix-logistics
 npm run install:all
 
 ```
@@ -149,26 +149,26 @@ Selain-UI kutsuu yhtä **REST JSON -APIa**, joka jakaa lukuoikeudet käyttäjän
 - `/deliveries` - GPS-sijaintipäivitykset ja lukeminen
 - `/admin` & `/users` - Tilastot ja käyttäjähallinta
 
-Kattava rajapintakuvaus löytyy: [API_DOCUMENTATION.md](https://www.google.com/search?q=docs/backend/API_DOCUMENTATION.md)
+Kattava rajapintakuvaus löytyy: [API_DOCUMENTATION.md](docs\backend\API_DOCUMENTATION.md)
 
 ---
 
 ## 7. Tietomalli
 
-Dokumentoidussa skeemassa on 11 päätaulua, mm: `USERS`, `CUSTOMER_PROFILES`, `DRIVER_PROFILES`, `PRODUCTS`, `ORDERS`, `DELIVERY_TRACKING` ja `NOTIFICATIONS`. Tarkat ER-suhteet ja esimerkkikyselyt löytyvät täältä: [DATABASE_SCHEMA.md](https://www.google.com/search?q=docs/backend/DATABASE_SCHEMA.md).
+Dokumentoidussa skeemassa on 11 päätaulua, mm: `USERS`, `CUSTOMER_PROFILES`, `DRIVER_PROFILES`, `PRODUCTS`, `ORDERS`, `DELIVERY_TRACKING` ja `NOTIFICATIONS`. Tarkat ER-suhteet ja esimerkkikyselyt löytyvät täältä: [DATABASE_SCHEMA.md](docs\backend\DATABASE_SCHEMA.md).
 
-<img src="https://i.imgur.com/fZO3ftr.png">
+<img src="docs\assets\quantix-logi-db-schema.png">
 
 ---
 
 ## 8. Linkit ja Repositorion rakenne
 
 - **Frontend (Tuotanto):** [https://logistics.quantixincorporated.com/](https://logistics.quantixincorporated.com/)
-- **Kokonaisanalytiikka:** [PROJECT_ANALYTICS.md](https://www.google.com/search?q=PROJECT_ANALYTICS.md)
+- **Kokonaisanalytiikka:** [PROJECT_ANALYTICS.md](PROJECT_ANALYTICS.md)
 - **Kartoissa hyödynnetyt palvelut:** [Leaflet](https://leafletjs.com/), [OSRM](https://router.project-osrm.org/), [Nominatim](https://nominatim.org/)
 
 ```text
-web-project/
+quantix-logistics/
 ├── frontend/              # React + Vite käyttöliittymä
 ├── backend/               # Express + MySQL palvelin
 ├── docs/backend/          # API- ja tietokantadokumentaatio
