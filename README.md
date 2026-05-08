@@ -78,7 +78,7 @@ Tätä polkua seuraamalla näet kaikki järjestelmän päätoiminnallisuudet:
 ### Palautelomake
 
 Kun olet testannut sovelluksen, pyydämme ystävällisesti täyttämään vertaisarviointilomakkeen tänne:
-👉 **[LINKKI GOOGLE FORMS -PALAUTELOMAKKEESEEN TÄHÄN]**
+👉 **[PALAUTELOMAKE](https://docs.google.com/forms/d/e/1FAIpQLScHqQipIrZEr8k7pPc-O6qOwIjgGH7TXIsdjvFrom7udg4viQ/viewform?usp=publish-editor)**
 
 ---
 
