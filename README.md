@@ -78,7 +78,7 @@ Tätä polkua seuraamalla näet kaikki järjestelmän päätoiminnallisuudet:
 ### Palautelomake
 
 Kun olet testannut sovelluksen, pyydämme ystävällisesti täyttämään vertaisarviointilomakkeen tänne:
-👉 **[LINKKI GOOGLE FORMS -PALAUTELOMAKKEESEEN TÄHÄN]**
+👉 **[PALAUTELOMAKE](https://docs.google.com/forms/d/e/1FAIpQLScHqQipIrZEr8k7pPc-O6qOwIjgGH7TXIsdjvFrom7udg4viQ/viewform?usp=publish-editor)**
 
 ---
 
@@ -89,7 +89,7 @@ Jos haluat ajaa ohjelmistoa omalla koneellasi lähdekoodista, toimi näin:
 **1. Kloonaa repositorio ja asenna riippuvuudet**
 
 ```bash
-git clone [https://github.com/XucyXi/quantix-logistics.git](https://github.com/XucyXi/quantix-logistics.git)
+git clone https://github.com/XucyXi/quantix-logistics.git
 cd quantix-logistics
 npm run install:all
 
@@ -166,6 +166,7 @@ Dokumentoidussa skeemassa on 11 päätaulua, mm: `USERS`, `CUSTOMER_PROFILES`, `
 - **Frontend (Tuotanto):** [https://logistics.quantixincorporated.com/](https://logistics.quantixincorporated.com/)
 - **Kokonaisanalytiikka:** [PROJECT_ANALYTICS.md](PROJECT_ANALYTICS.md)
 - **Kartoissa hyödynnetyt palvelut:** [Leaflet](https://leafletjs.com/), [OSRM](https://router.project-osrm.org/), [Nominatim](https://nominatim.org/)
+- **Koodi TypeDocs dokumentaatio:** [TypeDocs]( https://xucyxi.github.io/quantix-logistics/)
 
 ```text
 quantix-logistics/
