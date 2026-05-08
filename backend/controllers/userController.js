@@ -142,6 +142,19 @@ export async function updateUser(req, res) {
 export async function deleteUser(req, res) {
   try {
     const {id} = req.params;
+
+    // SECURE: Fetch user first to check their role before deletion
+    const existingUser = await userService.getUserById(id);
+
+    if (!existingUser) {
+      return res.status(404).json({error: 'User not found'});
+    }
+
+    // SECURE: Prevent deletion if the target is an admin
+    if (existingUser.role === 'admin') {
+      return res.status(403).json({error: 'Admin-käyttäjiä ei voi poistaa'});
+    }
+
     const deleted = await userService.deleteUser(id);
 
     if (!deleted) {
