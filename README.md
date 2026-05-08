@@ -62,9 +62,9 @@ Voit testata sovellusta vapaasti livenä osoitteessa:
 
 Voit rekisteröidä oman asiakastunnuksen tai käyttää näitä valmiita testitunnuksia päästäksesi kiinni eri roolien näkymiin:
 
-- **Asiakas:** `example@customer.com` | Salasana: `example123`
-- **Kuljettaja:** `example@driver.com` | Salasana: `exampleDriver123`
-- **Admin:** `example@admin.com` | Salasana: `exampleAdmin123`
+- **Asiakas:** `customer@example.com` | Salasana: `example123`
+- **Kuljettaja:** `driver@example.com` | Salasana: `exampleDriver123`
+- **Admin:** `admin@example.com` | Salasana: `exampleAdmin123`
 
 ### Suositeltu testauspolku
 
