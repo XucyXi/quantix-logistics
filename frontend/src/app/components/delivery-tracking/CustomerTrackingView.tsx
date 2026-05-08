@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Customer Tracking View.
+ * Dashboard view for customers to monitor their active orders and live driver tracking.
+ * Implements polling mechanisms for real-time updates.
+ */
+
 import {useEffect, useState} from 'react';
 import {Map} from './Map';
 import {OrderList} from './OrderList';
@@ -11,14 +17,13 @@ export const CustomerTrackingView = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | undefined>();
   const [trackingData, setTrackingData] = useState<TrackingData | null>(null);
 
-  // TILAUKSIEN HAKU
+  // Poll for customer orders every 15 seconds
   useEffect(() => {
     if (!token) return;
 
     const fetchOrders = async () => {
       try {
         const res = await orderService.getCustomerOrders({}, token);
-
         const fetchedOrders = Array.isArray(res) ? res : res.orders || [];
         setOrders(fetchedOrders);
 
@@ -32,7 +37,7 @@ export const CustomerTrackingView = () => {
           return prevSelected;
         });
       } catch (err) {
-        console.error('Virhe haettaessa tilauksia:', err);
+        console.error('Error fetching orders:', err);
       }
     };
 
@@ -41,7 +46,7 @@ export const CustomerTrackingView = () => {
     return () => clearInterval(interval);
   }, [token]);
 
-  // SEURANTADATAN HAKU
+  // Poll for live tracking data every 10 seconds if order is 'in_transit'
   useEffect(() => {
     if (
       !selectedOrder?.order_id ||
@@ -202,8 +207,7 @@ export const CustomerTrackingView = () => {
                 {selectedOrder.status}
               </span>
             </p>
-            {/* KORJATTU VIRHE 4: Tyyppimuunnos stringiksi estää TS-varoituksen */}
-            {(selectedOrder.status as string) === 'pending' && (
+            {String(selectedOrder.status) === 'pending' && (
               <span
                 style={{color: '#f97316', fontSize: '14px', fontWeight: 'bold'}}
               >
@@ -226,7 +230,7 @@ export const CustomerTrackingView = () => {
             selectedId={selectedOrder?.order_id}
             onSelect={(order: Order) => {
               setSelectedOrder(order);
-              setTrackingData(null); // Lisätty turvatoimi: nollaa heti kun vaihdat tilausta
+              setTrackingData(null);
             }}
             variant="customer"
           />

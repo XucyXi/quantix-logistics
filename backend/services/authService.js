@@ -1,6 +1,6 @@
-const pool = require('../config/db');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+import pool from '../config/db.js';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -13,8 +13,8 @@ if (!JWT_SECRET) {
  *
  * If provided, `extraData.full_name` is used for the user's full name; otherwise `extraData.first_name` and
  * `extraData.last_name` are joined, falling back to the email local-part. For `role === 'customer'` the function
- * inserts a CUSTOMER_PROFILES row using `company_name`, `address`, `tel`, and `vat_number` from `extraData`.
- * For `role === 'driver'` the function inserts a DRIVER_PROFILES row using `vehicle_info` from `extraData`.
+ * inserts a customer_profiles row using `company_name`, `address`, `tel`, and `vat_number` from `extraData`.
+ * For `role === 'driver'` the function inserts a driver_profiles row using `vehicle_info` from `extraData`.
  *
  * @param {Object} params - Parameters for user registration.
  * @param {string} params.email - The user's email address.
@@ -33,7 +33,7 @@ async function register({email, password, role, extraData = {}}) {
 
     // 1. Check if user already exists
     const [existing] = await connection.query(
-      `SELECT user_id FROM USERS WHERE email = ?`,
+      `SELECT user_id FROM users WHERE email = ?`,
       [email]
     );
 
@@ -49,9 +49,9 @@ async function register({email, password, role, extraData = {}}) {
       [extraData.first_name, extraData.last_name].filter(Boolean).join(' ') ||
       email.split('@')[0];
 
-    // 3. Insert into USERS
+    // 3. Insert into users
     const [userResult] = await connection.query(
-      `INSERT INTO USERS (full_name, email, password_hash, role)
+      `INSERT INTO users (full_name, email, password_hash, role)
        VALUES (?, ?, ?, ?)`,
       [fullName, email, password_hash, role]
     );
@@ -62,7 +62,7 @@ async function register({email, password, role, extraData = {}}) {
 
     if (role === 'customer') {
       await connection.query(
-        `INSERT INTO CUSTOMER_PROFILES
+        `INSERT INTO customer_profiles
          (user_id, company_name, address, tel, vat_number)
          VALUES (?, ?, ?, ?, ?)`,
         [
@@ -77,7 +77,7 @@ async function register({email, password, role, extraData = {}}) {
 
     if (role === 'driver') {
       await connection.query(
-        `INSERT INTO DRIVER_PROFILES
+        `INSERT INTO driver_profiles
          (user_id, vehicle_info, active)
          VALUES (?, ?, TRUE)`,
         [userId, extraData.vehicle_info || null]
@@ -110,7 +110,7 @@ async function register({email, password, role, extraData = {}}) {
  */
 async function login({email, password}) {
   // 1. Fetch user by email
-  const [rows] = await pool.query('SELECT * FROM USERS WHERE email = ?', [
+  const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [
     email,
   ]);
   if (!rows.length) throw new Error('User not found');
@@ -152,8 +152,8 @@ async function getProfile(userId) {
       u.role,
       cp.company_name,
       cp.vat_number
-    FROM USERS u
-    LEFT JOIN CUSTOMER_PROFILES cp ON cp.user_id = u.user_id
+    FROM users u
+    LEFT JOIN customer_profiles cp ON cp.user_id = u.user_id
     WHERE u.user_id = ?
     LIMIT 1
     `,
@@ -191,9 +191,9 @@ async function getProfile(userId) {
       dp.vehicle_info,
       dp.active AS is_active_driver,
       dp.current_orders
-    FROM USERS u
-    LEFT JOIN CUSTOMER_PROFILES cp ON u.user_id = cp.user_id
-    LEFT JOIN DRIVER_PROFILES dp ON u.user_id = dp.user_id
+    FROM users u
+    LEFT JOIN customer_profiles cp ON u.user_id = cp.user_id
+    LEFT JOIN driver_profiles dp ON u.user_id = dp.user_id
     WHERE u.user_id = ?
     LIMIT 1
     `,
@@ -218,10 +218,10 @@ async function getProfile(userId) {
       company_name: profile.company_name,
       vat_number: profile.vat_number,
       address: profile.address,
-      tel: profile.tel
+      tel: profile.tel,
     };
-  } 
-  
+  }
+
   if (profile.role === 'driver') {
     return {
       user_id: profile.user_id,
@@ -231,7 +231,7 @@ async function getProfile(userId) {
       created_at: profile.created_at,
       vehicle_info: profile.vehicle_info,
       is_active_driver: Boolean(profile.is_active_driver),
-      current_orders: profile.current_orders || 0
+      current_orders: profile.current_orders || 0,
     };
   }
 
@@ -241,7 +241,7 @@ async function getProfile(userId) {
     email: profile.email,
     full_name: profile.full_name,
     role: profile.role,
-    created_at: profile.created_at
+    created_at: profile.created_at,
   };
 }
 
@@ -253,15 +253,15 @@ async function updateProfile(userId, profile) {
     await connection.beginTransaction();
 
     if (fullName) {
-      await connection.query(`UPDATE USERS SET full_name = ? WHERE user_id = ?`, [
-        fullName,
-        userId,
-      ]);
+      await connection.query(
+        `UPDATE users SET full_name = ? WHERE user_id = ?`,
+        [fullName, userId]
+      );
     }
 
     await connection.query(
       `
-      INSERT INTO CUSTOMER_PROFILES (user_id, company_name, vat_number)
+      INSERT INTO customer_profiles (user_id, company_name, vat_number)
       VALUES (?, ?, ?)
       ON DUPLICATE KEY UPDATE
         company_name = VALUES(company_name),
@@ -286,11 +286,11 @@ async function updateDriverProfile(userId, vehicleInfo) {
   try {
     await connection.beginTransaction();
 
-    // Päivitetään ajoneuvotiedot. 
+    // Päivitetään ajoneuvotiedot.
     // ON DUPLICATE KEY UPDATE varmistaa, että profiili päivittyy vaikka INSERT epäonnistuisi.
     await connection.query(
       `
-      INSERT INTO DRIVER_PROFILES (user_id, vehicle_info, active)
+      INSERT INTO driver_profiles (user_id, vehicle_info, active)
       VALUES (?, ?, TRUE)
       ON DUPLICATE KEY UPDATE
         vehicle_info = VALUES(vehicle_info)
@@ -299,7 +299,7 @@ async function updateDriverProfile(userId, vehicleInfo) {
     );
 
     await connection.commit();
-    
+
     // Palautetaan päivitetty profiili
     return getProfile(userId);
   } catch (err) {
@@ -310,23 +310,25 @@ async function updateDriverProfile(userId, vehicleInfo) {
   }
 }
 
-
 async function changePassword(userId, currentPassword, newPassword) {
   if (!newPassword || newPassword.length < 8) {
     throw new Error('New password must be at least 8 characters');
   }
 
   const [rows] = await pool.query(
-    `SELECT password_hash FROM USERS WHERE user_id = ? LIMIT 1`,
+    `SELECT password_hash FROM users WHERE user_id = ? LIMIT 1`,
     [userId]
   );
   if (!rows.length) throw new Error('User not found');
 
-  const isCurrentValid = await bcrypt.compare(currentPassword, rows[0].password_hash);
+  const isCurrentValid = await bcrypt.compare(
+    currentPassword,
+    rows[0].password_hash
+  );
   if (!isCurrentValid) throw new Error('Current password is incorrect');
 
   const password_hash = await bcrypt.hash(newPassword, 10);
-  await pool.query(`UPDATE USERS SET password_hash = ? WHERE user_id = ?`, [
+  await pool.query(`UPDATE users SET password_hash = ? WHERE user_id = ?`, [
     password_hash,
     userId,
   ]);
@@ -334,11 +336,11 @@ async function changePassword(userId, currentPassword, newPassword) {
   return {success: true};
 }
 
-module.exports = {
+export default {
   register,
   login,
   getProfile,
   updateProfile,
   changePassword,
-  updateDriverProfile
+  updateDriverProfile,
 };

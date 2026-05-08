@@ -1,6 +1,17 @@
-const db = require('../config/db');
+/**
+ * @fileoverview Admin Service.
+ * Provides specialized database queries for the admin dashboard,
+ * including route overviews, system notifications, and core analytics.
+ */
 
-exports.getRoutesOverview = async () => {
+import db from '../config/db.js';
+
+/**
+ * Retrieves an aggregated overview of active drivers and their current deliveries.
+ *
+ * @returns {Promise<Array>} Array of driver route objects.
+ */
+export async function getRoutesOverview() {
   const query = `
     SELECT 
       u.user_id AS driverId,
@@ -9,9 +20,9 @@ exports.getRoutesOverview = async () => {
       COUNT(o.order_id) AS totalStops,
       SUM(CASE WHEN o.status = 'done' THEN 1 ELSE 0 END) AS completedStops,
       SUM(CASE WHEN o.status = 'stuck' THEN 1 ELSE 0 END) AS stuckCount
-    FROM USERS u
-    JOIN DRIVER_PROFILES dp ON u.user_id = dp.user_id
-    JOIN ORDERS o ON u.user_id = o.driver_id
+    FROM users u
+    JOIN driver_profiles dp ON u.user_id = dp.user_id
+    JOIN orders o ON u.user_id = o.driver_id
     WHERE o.status != 'cancelled'
     GROUP BY u.user_id, u.full_name, dp.vehicle_info
     HAVING totalStops > completedStops
@@ -19,7 +30,6 @@ exports.getRoutesOverview = async () => {
 
   const [rows] = await db.execute(query);
 
-  // Muotoillaan data suoraan täällä
   return rows.map((r) => ({
     driverId: r.driverId,
     driverName: r.driverName || 'Tuntematon Kuski',
@@ -29,33 +39,43 @@ exports.getRoutesOverview = async () => {
     status: r.stuckCount > 0 ? 'stuck' : 'in_progress',
     area: 'Pääkaupunkiseutu',
   }));
-};
+}
 
-exports.getSystemNotifications = async () => {
+/**
+ * Retrieves the latest system announcements and high-priority alerts.
+ *
+ * @returns {Promise<{announcements: Array, alerts: Array}>}
+ */
+export async function getSystemNotifications() {
   const [announcements] = await db.execute(`
     SELECT announcement_id, title, content, created_at, expires_at 
-    FROM ANNOUNCEMENTS 
+    FROM announcements 
     ORDER BY created_at DESC LIMIT 5
   `);
 
   const [alerts] = await db.execute(`
     SELECT notification_id, title, message, type, created_at 
-    FROM NOTIFICATIONS 
+    FROM notifications 
     WHERE type IN ('warning', 'error')
     ORDER BY created_at DESC LIMIT 10
   `);
 
   return {announcements, alerts};
-};
+}
 
-exports.getBasicAnalytics = async () => {
+/**
+ * Retrieves basic top-level analytics (e.g., total orders delivered today).
+ *
+ * @returns {Promise<{delivered: number}>}
+ */
+export async function getBasicAnalytics() {
   const [rows] = await db.execute(`
     SELECT COUNT(*) as deliveredToday 
-    FROM ORDERS 
+    FROM orders 
     WHERE status = 'done' AND DATE(order_finished) = CURDATE()
   `);
 
   return {
     delivered: rows[0].deliveredToday || 0,
   };
-};
+}

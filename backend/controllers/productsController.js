@@ -1,19 +1,34 @@
-const productsService = require('../services/productsService');
+/**
+ * @fileoverview Products Controller.
+ * Handles product catalog management, including cursor-based pagination, filtering, and CRUD operations.
+ */
 
-// GET /products
-async function getProducts(req, res) {
+import * as productsService from '../services/productsService.js';
+
+/**
+ * Retrieves the entire product catalog without pagination.
+ * Use cautiously on large datasets.
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ */
+export async function getProducts(req, res) {
   try {
     const products = await productsService.getAllProducts();
     res.json(products);
   } catch (err) {
     res.status(500).json({error: 'Failed to fetch products'});
   }
-} 
+}
 
-// POST /products
-async function createProduct(req, res) {
+/**
+ * Creates a new product in the database.
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ */
+export async function createProduct(req, res) {
   try {
-    // Luetaan kentät, tuetaan sekä frontendin uutta muotoa että mahdollista vanhaa testiä
     const {
       name,
       description,
@@ -48,24 +63,34 @@ async function createProduct(req, res) {
   }
 }
 
-// GET /products/:id
-async function getProductById(req, res) {
-  console.log('🔥 HIT getProductById:', req.params);
+/**
+ * Fetches a single product by its unique ID.
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ */
+export async function getProductById(req, res) {
   try {
     const {id} = req.params;
     const product_getter = await productsService.getProductById(id);
+
     if (!product_getter) {
-      throw new Error('Product not found. ');
+      throw new Error('Product not found.');
     }
+
     res.json(product_getter);
   } catch (err) {
-    console.error('Product fetching by ID error: ' + err);
     res.status(404).json({error: err.message});
   }
 }
 
-// PUT /products/:id
-async function updateProduct(req, res) {
+/**
+ * Updates an existing product's details and categories.
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ */
+export async function updateProduct(req, res) {
   try {
     const {id} = req.params;
     const {
@@ -101,81 +126,85 @@ async function updateProduct(req, res) {
   }
 }
 
-// GET /products/cursor
-async function getProductsCursor(req, res) {
+/**
+ * Fetches a paginated list of products using a cursor. Supports text-based search.
+ *
+ * @param {import('express').Request} req - Express request object containing cursor, limit, and search parameters.
+ * @param {import('express').Response} res - Express response object.
+ */
+export async function getProductsCursor(req, res) {
   try {
     const cursor = req.query.cursor || 0;
     const limit = req.query.limit || 16;
-    const search = req.query.search || null; // Lisätty hakusanan vastaanotto
+    const search = req.query.search || null;
 
-    const result = await productsService.getProductsCursor(cursor, limit, search);
+    const result = await productsService.getProductsCursor(
+      cursor,
+      limit,
+      search
+    );
     return res.json({success: true, ...result});
   } catch (error) {
-    console.error('Error fetching products cursor:', error);
     return res.status(500).json({success: false, error: error.message});
   }
 }
 
-// GET /products/category/cursor (UUSI)
-async function getProductsByCategoryCursor(req, res) {
+/**
+ * Fetches a paginated list of products filtered by one or more categories.
+ *
+ * @param {import('express').Request} req - Express request object containing categories, cursor, and limit parameters.
+ * @param {import('express').Response} res - Express response object.
+ */
+export async function getProductsByCategoryCursor(req, res) {
   try {
     const cursor = req.query.cursor || 0;
     const limit = req.query.limit || 24;
-    
-    // Nappaa kategoriat joko 'categories[]' taulukkona tai 'category' stringinä
     const categories = req.query.categories || req.query.category;
 
     if (!categories) {
-      return res.status(400).json({ success: false, error: 'Category parameter is required' });
+      return res
+        .status(400)
+        .json({success: false, error: 'Category parameter is required'});
     }
 
-    const result = await productsService.getProductsByCategoryCursor(categories, cursor, limit);
-    return res.json({ success: true, ...result });
+    const result = await productsService.getProductsByCategoryCursor(
+      categories,
+      cursor,
+      limit
+    );
+    return res.json({success: true, ...result});
   } catch (error) {
-    console.error('Error fetching products by category cursor:', error);
-    
-    // Nappaa service-kerroksen validointivirheet
-    if (error.message.includes('do not exist') || error.message.includes('required')) {
-      return res.status(400).json({ success: false, error: error.message });
+    if (
+      error.message.includes('do not exist') ||
+      error.message.includes('required')
+    ) {
+      return res.status(400).json({success: false, error: error.message});
     }
-
-    return res.status(500).json({ success: false, error: 'Failed to fetch products by category' });
+    return res
+      .status(500)
+      .json({success: false, error: 'Failed to fetch products by category'});
   }
 }
 
-
-
-// DELETE /products/:id
-async function deleteProduct(req, res) {
+/**
+ * Deletes a product from the database. Prevents deletion if the product exists in order histories.
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ */
+export async function deleteProduct(req, res) {
   try {
-    const { id } = req.params;
+    const {id} = req.params;
     const result = await productsService.deleteProduct(id);
-    
-    res.json({ message: 'Product deleted successfully', id: result.product_id });
-  } catch (err) {
-    console.error(`Error deleting product ${req.params.id}:`, err);
-    
-    // Nappaa service-kerroksen heittämä "Not found" -virhe
-    if (err.message.includes('not found')) {
-      return res.status(404).json({ error: err.message });
-    }
-    
-    // Nappaa viiteavain-virhe (Foreign Key Constraint) - 409 Conflict on tähän oikea statuskoodi
-    if (err.message.includes('tied to existing order history')) {
-      return res.status(409).json({ error: err.message });
-    }
 
-    res.status(500).json({ error: 'Failed to delete product' });
+    res.json({message: 'Product deleted successfully', id: result.product_id});
+  } catch (err) {
+    if (err.message.includes('not found')) {
+      return res.status(404).json({error: err.message});
+    }
+    if (err.message.includes('tied to existing order history')) {
+      return res.status(409).json({error: err.message});
+    }
+    res.status(500).json({error: 'Failed to delete product'});
   }
 }
-
-
-module.exports = {
-  getProducts,
-  getProductById,
-  createProduct,
-  updateProduct,
-  getProductsCursor,
-  deleteProduct,
-  getProductsByCategoryCursor
-};

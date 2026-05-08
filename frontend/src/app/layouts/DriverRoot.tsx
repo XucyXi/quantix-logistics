@@ -6,7 +6,7 @@ import {useEffect, useState, useRef} from 'react';
 import {useAuth} from '../contexts/AuthContext';
 import {ThemeProvider} from '../contexts/ThemeProvider';
 import {orderService} from '../services/orderService';
-import {adminService} from '../services/adminService'; // Tarvitaan ilmoitusten hakuun
+import {adminService} from '../services/adminService';
 
 export function DriverRoot() {
   const navigate = useNavigate();
@@ -16,9 +16,8 @@ export function DriverRoot() {
   const [isTracking, setIsTracking] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
 
-  // Tallennetaan edellisen päivityksen aikaleima
   const lastLocationUpdate = useRef<number>(0);
-
+  const activeOrdersRef = useRef<Order[]>([]);
   const {user, isLoading} = useAuth();
 
   const navItems = [
@@ -28,20 +27,16 @@ export function DriverRoot() {
     {to: '/driver/profile', icon: User, label: 'Profiili'},
   ];
 
-  // ILMOITUSTEN HAKU & LASKURI (Sama logiikka kuin AdminRootissa)
+  // Ilmoitusten haku
   useEffect(() => {
     let mounted = true;
-
     const fetchNotificationCount = async () => {
       try {
         const data = await adminService.getNotifications();
-
-        // Luetaan mitkä ilmoitukset on jo nähty
         const seen = JSON.parse(
           localStorage.getItem('seen_notifications_driver') || '[]'
         );
 
-        // Lasketaan vain ne, joita EI löydy "nähdyt" -listalta
         const unseenAlerts = (data?.notifications || []).filter(
           (n: {notification_id: number}) =>
             !seen.includes(`notif-${n.notification_id}`)
@@ -78,10 +73,9 @@ export function DriverRoot() {
     }
   }, [user]);
 
-  // Haetaan tilaukset säännöllisesti taustalla
+  // Tilausten haku (polling)
   useEffect(() => {
     if (!user || user.role !== 'driver') return;
-
     const fetchMyDeliveries = async () => {
       try {
         const data = await orderService.getAssignedOrders();
@@ -96,71 +90,65 @@ export function DriverRoot() {
     return () => clearInterval(interval);
   }, [user]);
 
-  // KOKO SOVELLUKSEN LAAJUINEN GPS-SEURANTA
+  // Pidetään Ref ajan tasalla aktiivisista tilauksista
+  useEffect(() => {
+    activeOrdersRef.current = orders.filter((o) => o.status === 'in_transit');
+    setIsTracking(activeOrdersRef.current.length > 0);
+  }, [orders]);
+
+  // KOKO SOVELLUKSEN LAAJUINEN GPS-SEURANTA (Optimoitu)
   useEffect(() => {
     let watchId: number;
 
-    const activeTransitOrders = orders.filter((o) => o.status === 'in_transit');
+    if (user?.role === 'driver' && 'geolocation' in navigator) {
+      watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const activeTransitOrders = activeOrdersRef.current;
 
-    if (activeTransitOrders.length > 0 && user?.role === 'driver') {
-      if ('geolocation' in navigator) {
-        setTimeout(() => setIsTracking(true), 0);
+          // Jos ei ole ajossa olevia tilauksia, ei lähetetä sijaintia turhaan
+          if (activeTransitOrders.length === 0) return;
 
-        watchId = navigator.geolocation.watchPosition(
-          (position) => {
-            const now = Date.now();
+          const now = Date.now();
+          if (now - lastLocationUpdate.current < 30000) return;
+          lastLocationUpdate.current = now;
 
-            if (now - lastLocationUpdate.current < 30000) {
-              return;
-            }
+          const {latitude, longitude} = position.coords;
 
-            lastLocationUpdate.current = now;
-
-            const {latitude, longitude} = position.coords;
-
-            activeTransitOrders.forEach((order) => {
-              orderService
-                .updateDeliveryLocation(order.order_id, {latitude, longitude})
-                .catch((err) =>
+          activeTransitOrders.forEach((order) => {
+            orderService
+              .updateDeliveryLocation(order.order_id, {latitude, longitude})
+              .catch((err) => {
+                // Sivuutetaan Axios Abortit (normaalia navigoidessa)
+                if (
+                  err.name !== 'CanceledError' &&
+                  err.code !== 'ERR_CANCELED'
+                ) {
                   console.error(
                     `Sijainnin lähetys epäonnistui tilaukselle ${order.order_id}:`,
                     err
-                  )
-                );
-            });
-          },
-          (err) => {
-            console.error('Sijainnin hakeminen epäonnistui:', err);
-          },
-          {
-            enableHighAccuracy: true,
-            maximumAge: 10000,
-            timeout: 10000,
-          }
-        );
-      } else {
-        console.warn('Selaimesi ei tue paikannusta.');
-      }
-    } else {
-      setTimeout(() => setIsTracking(false), 0);
+                  );
+                }
+              });
+          });
+        },
+        (err) => console.error('Sijainnin hakeminen epäonnistui:', err),
+        {
+          enableHighAccuracy: true,
+          maximumAge: 10000,
+          timeout: 10000,
+        }
+      );
     }
 
+    // Puhdistetaan GPS vasta kun komponentti kuolee / käyttäjä kirjautuu ulos
     return () => {
       if (watchId) navigator.geolocation.clearWatch(watchId);
     };
-  }, [orders, user]);
+  }, [user]); // Huom! Riippuvuutena ei ole orders, jotta GPS ei buuttaa turhaan
 
-  // --- ROUTE GUARD ---
   if (isLoading) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          height: '100vh',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
+      <div className="flex h-screen items-center justify-center bg-background text-foreground">
         Ladataan...
       </div>
     );
@@ -169,7 +157,6 @@ export function DriverRoot() {
   if (!user || user.role !== 'driver') {
     return <Navigate to="/admin-login" state={{from: location}} replace />;
   }
-  // -------------------
 
   const isActive = (path: string) =>
     path === '/driver'
@@ -178,37 +165,14 @@ export function DriverRoot() {
 
   return (
     <ThemeProvider defaultTheme="system" storageKey="quantix-theme-driver">
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: '100vh',
-          backgroundColor: '#f1f5f9',
-          fontFamily: "'Space Grotesk', sans-serif",
-          paddingBottom: '80px',
-        }}
-      >
-        {/* Yläpalkki (GPS + Ilmoituskello) */}
+      <div className="flex flex-col min-h-screen bg-background font-sans pb-[80px]">
+        {/* Yläpalkki */}
         <div className="fixed top-4 right-4 z-50 flex items-center gap-3">
           {isTracking && (
-            <div
-              style={{
-                backgroundColor: '#dcfce7',
-                color: '#15803d',
-                padding: '6px 12px',
-                borderRadius: '9999px',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-                border: '1px solid #bbf7d0',
-              }}
-            >
+            <div className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm border border-green-200 dark:border-green-800">
               <Navigation
                 size={12}
-                className="fill-green-700"
+                className="fill-green-700 dark:fill-green-400"
                 style={{
                   animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                 }}
@@ -219,62 +183,40 @@ export function DriverRoot() {
 
           <button
             onClick={() => navigate('/driver')}
-            className="relative bg-white w-10 h-10 rounded-full flex items-center justify-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] border border-slate-200 text-slate-600 hover:text-orange-500 cursor-pointer transition-colors"
+            className="relative bg-card w-10 h-10 rounded-full flex items-center justify-center shadow-sm border border-border text-muted-foreground hover:text-primary transition-colors"
           >
             <Bell size={20} />
             {notificationCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-orange-500 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white animate-bounce">
+              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-orange-500 text-white text-[10px] font-bold flex items-center justify-center border-2 border-card animate-bounce">
                 {notificationCount > 99 ? '99+' : notificationCount}
               </span>
             )}
           </button>
         </div>
 
-        {/* Main content */}
-        <main style={{flex: 1, overflow: 'auto'}}>
+        <main className="flex-1 overflow-auto">
           <Outlet context={{orders, deliveries}} />
         </main>
 
-        {/* Bottom Navigation */}
-        <nav
-          style={{
-            position: 'fixed',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            backgroundColor: 'white',
-            borderTop: '1px solid #e2e8f0',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            padding: '0.5rem 0',
-            zIndex: 50,
-            boxShadow: '0 -2px 10px rgba(0,0,0,0.05)',
-          }}
-        >
+        {/* Alapalkki */}
+        <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border grid grid-cols-4 py-2 z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] dark:shadow-none">
           {navItems.map(({to, icon: Icon, label}) => {
             const active = isActive(to);
             return (
               <button
                 key={to}
                 onClick={() => navigate(to)}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.25rem',
-                  padding: '0.5rem',
-                  border: 'none',
-                  backgroundColor: 'transparent',
-                  color: active ? '#f97316' : '#64748b',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  minHeight: '60px',
-                }}
+                className={`flex flex-col items-center justify-center gap-1 p-2 min-h-[60px] bg-transparent transition-colors ${
+                  active
+                    ? 'text-primary'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
               >
                 <Icon size={24} strokeWidth={active ? 2.5 : 2} />
                 <span
-                  style={{fontSize: '0.7rem', fontWeight: active ? 700 : 500}}
+                  className={`text-[0.7rem] ${
+                    active ? 'font-bold' : 'font-medium'
+                  }`}
                 >
                   {label}
                 </span>

@@ -1,56 +1,50 @@
-const express = require('express');
-const productsController = require('../controllers/productsController.js');
-const authMiddleware = require('../middlewares/authMiddleware.js');
-const roleMiddleware = require('../middlewares/roleMiddleware.js');
+/**
+ * @fileoverview Product management routes.
+ * Handles fetching, creating, updating, and deleting products.
+ */
+
+import express from 'express';
+import * as productsController from '../controllers/productsController.js';
+import {authenticate} from '../middlewares/authMiddleware.js';
+import {requireRole} from '../middlewares/roleMiddleware.js';
+
 const router = express.Router();
 
-// Static Routes (Must come first)
-router.get('/', authMiddleware.authenticate, productsController.getProducts);
-
-router.post(
-  '/',
-  authMiddleware.authenticate,
-  roleMiddleware.requireRole('admin'),
-  productsController.createProduct
-);
-
-// Protected cursor route
-router.get(
-  '/cursor',
-  authMiddleware.authenticate,
-  productsController.getProductsCursor
-);
-
+// Static & Cursor Routes
+router.get('/', authenticate, productsController.getProducts);
+router.get('/cursor', authenticate, productsController.getProductsCursor);
 router.get(
   '/category/cursor',
-  authMiddleware.authenticate,
+  authenticate,
   productsController.getProductsByCategoryCursor
 );
 
-// Moved the test route ABOVE the /:id route so it doesn't get swallowed uppety up - Jere
+// Admin Product Management
+router.post(
+  '/',
+  authenticate,
+  requireRole('admin'),
+  productsController.createProduct
+);
+
+// Debugging route
 router.get('/test', (req, res) => {
-  console.log('TEST ROUTE HIT');
-  res.json({
-    message: 'Server works',
-    url: req.url,
-    method: req.method,
-  });
+  res.json({message: 'Server works', url: req.url, method: req.method});
 });
 
-router.delete('/:id', authMiddleware.authenticate, roleMiddleware.requireRole('admin'), productsController.deleteProduct);
-
-// Dynamic Routes (Must come last (They just MUST))
+// Dynamic Routes (Must be defined after static routes to avoid param swallowing)
+router.get('/:id', authenticate, productsController.getProductById);
 router.put(
   '/:id',
-  authMiddleware.authenticate,
-  roleMiddleware.requireRole('admin'),
+  authenticate,
+  requireRole('admin'),
   productsController.updateProduct
 );
-
-router.get(
+router.delete(
   '/:id',
-  authMiddleware.authenticate,
-  productsController.getProductById
+  authenticate,
+  requireRole('admin'),
+  productsController.deleteProduct
 );
 
-module.exports = router;
+export default router;

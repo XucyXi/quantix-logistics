@@ -1,11 +1,22 @@
 import {useState, useEffect} from 'react';
 import {motion} from 'motion/react';
-import {User, Truck, Package, Clock, LogOut, Power} from 'lucide-react';
+import {
+  User,
+  Truck,
+  Package,
+  Clock,
+  LogOut,
+  Power,
+  Moon,
+  Sun,
+  Monitor,
+} from 'lucide-react';
 import {useAuth} from '../contexts/AuthContext';
 import {useNavigate} from 'react-router';
 import {orderService} from '../services/orderService';
 import {authService} from '../services/authService';
 import {ChangePasswordCard} from '../components/ChangePasswordCard';
+import {useTheme} from '../contexts/ThemeProvider';
 
 interface OrderData {
   status: string;
@@ -14,6 +25,7 @@ interface OrderData {
 export function DriverProfilePage() {
   const {user, logout} = useAuth();
   const navigate = useNavigate();
+  const {theme, setTheme} = useTheme();
 
   const [isActive, setIsActive] = useState(true);
   const [vehicleInfo, setVehicleInfo] = useState('');
@@ -25,9 +37,13 @@ export function DriverProfilePage() {
       if (user?.role !== 'driver') return;
 
       try {
-        const {data} = await authService.getProfile();
-        setVehicleInfo(data.profile.vehicle_info || '');
-        setIsActive(Boolean(data.profile.is_active_driver));
+        const response = await authService.getProfile();
+
+        const profileData =
+          response?.data?.profile || response?.profile || response || {};
+
+        setVehicleInfo(profileData.vehicle_info || '');
+        setIsActive(Boolean(profileData.is_active_driver));
       } catch (e) {
         console.error('Driver profile load failed:', e);
       }
@@ -115,7 +131,7 @@ export function DriverProfilePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background font-sans p-6 pb-24">
+    <div className="p-6 font-sans">
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Profile Header */}
         <motion.div
@@ -137,8 +153,8 @@ export function DriverProfilePage() {
             onClick={toggleAvailability}
             className={`inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all shadow-sm ${
               isActive
-                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800'
+                : 'bg-muted text-muted-foreground border border-border'
             }`}
           >
             <Power size={18} />
@@ -176,6 +192,48 @@ export function DriverProfilePage() {
           </div>
         </div>
 
+        {/* Ulkoasu / Teema Toggle */}
+        <motion.div
+          initial={{opacity: 0, y: 20}}
+          animate={{opacity: 1, y: 0}}
+          transition={{delay: 0.05}}
+          className="bg-card border border-border rounded-3xl p-6 shadow-sm"
+        >
+          <h2 className="text-xl font-bold text-foreground mb-4">Ulkoasu</h2>
+          <div className="flex gap-2 bg-muted p-1.5 rounded-2xl">
+            <button
+              onClick={() => setTheme('light')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                theme === 'light'
+                  ? 'bg-background shadow-sm text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Sun size={18} /> Vaalea
+            </button>
+            <button
+              onClick={() => setTheme('dark')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                theme === 'dark'
+                  ? 'bg-background shadow-sm text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Moon size={18} /> Tumma
+            </button>
+            <button
+              onClick={() => setTheme('system')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                theme === 'system'
+                  ? 'bg-background shadow-sm text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Monitor size={18} /> Auto
+            </button>
+          </div>
+        </motion.div>
+
         {/* Ajoneuvotiedot */}
         <motion.div
           initial={{opacity: 0, y: 20}}
@@ -196,7 +254,7 @@ export function DriverProfilePage() {
                 value={vehicleInfo}
                 onChange={(e) => setVehicleInfo(e.target.value)}
                 placeholder="Esim. Mercedes Sprinter (XYZ-123)"
-                className="w-full p-3 rounded-2xl bg-input-background border border-border text-foreground focus:ring-2 focus:ring-ring outline-none transition-all"
+                className="w-full p-3 rounded-2xl bg-muted border border-border text-foreground focus:ring-2 focus:ring-ring outline-none transition-all"
               />
               <p className="text-xs text-muted-foreground mt-1">
                 Tässä voit päivittää ajoneuvon tiedot, jotka näkyvät myös
@@ -206,7 +264,7 @@ export function DriverProfilePage() {
             <button
               type="submit"
               disabled={vehicleInfoSaving}
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-primary text-primary-foreground font-bold hover:opacity-90 transition-all disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-primary text-primary-foreground font-bold hover:bg-primary/90 transition-all disabled:cursor-not-allowed disabled:opacity-60"
             >
               {vehicleInfoSaving ? 'Tallennetaan...' : 'Tallenna tiedot'}
             </button>
@@ -215,6 +273,7 @@ export function DriverProfilePage() {
 
         {/* Salasanan vaihto */}
         <ChangePasswordCard />
+
         <motion.button
           initial={{opacity: 0, y: 20}}
           animate={{opacity: 1, y: 0}}

@@ -16,6 +16,7 @@ import {
   X,
   Moon,
   Sun,
+  Monitor,
   User as UserIcon,
   Bell,
   Loader2,
@@ -290,6 +291,7 @@ function OrderCard({
   );
 }
 
+// TÄMÄ ON SE RATKAISEVA SANA, JOKA PUUTTUI!
 export function CustomerDashboard() {
   const {user, token} = useAuth();
   const navigate = useNavigate();
@@ -302,7 +304,6 @@ export function CustomerDashboard() {
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>('all');
 
-  // Katsotaan onko tultu kellokuvakkeesta (navigoitu state: { tab: 'settings' } kanssa)
   const initialTab =
     location.state &&
     typeof location.state === 'object' &&
@@ -312,7 +313,6 @@ export function CustomerDashboard() {
 
   const [activeTab, setActiveTab] = useState<'orders' | 'settings'>(initialTab);
 
-  // Ilmoitustilat
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [newItems, setNewItems] = useState<Set<string>>(new Set());
@@ -324,12 +324,7 @@ export function CustomerDashboard() {
   const [isModalLoading, setIsModalLoading] = useState(false);
 
   const {theme, setTheme} = useTheme();
-  const isDarkMode =
-    theme === 'dark' ||
-    (theme === 'system' &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-  // Hae ilmoitukset ja merkitse luetuksi
   useEffect(() => {
     let mounted = true;
 
@@ -339,7 +334,6 @@ export function CustomerDashboard() {
         const fetchedAlerts: Alert[] = data.notifications || [];
         const fetchedAnns: Announcement[] = data.announcements || [];
 
-        // Hoidetaan luetuksi merkitseminen vain jos ollaan settings-tabissa!
         if (activeTab === 'settings') {
           const seen = JSON.parse(
             localStorage.getItem('seen_notifications_customer') || '[]'
@@ -389,7 +383,7 @@ export function CustomerDashboard() {
     return () => {
       mounted = false;
     };
-  }, [activeTab]); // Kutsutaan aina kun välilehti vaihtuu!
+  }, [activeTab]);
 
   const getStatCards = () => [
     {
@@ -442,7 +436,6 @@ export function CustomerDashboard() {
           return order.status === filterStatus;
         });
 
-  // Datan haku (Tilaukset & Statistiikka)
   useEffect(() => {
     if (!user || !token) {
       setLoading(false);
@@ -486,10 +479,9 @@ export function CustomerDashboard() {
     };
   }, [user, token]);
 
-  // Modaalin avaus
   const handleViewOrder = async (orderId: number) => {
     setIsModalLoading(true);
-    setTrackingData(null); // Nollataan aiemmat seurantatiedot
+    setTrackingData(null);
     try {
       const details = await orderService.getOrderById(
         orderId,
@@ -503,7 +495,6 @@ export function CustomerDashboard() {
     }
   };
 
-  // SEURANTADATAN LIVE-PÄIVITYS (Polling)
   useEffect(() => {
     if (!selectedOrder || selectedOrder.status !== 'in_transit' || !token) {
       return;
@@ -525,15 +516,14 @@ export function CustomerDashboard() {
       }
     };
 
-    fetchTracking(); // Hae heti
-    const interval = setInterval(fetchTracking, 10000); // Päivitä 10s välein
+    fetchTracking();
+    const interval = setInterval(fetchTracking, 10000);
     return () => {
       mounted = false;
       clearInterval(interval);
     };
   }, [selectedOrder, token]);
 
-  // KARTAN KOORDINAATTIEN PURKAMINEN JOUSTAVASTI
   const driverLat = trackingData
     ? Number(
         trackingData?.driver?.latitude ||
@@ -836,41 +826,50 @@ export function CustomerDashboard() {
               <ChangePasswordCard />
             </div>
 
+            {/* --- UUSI TYYLIKÄS 3-OSAINEN TEEMAVALITSIN --- */}
             <div className="bg-card border border-border rounded-3xl p-8 shadow-sm transition-all hover:shadow-md">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                <div>
-                  <h2 className="text-xl font-extrabold text-foreground mb-2">
-                    Ulkoasu (Teema)
-                  </h2>
-                  <p className="text-sm text-muted-foreground font-medium max-w-md">
-                    Vaihda sovelluksen värimaailmaa vaalean ja tumman teeman
-                    välillä silmille ystävällisemmäksi.
-                  </p>
-                </div>
+              <h2 className="text-xl font-extrabold text-foreground mb-4">
+                Ulkoasu
+              </h2>
+              <p className="text-sm text-muted-foreground font-medium mb-4 max-w-md">
+                Vaihda sovelluksen värimaailmaa vaalean ja tumman teeman välillä
+                silmille ystävällisemmäksi.
+              </p>
 
-                <div className="flex items-center justify-center shrink-0">
-                  <button
-                    onClick={() => setTheme(isDarkMode ? 'light' : 'dark')}
-                    aria-label="Vaihda teemaa"
-                    className={`relative inline-flex h-9 w-16 cursor-pointer items-center rounded-full transition-colors duration-300 ease-in-out focus:outline-none focus:ring-4 focus:ring-primary/30 ${
-                      isDarkMode ? 'bg-primary' : 'bg-slate-300'
-                    }`}
-                  >
-                    <span
-                      className={`pointer-events-none flex h-7 w-7 items-center justify-center rounded-full bg-white shadow-md transform ring-0 transition duration-300 ease-in-out ${
-                        isDarkMode ? 'translate-x-8' : 'translate-x-1'
-                      }`}
-                    >
-                      {isDarkMode ? (
-                        <Moon size={14} className="text-primary" />
-                      ) : (
-                        <Sun size={14} className="text-amber-500" />
-                      )}
-                    </span>
-                  </button>
-                </div>
+              <div className="flex gap-2 bg-muted p-1.5 rounded-2xl w-full">
+                <button
+                  onClick={() => setTheme('light')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                    theme === 'light'
+                      ? 'bg-background shadow-sm text-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Sun size={18} /> Vaalea
+                </button>
+                <button
+                  onClick={() => setTheme('dark')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                    theme === 'dark'
+                      ? 'bg-background shadow-sm text-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Moon size={18} /> Tumma
+                </button>
+                <button
+                  onClick={() => setTheme('system')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                    theme === 'system'
+                      ? 'bg-background shadow-sm text-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Monitor size={18} /> Auto
+                </button>
               </div>
             </div>
+            {/* ------------------------------------------- */}
           </motion.div>
         )}
       </div>
@@ -941,7 +940,6 @@ export function CustomerDashboard() {
                               <div className="h-[250px] w-full rounded-xl overflow-hidden border border-border relative z-0">
                                 <Map
                                   startCoords={[driverLat, driverLng]}
-                                  // Jos määränpäätä ei ole tiedossa, estetään Map:ia reitittämästä 0,0 koordinaatteihin asettamalla endCoords samaan paikkaan
                                   endCoords={
                                     hasDestination
                                       ? [destLat, destLng]

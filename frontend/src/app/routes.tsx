@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Application Routing.
+ * Configures the main routes for the application using React Router v6.
+ */
+
 import {createBrowserRouter} from 'react-router';
 import {Root} from './layouts/Root';
 import {AdminRoot} from './layouts/AdminRoot';
@@ -20,7 +25,6 @@ import {UsersPage} from './pages/UsersPage';
 import {ReportsPage} from './pages/ReportsPage';
 import {SettingsPage} from './pages/SettingsPage';
 import {LiveMapPage} from './pages/LiveMapPage';
-import {DriverDashboard} from './pages/DriverDashboard';
 import {DriverDeliveriesPage} from './pages/DriverDeliveriesPage';
 import {DriverProfilePage} from './pages/DriverProfilePage';
 import {DeliveryManager} from './components/delivery-tracking/DeliveryManager';
@@ -29,6 +33,7 @@ import {AdminProductsPage} from './pages/AdminProductsPage';
 import {CustomerDashboard} from './pages/CustomerDashboard';
 import {NotFoundPage} from './pages/NotFoundPage';
 
+// Dynaaminen, "laiska" tuonti optimoi sovelluksen latausnopeutta
 const loadDriverDashboard = async () => {
   const module = await import('./pages/DriverDashboard');
   return {Component: module.DriverDashboard};
@@ -72,7 +77,7 @@ export const router = createBrowserRouter([
     path: '/driver',
     Component: DriverRoot,
     children: [
-      {index: true, Component: DriverDashboard},
+      {index: true, lazy: loadDriverDashboard}, // <- Muutettu käyttämään lazy loadia
       {path: 'deliveries', Component: DriverDeliveriesPage},
       {path: 'map', Component: DeliveryManager},
       {path: 'profile', Component: DriverProfilePage},
@@ -86,13 +91,12 @@ export const router = createBrowserRouter([
   {
     path: '/kuljettaja',
     Component: DriverRoot,
-    children: [{index: true, lazy: loadDriverDashboard}],
+    children: [{index: true, lazy: loadDriverDashboard}], // <- Tämäkin käyttää samaa lazy loadia
   },
   {
     path: '/user/maptest',
     Component: CustomerTrackingView,
   },
-
   {
     path: '*',
     Component: NotFoundPage,

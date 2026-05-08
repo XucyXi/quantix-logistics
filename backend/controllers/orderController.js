@@ -1,8 +1,19 @@
-const orderService = require('../services/orderService.js');
-const notificationService = require('../services/notificationService.js');
-const db = require('../config/db.js');
+/**
+ * @fileoverview Order Controller.
+ * Handles the full lifecycle of orders, driver assignments, and automated warehouse simulation.
+ */
 
-async function createOrder(req, res) {
+import * as orderService from '../services/orderService.js';
+import * as notificationService from '../services/notificationService.js';
+import db from '../config/db.js';
+
+/**
+ * Creates a new order for the authenticated customer.
+ *
+ * @param {import('express').Request} req - Express request object containing delivery_address, notes, and items array.
+ * @param {import('express').Response} res - Express response object.
+ */
+export async function createOrder(req, res) {
   try {
     const customerId = req.user.user_id;
     const {delivery_address, notes, items} = req.body;
@@ -20,7 +31,6 @@ async function createOrder(req, res) {
 
     res.status(201).json(result);
   } catch (err) {
-    console.error('Error creating order:', err);
     if (err.message.includes('ei ole tarpeeksi varastossa')) {
       return res.status(400).json({error: err.message});
     }
@@ -28,7 +38,13 @@ async function createOrder(req, res) {
   }
 }
 
-async function getOrder(req, res) {
+/**
+ * Fetches a single order by its ID.
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ */
+export async function getOrder(req, res) {
   try {
     const {id} = req.params;
     const order = await orderService.getOrderById(id);
@@ -39,25 +55,37 @@ async function getOrder(req, res) {
 
     res.json(order);
   } catch (err) {
-    console.error('Get order error:', err.message);
     res.status(500).json({error: err.message || 'Failed to fetch order'});
   }
 }
 
-async function getAssignedOrders(req, res) {
+/**
+ * Fetches all active orders assigned to the authenticated driver.
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ */
+export async function getAssignedOrders(req, res) {
   try {
     const driverId = req.user.user_id;
     const orders = await orderService.getAssignedOrders(driverId);
     res.json(orders);
   } catch (err) {
-    console.error('Error fetching assigned orders:', err);
     res
       .status(500)
       .json({error: err.message || 'Failed to fetch assigned orders'});
   }
 }
 
-async function assignDriver(req, res) {
+/**
+ * Assigns a driver to an order.
+ * If a driver is assigned, triggers an automated warehouse simulation that
+ * changes the order status to 'in_progress' and then 'ready_for_pickup'.
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ */
+export async function assignDriver(req, res) {
   try {
     const {id} = req.params;
     const {driver_id} = req.body;
@@ -69,13 +97,11 @@ async function assignDriver(req, res) {
       return res.status(404).json({error: 'Order not found'});
     }
 
-    // Notifikaatio kuskille (Jos driver_id annettu)
     if (driver_id) {
       try {
         const order = await orderService.getOrderById(id);
-        // Haetaan full_name AS name. Poistettu tästä phone, koska sitä ei edes ole USERS-taulussa.
         const [users] = await db.query(
-          'SELECT email, full_name AS name FROM USERS WHERE user_id = ?',
+          'SELECT email, full_name AS name FROM users WHERE user_id = ?',
           [driver_id]
         );
         if (users.length > 0) {
@@ -90,35 +116,33 @@ async function assignDriver(req, res) {
       }
     }
 
-    // Automaattinen varastosimulaatio (Jos siirtyi tilaan 'assigned')
+    // Automatic warehouse simulation logic
     if (newStatus === 'assigned') {
       setTimeout(async () => {
         try {
           await orderService.updateOrderStatus(id, 'in_progress');
-          console.log(
-            `[Auto-Varasto] Tilaus ${id} tilaan 'in_progress' (Keräilyssä)`
-          );
-
           setTimeout(async () => {
             await orderService.updateOrderStatus(id, 'ready_for_pickup');
-            console.log(
-              `[Auto-Varasto] Tilaus ${id} tilaan 'ready_for_pickup' (Odottaa noutoa)`
-            );
           }, 5000);
         } catch (err) {
-          console.error('Varastosimulaatio epäonnistui:', err);
+          console.error('Warehouse simulation failed:', err);
         }
       }, 5000);
     }
 
     res.json({message: 'Driver assigned successfully', status: newStatus});
   } catch (err) {
-    console.error('Error assigning driver:', err);
     res.status(500).json({error: 'Failed to assign driver'});
   }
 }
 
-async function updateOrderStatus(req, res) {
+/**
+ * Updates the status of an order and notifies the customer.
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ */
+export async function updateOrderStatus(req, res) {
   try {
     const orderId = req.params.id;
     const {newStatus} = req.body;
@@ -128,13 +152,11 @@ async function updateOrderStatus(req, res) {
       return res.status(404).json({error: 'Order not found'});
     }
 
-    // Notifikaatio asiakkaalle
     try {
       const order = await orderService.getOrderById(orderId);
       if (order && order.customer_id) {
-        // KORJATTU: Haetaan full_name AS name. Poistettu phone.
         const [users] = await db.query(
-          'SELECT email, full_name AS name FROM USERS WHERE user_id = ?',
+          'SELECT email, full_name AS name FROM users WHERE user_id = ?',
           [order.customer_id]
         );
         if (users.length > 0) {
@@ -151,27 +173,37 @@ async function updateOrderStatus(req, res) {
 
     res.json({success: true, status: newStatus});
   } catch (err) {
-    console.error(err);
     res
       .status(400)
       .json({error: err.message || 'Failed to update order status'});
   }
 }
 
-const getOrderStats = async (req, res) => {
+/**
+ * Fetches aggregate order statistics for the authenticated customer.
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ */
+export async function getOrderStats(req, res) {
   const customerId = req.user.user_id;
   try {
     const stats = await orderService.getOrderStats(customerId);
     res.json(stats);
   } catch (error) {
-    console.error('Controller error getting stats:', error.message);
     res
       .status(500)
       .json({error: error.message || 'Failed to fetch order stats'});
   }
-};
+}
 
-const getCustomerOrders = async (req, res) => {
+/**
+ * Fetches paginated orders for the authenticated customer.
+ *
+ * @param {import('express').Request} req - Express request object containing limit, offset, and status filters.
+ * @param {import('express').Response} res - Express response object.
+ */
+export async function getCustomerOrders(req, res) {
   const customerId = req.user.user_id;
   const limit = parseInt(req.query.limit) || 20;
   const offset = parseInt(req.query.offset) || 0;
@@ -185,14 +217,19 @@ const getCustomerOrders = async (req, res) => {
     });
     res.json({success: true, orders});
   } catch (error) {
-    console.error('Controller error:', error.message);
     res
       .status(500)
       .json({error: error.message || 'Failed to fetch customer orders'});
   }
-};
+}
 
-async function updateAvailability(req, res) {
+/**
+ * Updates the 'active' status of the authenticated driver.
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ */
+export async function updateAvailability(req, res) {
   try {
     const driverId = req.user.user_id;
     const {active} = req.body;
@@ -210,7 +247,13 @@ async function updateAvailability(req, res) {
   }
 }
 
-async function cancelOrder(req, res) {
+/**
+ * Cancels a pending order and restores product stock.
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ */
+export async function cancelOrder(req, res) {
   try {
     const {id} = req.params;
     const result = await orderService.cancelOrder(id);
@@ -225,7 +268,13 @@ async function cancelOrder(req, res) {
   }
 }
 
-async function getAllDrivers(req, res) {
+/**
+ * Fetches all drivers in the system (Admin only).
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ */
+export async function getAllDrivers(req, res) {
   try {
     const drivers = await orderService.getAllDrivers();
     return res.json({success: true, drivers});
@@ -234,7 +283,13 @@ async function getAllDrivers(req, res) {
   }
 }
 
-async function getOrdersCursor(req, res) {
+/**
+ * Fetches orders using cursor-based pagination for efficient large-scale retrieval.
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ */
+export async function getOrdersCursor(req, res) {
   try {
     const cursor = req.query.cursor || 0;
     const limit = req.query.limit || 16;
@@ -246,27 +301,17 @@ async function getOrdersCursor(req, res) {
   }
 }
 
-async function getAllOrdersAdmin(req, res) {
+/**
+ * Fetches all orders for the admin dashboard.
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ */
+export async function getAllOrdersAdmin(req, res) {
   try {
     const orders = await orderService.getAllOrdersAdmin();
     res.json(orders);
   } catch (err) {
-    console.error('Error fetching admin orders:', err);
     res.status(500).json({error: 'Failed to fetch admin orders'});
   }
 }
-
-module.exports = {
-  createOrder,
-  getOrder,
-  getAssignedOrders,
-  updateOrderStatus,
-  getOrderStats,
-  getCustomerOrders,
-  updateAvailability,
-  cancelOrder,
-  getAllDrivers,
-  getOrdersCursor,
-  getAllOrdersAdmin,
-  assignDriver,
-};

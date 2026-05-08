@@ -1,4 +1,4 @@
-const bcrypt = require('bcrypt');
+import bcrypt from 'bcrypt';
 
 const password = "YOUR_PASSWORD_CHOICE_HERE";
 

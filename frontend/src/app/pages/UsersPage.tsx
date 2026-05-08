@@ -56,6 +56,12 @@ export function UsersPage() {
   }, []);
 
   const handleDelete = async (user: User) => {
+    // Varmistetaan vielä kerran, ettei vahingossakaan yritetä poistaa adminia
+    if (user.role === 'Admin') {
+      alert('Admin-käyttäjiä ei voi poistaa!');
+      return;
+    }
+
     if (window.confirm(`Haluatko varmasti poistaa käyttäjän ${user.name}?`)) {
       try {
         await userService.deleteUser(user.original_id);
@@ -365,6 +371,7 @@ export function UsersPage() {
 
               <MasterTableCell align="right">
                 <div className="flex items-center justify-end gap-2">
+                  {/* Piilotetaan Muokkaa-nappi Admineilta */}
                   {user.role !== 'Admin' ? (
                     <button
                       onClick={() => openModal(user)}
@@ -373,12 +380,18 @@ export function UsersPage() {
                       <Edit size={16} />
                     </button>
                   ) : null}
-                  <button
-                    onClick={() => handleDelete(user)}
-                    className="p-2 text-muted-foreground hover:text-destructive bg-transparent rounded-lg hover:bg-muted transition-colors"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+
+                  {/* Piilotetaan Poista-nappi Admineilta */}
+                  {user.role !== 'Admin' ? (
+                    <button
+                      onClick={() => handleDelete(user)}
+                      className="p-2 text-muted-foreground hover:text-destructive bg-transparent rounded-lg hover:bg-muted transition-colors"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  ) : (
+                    <div className="h-8 w-8" /> // Placeholder jotta asettelu pysyy siistinä
+                  )}
                 </div>
               </MasterTableCell>
             </MasterTableRow>
@@ -431,7 +444,7 @@ export function UsersPage() {
                 />
               </div>
 
-              {/* UUSI: Salasana (näytetään aina uutta luodessa, muokatessa vapaaehtoinen) */}
+              {/* Salasana (näytetään aina uutta luodessa, muokatessa vapaaehtoinen) */}
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1.5">
                   Salasana{' '}

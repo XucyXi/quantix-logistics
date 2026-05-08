@@ -1,6 +1,10 @@
+/**
+ * @fileoverview Theme Provider Context.
+ * Manages the application's color scheme (dark, light, or system preference).
+ */
+
 import {createContext, useContext, useEffect, useState} from 'react';
 
-// Määritellään mahdolliset teemat
 type Theme = 'dark' | 'light' | 'system';
 
 type ThemeProviderProps = {
@@ -19,16 +23,14 @@ const initialState: ThemeProviderState = {
   setTheme: () => null,
 };
 
-// Luodaan Context
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
 export function ThemeProvider({
   children,
   defaultTheme = 'system',
-  storageKey = 'quantix-ui-theme', // LocalStoragen avain
+  storageKey = 'quantix-ui-theme',
   ...props
 }: ThemeProviderProps) {
-  // Alustetaan tila LocalStoragesta tai käytetään oletusta
   const [theme, setTheme] = useState<Theme>(
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
   );
@@ -57,7 +59,6 @@ export function ThemeProvider({
   const value = {
     theme,
     setTheme: (theme: Theme) => {
-      // Tallennetaan uusi valinta selaimeen, jotta se muistetaan ensi kerralla
       localStorage.setItem(storageKey, theme);
       setTheme(theme);
     },
@@ -70,12 +71,14 @@ export function ThemeProvider({
   );
 }
 
-// Custom hook, jota muiden komponenttien on helppo käyttää
+/**
+ * Custom hook to consume the ThemeContext.
+ * Must be used within a <ThemeProvider>.
+ */
 export const useTheme = () => {
   const context = useContext(ThemeProviderContext);
-
-  if (context === undefined)
-    throw new Error('useTheme täytyy olla ThemeProviderin sisällä');
-
+  if (context === undefined) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
   return context;
 };
