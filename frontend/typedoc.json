@@ -1,0 +1,16 @@
+{
+  "entryPoints": ["src"],
+  "entryPointStrategy": "expand",
+  "out": "../docs/frontend-code",
+  "name": "Quantix Logistics - Frontend UI",
+  "exclude": [
+    "**/node_modules/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/vite-env.d.ts"
+  ],
+  "excludePrivate": true,
+  "validation": {
+    "invalidLink": false
+  }
+}

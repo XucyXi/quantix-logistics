@@ -1,0 +1,159 @@
+<!DOCTYPE html><html class="default" lang="en" data-base="./"><head><meta charset="utf-8"/><meta http-equiv="x-ua-compatible" content="IE=edge"/><title>Quantix Logistics - Backend API</title><meta name="description" content="Documentation for Quantix Logistics - Backend API"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="assets/style.css"/><link rel="stylesheet" href="assets/highlight.css"/><script defer src="assets/main.js"></script><script async src="assets/icons.js" id="tsd-icons-script"></script><script async src="assets/search.js" id="tsd-search-script"></script><script async src="assets/navigation.js" id="tsd-nav-script"></script></head><body><script>document.documentElement.dataset.theme = localStorage.getItem("tsd-theme") || "os";document.body.style.display="none";setTimeout(() => window.app?app.showPage():document.body.style.removeProperty("display"),500)</script><header class="tsd-page-toolbar"><div class="tsd-toolbar-contents container"><a href="index.html" class="title">Quantix Logistics - Backend API</a><div id="tsd-toolbar-links"></div><button id="tsd-search-trigger" class="tsd-widget" aria-label="Search"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-search"></use></svg></button><dialog id="tsd-search" aria-label="Search"><input role="combobox" id="tsd-search-input" aria-controls="tsd-search-results" aria-autocomplete="list" aria-expanded="true" autocapitalize="off" autocomplete="off" placeholder="Search the docs" maxLength="100"/><ul role="listbox" id="tsd-search-results"></ul><div id="tsd-search-status" aria-live="polite" aria-atomic="true"><div>Preparing search index...</div></div></dialog><a href="#" class="tsd-widget menu" id="tsd-toolbar-menu-trigger" data-toggle="menu" aria-label="Menu"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-menu"></use></svg></a></div></header><div class="container container-main"><div class="col-content"><div class="tsd-page-title"><h1>Quantix Logistics - Backend API</h1></div><div class="tsd-panel tsd-typography"><h1 id="quantix-logistics" class="tsd-anchor-link">Quantix Logistics<a href="#quantix-logistics" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h1>
+<p><strong>Digitaalinen kuljetuksen ja tilauksen hallinta</strong> kokonaisuus, jossa asiakkaat käyvät verkkokaupassa, kuljettajat päivittävät toimituksia ja ylläpito näkee analytiikan. Sovellus on Metropolian <strong>Full Stack -websovelluskehitys</strong> -opintojaksoon tehty full stack -projektina (frontend + REST-API + MySQL).</p>
+<p>Projektissa korostuu <strong>läpinäkyvä toimitusketju</strong>: tilausrivit, tilat, karttapohjainen seuranta ja ilmoitusvirta yhdessä järjestelmässä.</p>
+<p align="center">
+  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=000" alt="React" />
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=fff" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=fff" alt="Vite" />
+  <img src="https://img.shields.io/badge/Express-5-000?logo=express&logoColor=fff" alt="Express" />
+  <img src="https://img.shields.io/badge/MySQL-8%2B-4479A1?logo=mysql&logoColor=fff" alt="MySQL" />
+</p>
+<hr>
+<h2 id="1-projektin-kuvaus" class="tsd-anchor-link">1. Projektin kuvaus<a href="#1-projektin-kuvaus" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<h3 id="mikä-on-quantix-logistics" class="tsd-anchor-link">Mikä on Quantix Logistics?<a href="#mikä-on-quantix-logistics" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Quantix Logistics on moderni tilaus- ja kuljetusketjun hallintasovellus. Se yhdistää verkkokauppamaisen tilauskokemuksen, kuljettajan operatiivisen näkymän sekä ylläpidon hallinta- ja analytiikkatyökalut yhteen saumattomaan käyttöliittymään.</p>
+<h3 id="kenelle-se-on-tehty" class="tsd-anchor-link">Kenelle se on tehty?<a href="#kenelle-se-on-tehty" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul>
+<li><strong>Asiakkaat (B2B/B2C):</strong> Käyttäjät, jotka tilaavat tuotteita ja haluavat seurata toimituksen etenemistä reaaliajassa.</li>
+<li><strong>Kuljettajat:</strong> Logistiikkahenkilöstö, joka hallitsee omia toimituksiaan ja navigoi kohteisiin.</li>
+<li><strong>Ylläpito (Admin):</strong> Operatiivinen tiimi, joka hallitsee tuotteita, käyttäjiä, tilauksia ja seuraa järjestelmän analytiikkaa.</li>
+</ul>
+<h3 id="miksi-sovellus-on-hyödyllinen" class="tsd-anchor-link">Miksi sovellus on hyödyllinen?<a href="#miksi-sovellus-on-hyödyllinen" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Nykyajan logistiikassa läpinäkyvyys on kaikki kaikessa. Järjestelmämme ratkaisee ongelman, jossa tieto katkeaa varaston ja asiakkaan välillä. Tarjoamalla asiakkaalle <strong>live-karttaseurannan</strong> ja kuljettajalle helpon mobiilinäkymän, vähennämme epätietoisuutta ja asiakaspalvelun kuormitusta. Roolipohjainen arkkitehtuuri on tehty skaalautuvaksi reaalimaailman tarpeisiin.</p>
+<hr>
+<h2 id="2-ryhmän-jäsenet" class="tsd-anchor-link">2. Ryhmän jäsenet<a href="#2-ryhmän-jäsenet" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<table>
+<thead>
+<tr>
+<th>Nimi</th>
+<th>Rooli</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Anders Nuri</strong></td>
+<td>Frontend</td>
+</tr>
+<tr>
+<td><strong>Jere Lappalainen</strong></td>
+<td>Fullstack &amp; Project Manager</td>
+</tr>
+<tr>
+<td><strong>Teemu Poutanen</strong></td>
+<td>Fullstack</td>
+</tr>
+<tr>
+<td><strong>Satvik Velpola</strong></td>
+<td>Backend</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="3-keskeiset-ominaisuudet" class="tsd-anchor-link">3. Keskeiset ominaisuudet<a href="#3-keskeiset-ominaisuudet" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<ul>
+<li><strong>Käyttäjähallinta:</strong> Roolipohjainen turvallinen kirjautuminen (JWT).</li>
+<li><strong>Asiakkaalle:</strong> Tuoteluettelo, ostoskori, tilauksen luonti ja omien tilausten reaaliaikainen seuranta.</li>
+<li><strong>Kuljettajalle:</strong> Osoitettujen toimitusten näkymä, tilapäivitykset ja <strong>GPS-seuranta</strong> kartalla.</li>
+<li><strong>Adminille:</strong> Tuotteiden, kategorioiden ja käyttäjien CRUD-hallinta sekä visuaalinen analytiikkapaneeli (Recharts).</li>
+<li><strong>Integraatiot:</strong> Leaflet-pohjainen live-kartta ja sisäinen ilmoitusjärjestelmä.</li>
+</ul>
+<hr>
+<h2 id="4-ohjeistus-testaamiseen" class="tsd-anchor-link">4. Ohjeistus testaamiseen<a href="#4-ohjeistus-testaamiseen" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>Voit testata sovellusta vapaasti livenä osoitteessa:
+👉 <strong><a href="https://logistics.quantixincorporated.com/">logistics.quantixincorporated.com</a></strong></p>
+<h3 id="testitunnukset" class="tsd-anchor-link">Testitunnukset<a href="#testitunnukset" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Voit rekisteröidä oman asiakastunnuksen tai käyttää näitä valmiita testitunnuksia päästäksesi kiinni eri roolien näkymiin:</p>
+<ul>
+<li><strong>Asiakas:</strong> <code>example@customer.com</code> | Salasana: <code>example123</code></li>
+<li><strong>Kuljettaja:</strong> <code>example@driver.com</code> | Salasana: <code>exampleDriver123</code></li>
+<li><strong>Admin:</strong> <code>example@admin.com</code> | Salasana: <code>exampleAdmin123</code></li>
+</ul>
+<h3 id="suositeltu-testauspolku" class="tsd-anchor-link">Suositeltu testauspolku<a href="#suositeltu-testauspolku" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Tätä polkua seuraamalla näet kaikki järjestelmän päätoiminnallisuudet:</p>
+<ol>
+<li><strong>Kirjaudu asiakkaana:</strong> Selaa tuotteita, lisää niitä ostoskoriin ja vie tilaus loppuun (Checkout). Tarkista, että tilaus ilmestyy &quot;Tilaukset&quot;-välilehdelle.</li>
+<li><strong>Kirjaudu adminina:</strong> Mene &quot;Tilaukset&quot;-sivulle. Voit halutessasi muuttaa juuri tekemäsi tilauksen tilaksi <em>Assigned</em> ja ohjata sen testikuljettajalle. Tutki samalla analytiikkanäkymää.</li>
+<li><strong>Kirjaudu kuljettajana:</strong> Etsi äsken tehty tilaus &quot;Odottaa toimitusta&quot; -listalta. Kuittaa tilaus tilaan <strong>&quot;Matkalla&quot;</strong>. Mene Kartta-välilehdelle (voit käyttää &quot;Simuloi ajo&quot; -nappia oikeassa yläkulmassa nähdäksesi ajoreitin livenä).</li>
+<li><strong>Live-seuranta:</strong> Jos avaat toisella selaimella asiakkaan näkymän ja katsot kyseistä tilausta, näet kuljettajan sijainnin päivittyvän kartalla reaaliajassa!</li>
+</ol>
+<h3 id="palautelomake" class="tsd-anchor-link">Palautelomake<a href="#palautelomake" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Kun olet testannut sovelluksen, pyydämme ystävällisesti täyttämään vertaisarviointilomakkeen tänne:
+👉 <strong>[LINKKI GOOGLE FORMS -PALAUTELOMAKKEESEEN TÄHÄN]</strong></p>
+<hr>
+<h2 id="5-asennus-ja-pika-aloitusohjeet-lokaalisti" class="tsd-anchor-link">5. Asennus- ja pika-aloitusohjeet (Lokaalisti)<a href="#5-asennus-ja-pika-aloitusohjeet-lokaalisti" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>Jos haluat ajaa ohjelmistoa omalla koneellasi lähdekoodista, toimi näin:</p>
+<p><strong>1. Kloonaa repositorio ja asenna riippuvuudet</strong></p>
+<pre><code class="bash"><span class="hl-0">git</span><span class="hl-1"> </span><span class="hl-2">clone</span><span class="hl-1"> [https://github.com/XucyXi/quantix-logistics.git](</span><span class="hl-0">https://github.com/XucyXi/quantix-logistics.git</span><span class="hl-1">)</span><br/><span class="hl-0">cd</span><span class="hl-1"> </span><span class="hl-2">quantix-logistics</span><br/><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">install:all</span><br/>
+</code><button type="button">Copy</button></pre>
+
+<p><strong>2. Tietokannan pystytys (Backend)</strong></p>
+<ul>
+<li>Luo paikalliselle MySQL-palvelimellesi tyhjä tietokanta.</li>
+<li>Kopioi <code>backend/.env.example</code> nimelle <code>backend/.env</code> ja täytä tietokantasi tunnukset sekä valitsemasi <code>JWT_SECRET</code>.</li>
+<li>Alusta tietokannan taulut:</li>
+</ul>
+<pre><code class="bash"><span class="hl-0">cd</span><span class="hl-1"> </span><span class="hl-2">backend</span><br/><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">db:init</span><br/>
+</code><button type="button">Copy</button></pre>
+
+<p><strong>3. Käynnistä palvelimet</strong></p>
+<ul>
+<li><strong>Backend:</strong> (Kansiossa <code>backend/</code>) aja komento <code>npm start</code></li>
+<li><strong>Frontend:</strong> (Kansiossa <code>frontend/</code>) aja komento <code>npm run dev</code></li>
+</ul>
+<p>Sovellus pyörii nyt osoitteessa <code>http://localhost:5173</code>.</p>
+<blockquote>
+<p>Vinkki: Ennen uusia commit-työntöjä voit tarkistaa laadun ajamalla projektin juuresta <code>npm run verify</code> (typecheck + build + syntax check).</p>
+</blockquote>
+<hr>
+<h2 id="6-arkkitehtuuri-ja-teknologiapino" class="tsd-anchor-link">6. Arkkitehtuuri ja Teknologiapino<a href="#6-arkkitehtuuri-ja-teknologiapino" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>Selain-UI kutsuu yhtä <strong>REST JSON -APIa</strong>, joka jakaa lukuoikeudet käyttäjän roolin mukaan JWT-tokenin avulla.</p>
+<pre><code class="text">┌─────────────────────────────────────────────────────┐
+│  Frontend (React 19, TypeScript, Vite, Tailwind 4)  │
+│  • StoreRoot · DriverRoot · AdminRoot layouts       │
+│  • Axios → /api                                     │
+└────────────────────────┬────────────────────────────┘
+                         │ HTTPS / JSON
+┌────────────────────────▼────────────────────────────┐
+│  Backend (Express 5 on Node.js)                     │
+│  • JWT middleware + roleMiddleware                  │
+│  • Moduulit: auth, products, orders, deliveries...  │
+└────────────────────────┬────────────────────────────┘
+                         │ mysql2 (promise)
+┌────────────────────────▼────────────────────────────┐
+│  MySQL — (Käyttäjät, Tuotteet, Tilaukset, GPS...)   │
+└─────────────────────────────────────────────────────┘
+
+</code><button type="button">Copy</button></pre>
+
+<p><strong>REST API -moduulit (/api/...)</strong></p>
+<ul>
+<li><code>/auth</code> - Rekisteröinti, kirjautuminen, refresh</li>
+<li><code>/products</code> &amp; <code>/categories</code> - Tuoteluettelot ja CRUD</li>
+<li><code>/orders</code> - Tilausten luonti ja tilamuutokset</li>
+<li><code>/deliveries</code> - GPS-sijaintipäivitykset ja lukeminen</li>
+<li><code>/admin</code> &amp; <code>/users</code> - Tilastot ja käyttäjähallinta</li>
+</ul>
+<p>Kattava rajapintakuvaus löytyy: <a href="media/docs%5Cbackend%5CAPI_DOCUMENTATION.md">API_DOCUMENTATION.md</a></p>
+<hr>
+<h2 id="7-tietomalli" class="tsd-anchor-link">7. Tietomalli<a href="#7-tietomalli" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>Dokumentoidussa skeemassa on 11 päätaulua, mm: <code>USERS</code>, <code>CUSTOMER_PROFILES</code>, <code>DRIVER_PROFILES</code>, <code>PRODUCTS</code>, <code>ORDERS</code>, <code>DELIVERY_TRACKING</code> ja <code>NOTIFICATIONS</code>. Tarkat ER-suhteet ja esimerkkikyselyt löytyvät täältä: <a href="media/docs%5Cbackend%5CDATABASE_SCHEMA.md">DATABASE_SCHEMA.md</a>.</p>
+<img src="media/docs\assets\quantix-logi-db-schema.png">
+<hr>
+<h2 id="8-linkit-ja-repositorion-rakenne" class="tsd-anchor-link">8. Linkit ja Repositorion rakenne<a href="#8-linkit-ja-repositorion-rakenne" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<ul>
+<li><strong>Frontend (Tuotanto):</strong> <a href="https://logistics.quantixincorporated.com/">https://logistics.quantixincorporated.com/</a></li>
+<li><strong>Kokonaisanalytiikka:</strong> <a href="media/PROJECT_ANALYTICS.md">PROJECT_ANALYTICS.md</a></li>
+<li><strong>Kartoissa hyödynnetyt palvelut:</strong> <a href="https://leafletjs.com/">Leaflet</a>, <a href="https://router.project-osrm.org/">OSRM</a>, <a href="https://nominatim.org/">Nominatim</a></li>
+</ul>
+<pre><code class="text">quantix-logistics/
+├── frontend/              # React + Vite käyttöliittymä
+├── backend/               # Express + MySQL palvelin
+├── docs/backend/          # API- ja tietokantadokumentaatio
+├── PROJECT_ANALYTICS.md   # Syvällinen rakenne- ja riippuvuusanalyysi
+└── package.json           # Juuriscriptit (install:all, build, verify)
+
+</code><button type="button">Copy</button></pre>
+
+<p><strong>Lisenssi:</strong> Opiskelijaprojekti Metropolia AMK.
+Contributoorit: <a href="https://github.com/XucyXi/quantix-logistics/graphs/contributors">GitHub contributors</a>.</p>
+</div></div><div class="col-sidebar"><div class="page-menu"><div class="tsd-navigation settings"><details class="tsd-accordion"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg><h3>Settings</h3></summary><div class="tsd-accordion-details"><div class="tsd-filter-visibility"><span class="settings-label">Member Visibility</span><ul id="tsd-filter-options"><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-protected" name="protected"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Protected</span></label></li><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-inherited" name="inherited" checked/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Inherited</span></label></li><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-external" name="external"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>External</span></label></li></ul></div><div class="tsd-theme-toggle"><label class="settings-label" for="tsd-theme">Theme</label><select id="tsd-theme"><option value="os">OS</option><option value="light">Light</option><option value="dark">Dark</option></select></div></div></details></div><details open class="tsd-accordion tsd-page-navigation"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg><h3>On This Page</h3></summary><div class="tsd-accordion-details"><a href="#quantix-logistics"><span>Quantix <wbr/>Logistics</span></a><ul><li><a href="#1-projektin-kuvaus"><span>1. <wbr/>Projektin kuvaus</span></a></li><li><ul><li><a href="#mikä-on-quantix-logistics"><span>Mikä on <wbr/>Quantix <wbr/>Logistics?</span></a></li><li><a href="#kenelle-se-on-tehty"><span>Kenelle se on tehty?</span></a></li><li><a href="#miksi-sovellus-on-hyödyllinen"><span>Miksi sovellus on hyödyllinen?</span></a></li></ul></li><li><a href="#2-ryhmän-jäsenet"><span>2. <wbr/>Ryhmän jäsenet</span></a></li><li><a href="#3-keskeiset-ominaisuudet"><span>3. <wbr/>Keskeiset ominaisuudet</span></a></li><li><a href="#4-ohjeistus-testaamiseen"><span>4. <wbr/>Ohjeistus testaamiseen</span></a></li><li><ul><li><a href="#testitunnukset"><span>Testitunnukset</span></a></li><li><a href="#suositeltu-testauspolku"><span>Suositeltu testauspolku</span></a></li><li><a href="#palautelomake"><span>Palautelomake</span></a></li></ul></li><li><a href="#5-asennus-ja-pika-aloitusohjeet-lokaalisti"><span>5. <wbr/>Asennus-<wbr/> ja pika-<wbr/>aloitusohjeet (<wbr/>Lokaalisti)</span></a></li><li><a href="#6-arkkitehtuuri-ja-teknologiapino"><span>6. <wbr/>Arkkitehtuuri ja <wbr/>Teknologiapino</span></a></li><li><a href="#7-tietomalli"><span>7. <wbr/>Tietomalli</span></a></li><li><a href="#8-linkit-ja-repositorion-rakenne"><span>8. <wbr/>Linkit ja <wbr/>Repositorion rakenne</span></a></li></ul></div></details></div><div class="site-menu"><nav class="tsd-navigation"><a href="modules.html">Quantix Logistics - Backend API</a><ul class="tsd-small-nested-navigation" id="tsd-nav-container"><li>Loading...</li></ul></nav></div></div></div><footer><p class="tsd-generator">Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p></footer><div class="overlay"></div></body></html>

@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx",
     "typecheck": "tsc --noEmit",
-    "test": "node -e \"console.log('No frontend tests yet')\""
+    "test": "node -e \"console.log('No frontend tests yet')\"",
+    "docs": "typedoc"
   },
   "keywords": [],
   "author": "",
@@ -28,6 +29,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "prettier": "^3.3.3",
+    "typedoc": "^0.28.19",
     "typescript": "^6.0.2",
     "vite": "^8.0.3"
   },

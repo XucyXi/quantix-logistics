@@ -1,0 +1,16 @@
+{
+  "entryPoints": [
+    "controllers",
+    "routes",
+    "services",
+    "middlewares",
+    "utils",
+    "app.js",
+    "server.js"
+  ],
+  "entryPointStrategy": "expand",
+  "out": "../docs/backend-code",
+  "name": "Quantix Logistics - Backend API",
+  "tsconfig": "tsconfig.json",
+  "exclude": ["**/node_modules/**", "**/test/**", "**/tests/**"]
+}
