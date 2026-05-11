@@ -186,7 +186,7 @@ export function CheckoutPage() {
           </span>
         </div>
         <button
-          onClick={() => navigate('/tuotteet')}
+          onClick={() => navigate('/products')}
           style={{
             padding: '0.75rem 1.5rem',
             backgroundColor: '#0f2444',
